@@ -98,6 +98,27 @@ describe('deleting a reading', () => {
     expect(historyRows()[0]).toHaveTextContent('00529');
   });
 
+  it('says the photo goes too when the reading has one', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
+
+    expect(screen.getByRole('dialog', { name: DELETE_DIALOG })).toHaveTextContent(
+      'will be removed from the history, with its photo.',
+    );
+  });
+
+  it('does not mention a photo when the reading has none', async () => {
+    await renderHome();
+
+    // The mock history's 1 Jun 2026 reading has no photo.
+    await userEvent.click(screen.getByRole('button', { name: 'Delete the reading of 1 Jun 2026' }));
+
+    const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
+    expect(dialog).toHaveTextContent('will be removed from the history. This cannot be undone.');
+    expect(dialog).not.toHaveTextContent('photo');
+  });
+
   it('removes the reading from the history when the user confirms', async () => {
     await renderHome();
 

@@ -1,6 +1,7 @@
 import { NotFoundError } from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
+import { removeUpload } from '../../lib/uploads.ts';
 import { readingsRepository, type ReadingRow } from './readings.repository.ts';
 import type {
   CreateReading,
@@ -58,11 +59,17 @@ export async function getReadings(query: ListReadingsQuery): Promise<ReadingList
   return { data: rows.map(toResponse), totalResultNumber: total, currentPage: query.page };
 }
 
-// The seam for photos (issue #4): a reading has no photo yet, so there is nothing to remove. Once a reading keeps
-// its photo, this deletes that file from the uploads folder. The row is already gone by then, so a file that cannot
-// be removed is logged, not turned into a failed delete.
+// Deleting the reading already deleted its photo row (cascade); this removes the file from the uploads folder. The
+// row is gone by then, so a file that cannot be removed is logged, not turned into a failed delete.
 async function removeReadingPhoto(row: ReadingRow): Promise<void> {
-  log.debug({ readingId: row.id }, 'reading has no photo to remove');
+  if (!row.photo) return;
+
+  try {
+    await removeUpload(row.photo.fileName);
+  } catch (error: unknown) {
+    // Ids only: the error's message holds the file's path, never anything the user typed.
+    log.warn({ readingId: row.id, photoId: row.photo.id, err: error }, 'photo file of a deleted reading not removed');
+  }
 }
 
 export async function deleteReading(id: number): Promise<void> {
