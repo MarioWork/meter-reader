@@ -75,7 +75,29 @@ yarn install
 yarn dev
 ```
 
-Opens on `http://localhost:5173/home`. In dev the API is mocked (MSW), so the api does not need to run. Vite reads `web/.env` and `web/.env.development` (see Environment below).
+Opens on `http://localhost:5173/home`. By default the API is mocked (MSW), so the api does not need to run.
+
+To use the real api instead, start it (below), then turn the mocks off in a git-ignored `web/.env.development.local`:
+
+```bash
+echo "VITE_USE_MOCKS=false" > .env.development.local
+yarn dev
+```
+
+The dev server proxies `/api/<path>` to `http://localhost:3000/<path>`, the same prefix strip Caddy does on the server, so the app always calls its own origin. Until ticket #3 replaces it, the starter Items page errors against the real api (there is no `/items` route).
+
+| Script               | Does                                     |
+| -------------------- | ---------------------------------------- |
+| `yarn dev`           | Starts the dev server                    |
+| `yarn build`         | Type-checks, then builds to `dist/`      |
+| `yarn preview`       | Serves the built app                     |
+| `yarn typecheck`     | Type-checks without emitting             |
+| `yarn lint`          | Runs ESLint and the Prettier check       |
+| `yarn format`        | Formats every file with Prettier         |
+| `yarn test`          | Runs the unit and component tests once   |
+| `yarn test:watch`    | Runs them in watch mode                  |
+| `yarn test:coverage` | Runs them with a coverage report         |
+| `yarn test-e2e`      | Type-checks `e2e/`, then runs Playwright |
 
 ### api
 
@@ -97,23 +119,49 @@ psql -d postgres -c "create database meter_dev owner meter"
 Then:
 
 ```bash
-cp .env.example .env         # once; .env is git-ignored
+cp .env.example .env          # once; .env is git-ignored
 yarn install
-yarn dev                     # applies migrations, then runs src/server.ts with --watch
+yarn db:deploy                # applies pending migrations; run again after pulling new ones
+yarn dev | yarn pino-pretty   # runs src/server.ts with --watch, logs made readable
 ```
 
 The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answer `{"status":"ok"}`; the OpenAPI docs are at `http://localhost:3000/docs`.
 
-| Script            | Does                                                    |
-| ----------------- | ------------------------------------------------------- |
-| `yarn dev`        | Migrates, then runs the api in watch mode (pretty logs) |
-| `yarn build`      | Compiles `src/` to `dist/`                              |
-| `yarn typecheck`  | Type-checks without emitting                            |
-| `yarn lint`       | Runs ESLint and the Prettier check                      |
-| `yarn test`       | Runs the tests once                                     |
-| `yarn db:migrate` | Makes a new migration from `prisma/schema.prisma`       |
+| Script             | Does                                                           |
+| ------------------ | -------------------------------------------------------------- |
+| `yarn dev`         | Runs the api in watch mode (JSON logs; pipe to `pino-pretty`)  |
+| `yarn build`       | Compiles `src/` to `dist/`                                     |
+| `yarn typecheck`   | Type-checks without emitting                                   |
+| `yarn lint`        | Runs ESLint and the Prettier check                             |
+| `yarn test`        | Runs the tests once                                            |
+| `yarn db:deploy`   | Applies pending migrations                                     |
+| `yarn db:migrate`  | Makes a new migration from `prisma/schema.prisma`              |
+| `yarn db:generate` | Regenerates the Prisma client (`yarn install` already does it) |
 
 The tests need the same local Postgres and the `meter` role: each run makes a migrated `meter_test_template` database, gives every test file its own copy, and drops them all at the end (`api/.env.test`).
+
+### Environment files
+
+Each `.env` belongs to the folder that reads it:
+
+| File                   | Read by               | Holds                                                     |
+| ---------------------- | --------------------- | --------------------------------------------------------- |
+| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`               |
+| `web/.env.development` | `yarn dev` in `web/`  | The `VITE_*` dev values (committed, nothing secret)       |
+| `web/.env.example`     | nobody                | Every `VITE_*` key; copy to `.env.development.local`      |
+| `api/.env`             | `yarn dev` in `api/`  | The api's settings (copy `api/.env.example`, git-ignored) |
+| `api/.env.test`        | `yarn test` in `api/` | The test settings (committed)                             |
+
+`VITE_*` values are built into the bundle at build time, so they are never secrets:
+
+| Variable            | Meaning                                                     |
+| ------------------- | ----------------------------------------------------------- |
+| `VITE_PROJECT_PATH` | Base path the app is served from (`/` by default)           |
+| `VITE_BASE_API_URL` | Base URL for every API call (`/api`, proxied to the api)    |
+| `VITE_USE_MOCKS`    | `true` starts MSW in the browser (on in dev, off in builds) |
+| `VITE_PLAYWRIGHT`   | `true` under Playwright, which brings its own mocks         |
+
+An older checkout may still have `VITE_*` lines in a root `.env` or `.env.development`. Nothing reads them there any more: move any value you changed to `web/.env.development.local`, and keep only `POSTGRES_PASSWORD` in the root `.env`.
 
 CI (`.github/workflows/ci.yml`) runs lint, type-check, tests and build for both packages.
 
@@ -132,43 +180,6 @@ The sections below describe the web starter. They apply inside `web/`.
 | Tests    | Vitest 5 + Testing Library, Playwright for E2E       |
 | Lint     | ESLint (flat, type-aware) + custom rules, Prettier   |
 | Packages | Yarn 4, release committed in `.yarn/releases`        |
-
-## Getting started
-
-```bash
-corepack enable   # once per machine; Node 24 ships Corepack, it reads packageManager and runs the committed Yarn
-yarn install
-yarn dev
-```
-
-The app opens on `http://localhost:5173/home`. In dev the API is mocked, so no backend is needed.
-
-Node version: see `.node-version` (fnm reads it).
-
-## Scripts
-
-| Script               | Does                                     |
-| -------------------- | ---------------------------------------- |
-| `yarn dev`           | Starts the dev server                    |
-| `yarn build`         | Type-checks, then builds to `dist/`      |
-| `yarn preview`       | Serves the built app                     |
-| `yarn lint`          | Runs ESLint and the Prettier check       |
-| `yarn format`        | Formats every file with Prettier         |
-| `yarn test`          | Runs the unit and component tests once   |
-| `yarn test:watch`    | Runs them in watch mode                  |
-| `yarn test:coverage` | Runs them with a coverage report         |
-| `yarn test-e2e`      | Type-checks `e2e/`, then runs Playwright |
-
-## Environment
-
-Set in `.env` (all modes) and `.env.development` (dev only). Values are read at build time.
-
-| Variable            | Meaning                                                     |
-| ------------------- | ----------------------------------------------------------- |
-| `VITE_PROJECT_PATH` | Base path the app is served from (`/` by default)           |
-| `VITE_BASE_API_URL` | Base URL for every API call                                 |
-| `VITE_USE_MOCKS`    | `true` starts MSW in the browser (on in dev, off in builds) |
-| `VITE_PLAYWRIGHT`   | `true` under Playwright, which brings its own mocks         |
 
 ## Folder structure
 
