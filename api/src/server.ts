@@ -34,12 +34,14 @@ if (setupCode) {
 
 await app.listen({ port: env.PORT, host: LISTEN_HOST });
 
-// The server keeps the Hotmail token alive by itself, from start (ADR 0001). refreshMailToken never rejects: a
-// failure is logged and the next round tries again.
-// Shutting down cuts a refresh that is waiting on Microsoft short.
+// The server keeps the Hotmail token alive by itself, from start (ADR 0001). refreshMailToken never rejects (a failure
+// is logged and the next round tries again), so the promise kept here is only awaited at shutdown, which also cuts a
+// refresh still waiting on Microsoft short.
 const mailRefreshAbort = new AbortController();
-void refreshMailToken(mailRefreshAbort.signal);
-const mailRefreshTimer = setInterval(() => void refreshMailToken(mailRefreshAbort.signal), MAIL_REFRESH_INTERVAL_MS);
+let mailRefresh = refreshMailToken(mailRefreshAbort.signal);
+const mailRefreshTimer = setInterval(() => {
+  mailRefresh = refreshMailToken(mailRefreshAbort.signal);
+}, MAIL_REFRESH_INTERVAL_MS);
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   logger.info({ signal }, 'shutting down');
@@ -48,8 +50,10 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   const forceExit = setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MS);
   forceExit.unref();
 
+  // A refresh still running is cut short and allowed to finish its write before the database closes.
   clearInterval(mailRefreshTimer);
   mailRefreshAbort.abort();
+  await mailRefresh;
 
   await app.close();
   process.exit(0);
