@@ -15,7 +15,12 @@ import {
   type DeviceCode,
   type MicrosoftTokens,
 } from './mail.microsoftIdentity.ts';
-import { buildSendMailRequest, postSendMail } from './mail.microsoftGraph.ts';
+import {
+  MAIL_TOKEN_REJECTED,
+  buildSendMailRequest,
+  postSendMail,
+  type SendMailRequest,
+} from './mail.microsoftGraph.ts';
 import { mailRepository, type MailConnection } from './mail.repository.ts';
 import type { MailState, MailStatusResponse } from './mail.schema.ts';
 import type { OutgoingMail } from './mail.type.ts';
@@ -192,13 +197,15 @@ export async function assertMailConnected(): Promise<void> {
 
 // An access token good for the next few minutes: the stored one, or a new one when it is about to run out. A refusal
 // removes the connection, so the user hears that Hotmail is no longer connected.
-async function getAccessToken(): Promise<string> {
+async function findConnectionToSendWith(): Promise<MailConnection> {
   const connection = env.MICROSOFT_CLIENT_ID ? await mailRepository.findConnection() : undefined;
 
   if (!connection) throw mailNotConnected();
 
-  if (isTokenFresh(connection)) return connection.accessToken;
+  return connection;
+}
 
+async function refreshAccessToken(connection: MailConnection): Promise<string> {
   await refreshOnce(connection);
 
   const refreshed = await mailRepository.findConnection();
@@ -208,12 +215,39 @@ async function getAccessToken(): Promise<string> {
   return refreshed.accessToken;
 }
 
+async function getAccessToken(): Promise<string> {
+  const connection = await findConnectionToSendWith();
+
+  if (isTokenFresh(connection)) return connection.accessToken;
+
+  return refreshAccessToken(connection);
+}
+
+function isTokenRejected(error: unknown): boolean {
+  return error instanceof AppError && error.code === MAIL_TOKEN_REJECTED;
+}
+
+// Graph turned down a token that looked fresh (revoked early, the password changed): one refresh, one more try. A
+// refusal of the refresh itself disconnects Hotmail, and the user hears so.
+async function postWithRefreshedToken(request: SendMailRequest): Promise<void> {
+  const accessToken = await refreshAccessToken(await findConnectionToSendWith());
+
+  await postSendMail(accessToken, request);
+}
+
 // Sends one mail from the user's Hotmail (ADR 0001). Resolves once Microsoft has accepted it; throws an AppError
 // saying why when it did not: MAIL_TOO_LARGE before anything is asked, MAIL_NOT_CONNECTED, or Microsoft's refusal.
 export async function sendMail(mail: OutgoingMail): Promise<void> {
   const request = buildSendMailRequest(mail);
   const accessToken = await getAccessToken();
 
-  await postSendMail(accessToken, request);
+  try {
+    await postSendMail(accessToken, request);
+  } catch (error: unknown) {
+    if (!isTokenRejected(error)) throw error;
+
+    await postWithRefreshedToken(request);
+  }
+
   log.info('mail sent');
 }

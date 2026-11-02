@@ -19,6 +19,7 @@ import {
   tokensAnswer,
 } from './mail.microsoftIdentity.mock.ts';
 import {
+  acceptedAnswer,
   answerSendMail,
   expiredTokenAnswer,
   failGraphNetwork,
@@ -487,11 +488,35 @@ describe('sendMail', () => {
     await expect(sending).rejects.not.toThrow(PROVIDER_EMAIL);
   });
 
-  it('throws MAIL_REFUSED when Graph does not take the token', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+  it('refreshes the token once and sends again when Graph does not take a token that looked fresh', async () => {
+    storeConnection(storedConnection(minutesFromNow(30)));
+    const tokenForms = answerToken(tokensAnswer());
+    const received = answerSendMail(expiredTokenAnswer(), acceptedAnswer());
+
+    await sendMail(READING_MAIL);
+
+    expect(tokenForms).toHaveLength(1);
+    expect(received.map((request) => request.authorization)).toEqual([
+      `Bearer ${STORED_ACCESS_TOKEN}`,
+      `Bearer ${TEST_ACCESS_TOKEN}`,
+    ]);
+  });
+
+  it('throws MAIL_TOKEN_REJECTED when Graph does not take the token even after a refresh', async () => {
+    storeConnection(storedConnection(minutesFromNow(30)));
+    answerToken(tokensAnswer());
+    const received = answerSendMail(expiredTokenAnswer());
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_TOKEN_REJECTED' });
+    expect(received).toHaveLength(2);
+  });
+
+  it('throws MAIL_NOT_CONNECTED when Graph does not take the token and Microsoft refuses the refresh', async () => {
+    storeConnection(storedConnection(minutesFromNow(30)));
+    answerToken(errorAnswer('invalid_grant'));
     answerSendMail(expiredTokenAnswer());
 
-    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_REFUSED' });
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
   });
 
   it('throws MAIL_SERVICE_BUSY when Graph is throttling', async () => {

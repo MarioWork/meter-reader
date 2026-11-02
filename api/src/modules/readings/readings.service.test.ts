@@ -145,13 +145,13 @@ describe('sendReading', () => {
     expect(sendMail).toHaveBeenCalledTimes(1);
   });
 
-  it('marks the reading failed with PHOTO_FILE_MISSING, sending nothing, when the photo file is gone', async () => {
+  it('marks the reading failed with a 409 PHOTO_FILE_MISSING, sending nothing, when the photo file is gone', async () => {
     vi.mocked(readingsRepository.findById).mockResolvedValueOnce({ ...SAVED_ROW, photo: PHOTO });
     vi.mocked(readUpload).mockResolvedValueOnce(undefined);
 
     const sending = sendReading(7, { attachPhoto: true });
 
-    await expect(sending).rejects.toMatchObject({ code: 'PHOTO_FILE_MISSING', statusCode: 502 });
+    await expect(sending).rejects.toMatchObject({ code: 'PHOTO_FILE_MISSING', statusCode: 409 });
     expect(sendMail).not.toHaveBeenCalled();
     expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
   });
@@ -173,5 +173,15 @@ describe('sendReading', () => {
 
     await expect(sendReading(7, { attachPhoto: false })).rejects.toBe(bug);
     expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
+  });
+
+  it("still answers Microsoft's reason when saving the failure itself fails", async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce(SAVED_ROW);
+    vi.mocked(sendMail).mockRejectedValueOnce(new AppError('Microsoft is busy', { code: 'MAIL_SERVICE_BUSY' }));
+    vi.mocked(readingsRepository.markFailed).mockRejectedValueOnce(new Error('connection terminated'));
+
+    const sending = sendReading(7, { attachPhoto: false });
+
+    await expect(sending).rejects.toMatchObject({ code: 'MAIL_SERVICE_BUSY', statusCode: 502 });
   });
 });

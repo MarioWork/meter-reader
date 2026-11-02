@@ -16,6 +16,8 @@ test('a reading is previewed and sent with its photo, and the history shows it s
   await expect(homePage.sendDialog).toBeHidden();
   await expect(homePage.historyRows.nth(1)).toContainText('Sent 2 Nov 2026');
   await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeHidden();
+  // The Send link that opened the preview is gone, so focus goes to the history, never to the top of the page.
+  await expect(homePage.historyTable).toBeFocused();
 });
 
 test('Escape closes the preview, sends nothing and gives focus back to the Send link', async ({ page }) => {

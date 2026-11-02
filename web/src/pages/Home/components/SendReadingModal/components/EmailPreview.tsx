@@ -19,9 +19,7 @@ function EmailPreview({ email, isAttachingPhoto, isDisabled, onAttachingPhotoCha
       <dt className={FIELD_LABEL_CLASSES}>Subject</dt>
       <dd>{email.subject}</dd>
       <dt className={FIELD_LABEL_CLASSES}>Body</dt>
-      <dd data-testid="email-body" className="font-mono whitespace-pre-wrap">
-        {email.body}
-      </dd>
+      <dd className="font-mono whitespace-pre-wrap">{email.body}</dd>
       <dt className={FIELD_LABEL_CLASSES}>Photo</dt>
       <dd>
         <EmailAttachment

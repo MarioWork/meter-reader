@@ -225,7 +225,8 @@ describe('sending a reading', () => {
 
     expect(within(dialog).getByText('readings@water-provider.example')).toBeVisible();
     expect(within(dialog).getByText('test')).toBeVisible();
-    expect(within(dialog).getByTestId('email-body')).toHaveTextContent('Date: 1 October 2026 Reading: 00529');
+    // The body's line break reads as a space once the text is normalised.
+    expect(within(dialog).getByText('Date: 1 October 2026 Reading: 00529')).toBeVisible();
     expect(within(dialog).getByRole('checkbox', { name: 'Attach photo' })).toBeChecked();
     expect(within(dialog).getByRole('img', { name: 'meter-2026-10-01.jpg' })).toHaveAttribute(
       'src',

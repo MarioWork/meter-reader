@@ -18,7 +18,10 @@ const BASE64 = 'base64';
 const JSON_CONTENT_TYPE = 'application/json';
 const FIRST_SUCCESS_STATUS = 200;
 const FIRST_REDIRECT_STATUS = 300;
+const UNAUTHORIZED_STATUS = 401;
 const TOO_MANY_REQUESTS_STATUS = 429;
+// Graph did not take the access token: the caller may refresh it and try once more.
+export const MAIL_TOKEN_REJECTED = 'MAIL_TOKEN_REJECTED';
 const FIRST_SERVER_ERROR_STATUS = 500;
 
 // A Graph error (`{ error: { code, message } }`): only the stable code is read.
@@ -62,7 +65,8 @@ async function readGraphErrorCode(response: Response): Promise<string | undefine
   }
 }
 
-// Why Graph did not take the mail: busy or down (try again later), or a refusal naming Graph's code.
+// Why Graph did not take the mail: busy or down (try again later), the token refused, or a refusal naming Graph's
+// code.
 async function toSendFailure(response: Response): Promise<AppError> {
   const isBusy = response.status === TOO_MANY_REQUESTS_STATUS || response.status >= FIRST_SERVER_ERROR_STATUS;
 
@@ -73,8 +77,9 @@ async function toSendFailure(response: Response): Promise<AppError> {
   }
 
   const graphCode = (await readGraphErrorCode(response)) ?? `HTTP ${response.status}`;
+  const code = response.status === UNAUTHORIZED_STATUS ? MAIL_TOKEN_REJECTED : 'MAIL_REFUSED';
 
-  return new AppError(`Microsoft did not send the email (${graphCode}). Try again`, { code: 'MAIL_REFUSED' });
+  return new AppError(`Microsoft did not send the email (${graphCode}). Try again`, { code });
 }
 
 // Sends the mail. Resolves once Graph has accepted it; throws an AppError saying why when it did not.
