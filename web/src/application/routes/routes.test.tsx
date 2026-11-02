@@ -6,6 +6,25 @@ import { renderRoutes, screen, userEvent } from '@test-utils';
 import routes from '.';
 import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS } from './routesUtils';
 
+const UNKNOWN_PATH = '/no-such-page';
+
+describe('an unknown page', () => {
+  it('shows the error page with one heading and a link home', async () => {
+    renderRoutes(routes, { initialEntries: [UNKNOWN_PATH] });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Page not available' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', BASE_ROUTES_PATHS.HOME);
+  });
+
+  it('opens Home from the link', async () => {
+    renderRoutes(routes, { initialEntries: [UNKNOWN_PATH] });
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Back to home' }));
+
+    expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
+  });
+});
+
 describe('signed-in pages', () => {
   it('opens the page when the browser is signed in', async () => {
     renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
