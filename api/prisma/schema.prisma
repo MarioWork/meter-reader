@@ -1,0 +1,15 @@
+// The database: PostgreSQL. Models are PascalCase, tables and columns snake_case through @@map / @map.
+// No models yet: the first feature adds them, with its own migration.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
