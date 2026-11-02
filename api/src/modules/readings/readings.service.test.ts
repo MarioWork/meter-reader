@@ -73,8 +73,26 @@ describe('getReadings', () => {
 
     const page = await getReadings({ page: 3, size: 10 });
 
-    expect(readingsRepository.findPage).toHaveBeenCalledWith({ skip: 20, take: 10 });
+    expect(readingsRepository.findPage).toHaveBeenCalledWith(
+      { skip: 20, take: 10 },
+      { from: undefined, to: undefined, statuses: undefined },
+    );
     expect(page).toMatchObject({ totalResultNumber: 21, currentPage: 3, data: [{ id: 7, status: 'failed' }] });
+  });
+
+  it('asks for the days as midnight UTC and the statuses as stored when the filters are given', async () => {
+    vi.mocked(readingsRepository.findPage).mockResolvedValueOnce({ rows: [], total: 0 });
+
+    await getReadings({ page: 1, size: 10, from: '2026-09-01', to: '2026-09-30', status: ['notSent', 'failed'] });
+
+    expect(readingsRepository.findPage).toHaveBeenCalledWith(
+      { skip: 0, take: 10 },
+      {
+        from: new Date('2026-09-01T00:00:00.000Z'),
+        to: new Date('2026-09-30T00:00:00.000Z'),
+        statuses: ['NOT_SENT', 'FAILED'],
+      },
+    );
   });
 });
 

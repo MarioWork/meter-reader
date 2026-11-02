@@ -24,6 +24,9 @@ export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELEC
 
 export type ReadingPage = { rows: ReadingRow[]; total: number };
 
+// Which readings a page is taken from. Every part is optional; the days are inclusive.
+export type ReadingFilter = { from?: Date; to?: Date; statuses?: ReadingRow['status'][] };
+
 // What a send ends in: sent at a time, or failed (and so not sent at any time).
 type SendOutcome = { status: 'SENT'; sentAt: Date } | { status: 'FAILED'; sentAt: null };
 
@@ -53,11 +56,16 @@ export const readingsRepository = {
     }
   },
 
-  // The page and the total in one transaction, so the total matches the page.
-  findPage: async ({ skip, take }: SkipTake): Promise<ReadingPage> => {
+  // The page and the total in one transaction, so the total matches the page. Both count the filtered rows only.
+  findPage: async ({ skip, take }: SkipTake, { from, to, statuses }: ReadingFilter): Promise<ReadingPage> => {
+    const where = {
+      date: { gte: from, lte: to },
+      status: statuses ? { in: statuses } : undefined,
+    } satisfies Prisma.ReadingWhereInput;
+
     const [rows, total] = await prisma.$transaction([
-      prisma.reading.findMany({ orderBy: [...NEWEST_FIRST], skip, take, select: READING_SELECT }),
-      prisma.reading.count(),
+      prisma.reading.findMany({ where, orderBy: [...NEWEST_FIRST], skip, take, select: READING_SELECT }),
+      prisma.reading.count({ where }),
     ]);
 
     return { rows, total };
