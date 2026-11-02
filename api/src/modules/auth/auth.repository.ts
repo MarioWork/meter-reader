@@ -15,6 +15,8 @@ const PASSKEY_SELECT = {
 
 const SESSION_SELECT = { tokenHash: true, signedInAt: true, lastSeenAt: true } as const satisfies Prisma.SessionSelect;
 
+const PASSWORD_SELECT = { passwordHash: true } as const satisfies Prisma.AccountSelect;
+
 const CHALLENGE_SELECT = { challenge: true, webauthnUserId: true } as const satisfies Prisma.AuthChallengeSelect;
 
 type NewChallenge = {
@@ -81,7 +83,7 @@ export const authRepository = {
 
   // The one account's password hash, or undefined when there is no password (or no account yet).
   findPasswordHash: async (): Promise<string | undefined> => {
-    const account = await prisma.account.findFirst({ orderBy: { id: 'asc' }, select: { passwordHash: true } });
+    const account = await prisma.account.findFirst({ orderBy: { id: 'asc' }, select: PASSWORD_SELECT });
 
     return account?.passwordHash ?? undefined;
   },

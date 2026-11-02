@@ -5,6 +5,7 @@ import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import Button from '@components/Button';
 import FormAlert from '@components/FormAlert';
 import PasswordField from '@components/PasswordField';
+import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
 import { LoginIntents, SIGN_IN_FAILED_MESSAGE } from '../../loginUtils';
 import {
@@ -13,6 +14,8 @@ import {
   toPayload,
   type PasswordSignInFormValues,
 } from './passwordSignInFormUtils';
+
+const PASSWORD_FIELD_ID = 'sign-in-password';
 
 function PasswordSignInForm() {
   // react-hook-form drives uncontrolled inputs through the `ref` callback `register()` returns on every render.
@@ -33,19 +36,18 @@ function PasswordSignInForm() {
   );
 
   const isSigningIn = fetcher.state !== 'idle';
-  const failure = fetcher.data?.success === false ? fetcher.data.error : undefined;
-  const hasFailed = fetcher.data?.success === false && !isSigningIn;
+  const failureMessage = useFetcherFailure(fetcher, SIGN_IN_FAILED_MESSAGE);
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-3">
       <PasswordField
-        id="sign-in-password"
+        id={PASSWORD_FIELD_ID}
         label="Password"
         autoComplete="current-password"
         error={formState.errors.password?.message}
         {...register('password')}
       />
-      {hasFailed && <FormAlert message={failure?.message ?? SIGN_IN_FAILED_MESSAGE} />}
+      {failureMessage && <FormAlert message={failureMessage} />}
       <Button type="submit" isDisabled={isSigningIn}>
         Sign in
       </Button>

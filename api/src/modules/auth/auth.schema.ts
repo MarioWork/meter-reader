@@ -19,12 +19,16 @@ const ClientExtensionResultsSchema = z.object({
   credProps: z.object({ rk: z.boolean().optional() }).optional(),
 });
 
-export const RegistrationResponseSchema = z.object({
+// What every passkey answer carries, made or used. Not strict: browsers and passkey managers add fields of their own.
+const PasskeyAnswerSchema = z.object({
   id: base64Url(ID_MAX_LENGTH),
   rawId: base64Url(ID_MAX_LENGTH),
   type: z.literal('public-key'),
   authenticatorAttachment: z.enum(AUTHENTICATOR_ATTACHMENTS).optional(),
   clientExtensionResults: ClientExtensionResultsSchema,
+});
+
+export const RegistrationResponseSchema = PasskeyAnswerSchema.extend({
   response: z.object({
     clientDataJSON: base64Url(ENCODED_MAX_LENGTH),
     attestationObject: base64Url(ENCODED_MAX_LENGTH),
@@ -35,12 +39,7 @@ export const RegistrationResponseSchema = z.object({
   }),
 });
 
-export const AuthenticationResponseSchema = z.object({
-  id: base64Url(ID_MAX_LENGTH),
-  rawId: base64Url(ID_MAX_LENGTH),
-  type: z.literal('public-key'),
-  authenticatorAttachment: z.enum(AUTHENTICATOR_ATTACHMENTS).optional(),
-  clientExtensionResults: ClientExtensionResultsSchema,
+export const AuthenticationResponseSchema = PasskeyAnswerSchema.extend({
   response: z.object({
     clientDataJSON: base64Url(ENCODED_MAX_LENGTH),
     authenticatorData: base64Url(ENCODED_MAX_LENGTH),

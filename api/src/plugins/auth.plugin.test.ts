@@ -10,7 +10,7 @@ const PUBLIC_ROUTES = new Set([
   'POST /auth/setup',
   'POST /auth/login/password',
   'POST /auth/login/options',
-  'POST /auth/login/verify',
+  'POST /auth/login/passkey',
   'POST /auth/logout',
 ]);
 // A route only this test adds, standing in for every locked route the app will have.
@@ -61,7 +61,7 @@ describe('auth plugin', () => {
     expect(answers.every((answer) => answer.statusCode === 401 && answer.code === 'UNAUTHORIZED')).toBe(true);
   });
 
-  it('documents every public route, so the list above stays true', () => {
+  it('lists only documented routes as public when the OpenAPI document is built', () => {
     const documented = new Set(documentedRoutes());
 
     expect([...PUBLIC_ROUTES].filter((route) => !documented.has(route))).toEqual([]);
@@ -73,7 +73,7 @@ describe('auth plugin', () => {
     expect(response.statusCode).toBe(401);
   });
 
-  it('lets a request with a session through', async () => {
+  it('lets a locked route answer when the request has a session', async () => {
     const token = await setUpWithPassword(app);
 
     const response = await app.inject({ method: 'GET', url: PROBE_URL, ...withSession(token) });
@@ -82,7 +82,7 @@ describe('auth plugin', () => {
     expect(response.headers['cache-control']).toBe('no-store');
   });
 
-  it('answers 403 CROSS_SITE_REQUEST to a write another site made, even with a session', async () => {
+  it('answers 403 CROSS_SITE_REQUEST when another site makes a write, even with a session', async () => {
     const token = await setUpWithPassword(app);
 
     const response = await app.inject({

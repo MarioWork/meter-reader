@@ -1,13 +1,12 @@
 import { BadRequestError, ConflictError, UnauthorizedError } from '../../../lib/httpErrors.ts';
+import { APP_ORIGIN } from '../../../lib/appOrigin.ts';
 import { hashPassword } from '../../../lib/passwordHash.ts';
 import { createSecureToken, hashSecureToken } from '../../../lib/secureToken.ts';
 import { authRepository, type NewPasskey } from '../auth.repository.ts';
 import type { RegistrationOptionsResponse, RegistrationResponse } from '../auth.schema.ts';
 import {
-  APP_ORIGIN,
   buildRegistrationOptions,
   createWebauthnUserId,
-  isSetUp,
   log,
   openSession,
   storeChallenge,
@@ -34,13 +33,13 @@ async function assertSetupCode(code: string): Promise<void> {
 }
 
 async function assertNotSetUp(): Promise<void> {
-  if (await isSetUp()) throw new ConflictError(ALREADY_SET_UP_MESSAGE, 'ALREADY_SET_UP');
+  if (await authRepository.isSetUp()) throw new ConflictError(ALREADY_SET_UP_MESSAGE, 'ALREADY_SET_UP');
 }
 
 // When nobody has set the app up, a fresh one-time code (the old one stops working). Undefined otherwise.
 // Called on every start.
 export async function addSetupCode(): Promise<string | undefined> {
-  if (await isSetUp()) return undefined;
+  if (await authRepository.isSetUp()) return undefined;
 
   const code = createSecureToken();
   await authRepository.replaceSetupCode(hashSecureToken(code));
@@ -83,7 +82,10 @@ async function verifySetupPasskey(response: RegistrationResponse): Promise<Verif
 
   if (!challenge?.webauthnUserId) throw failure;
 
-  const registration = await verifyNewPasskey(response, challenge.challenge, failure);
+  const registration = await verifyNewPasskey(response, challenge.challenge);
+
+  if (!registration) throw failure;
+
   const passkey: NewPasskey = {
     credentialId: registration.credential.id,
     publicKey: new Uint8Array(registration.credential.publicKey),
@@ -97,7 +99,7 @@ async function verifySetupPasskey(response: RegistrationResponse): Promise<Verif
 
 // Setup, once: a password, a passkey or both, then the user is signed in and the setup link is dead. Returns the new
 // session's token for the cookie.
-export async function completeSetup({ code, password, passkey }: Setup): Promise<string> {
+export async function addLogin({ code, password, passkey }: Setup): Promise<string> {
   await assertNotSetUp();
   await assertSetupCode(code);
 

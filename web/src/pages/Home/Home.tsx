@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { ITEM_ROUTES_PATHS } from '@application/routes/routesUtils';
-import SignOutButton from '@components/SignOutButton';
+import SignOutButton from './components/SignOutButton';
 
 function Home() {
   return (

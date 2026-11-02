@@ -42,7 +42,7 @@ export default {
     }),
 
   signInWithPasskey: async (fields: PasskeySignIn): Promise<JSONResponseUtil> =>
-    axiosActions({ url: `${BASE_AUTH_URL}/login/verify`, method: HttpVerbsUtil.POST, data: fields }),
+    axiosActions({ url: `${BASE_AUTH_URL}/login/passkey`, method: HttpVerbsUtil.POST, data: fields }),
 
   logout: async (): Promise<JSONResponseUtil> =>
     axiosActions({ url: `${BASE_AUTH_URL}/logout`, method: HttpVerbsUtil.POST }),

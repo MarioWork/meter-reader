@@ -1,6 +1,7 @@
 import { hashSecureToken } from '../../../lib/secureToken.ts';
+import { SESSION_ABSOLUTE_MS } from '../../../lib/sessionCookie.ts';
 import { authRepository, type SessionRow } from '../auth.repository.ts';
-import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SESSION_TOUCH_INTERVAL_MS, isSetUp } from '../auth.service.ts';
+import { SESSION_IDLE_MS, SESSION_TOUCH_INTERVAL_MS } from '../auth.service.ts';
 import type { AuthSession } from '../auth.type.ts';
 import type { AuthState, AuthStatusResponse } from './session.schema.ts';
 
@@ -14,7 +15,7 @@ function isSessionExpired(row: SessionRow, now: number): boolean {
 export async function getAuthStatus(session: AuthSession | null): Promise<AuthStatusResponse> {
   if (session) return { state: 'signedIn' };
 
-  const state: AuthState = (await isSetUp()) ? 'signedOut' : 'setup';
+  const state: AuthState = (await authRepository.isSetUp()) ? 'signedOut' : 'setup';
 
   return { state };
 }
@@ -41,6 +42,9 @@ export async function getSession(token: string): Promise<AuthSession | null> {
   return { tokenHash: row.tokenHash, signedInAt: row.signedInAt };
 }
 
-export async function deleteSession(session: AuthSession): Promise<void> {
+// Signing out: ends this browser's session when it has one. Without one there is nothing to end.
+export async function deleteSession(session: AuthSession | null): Promise<void> {
+  if (!session) return;
+
   await authRepository.deleteSession(session.tokenHash);
 }
