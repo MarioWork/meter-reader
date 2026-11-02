@@ -9,12 +9,12 @@ type Props = {
   ariaLabel?: string;
 };
 
-const FOCUS_RING_CLASSES = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700';
+const FOCUS_RING_CLASSES = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 const VARIANT_CLASSES: Record<NonNullable<Props['variant']>, string> = {
-  text: `min-h-6 self-start rounded-sm text-blue-700 underline ${FOCUS_RING_CLASSES}`,
+  text: `min-h-6 self-start rounded-sm text-primary underline ${FOCUS_RING_CLASSES}`,
   primary: `
-    self-stretch rounded-md bg-blue-700 px-6 py-4 text-center text-xl font-semibold text-white ${FOCUS_RING_CLASSES}
+    self-stretch rounded-md bg-primary px-6 py-4 text-center text-xl font-semibold text-primary-foreground ${FOCUS_RING_CLASSES}
   `,
 };
 

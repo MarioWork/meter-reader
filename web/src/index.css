@@ -36,6 +36,8 @@
   --border: #d6d6d6;
   --input: #858489;
   --ring: #6b5a7a;
+  /* Dims the page behind a modal; the same in both themes. */
+  --scrim: #1c201e;
   --radius: 0.625rem;
 }
 
@@ -90,6 +92,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-scrim: var(--scrim);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

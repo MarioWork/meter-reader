@@ -8,7 +8,7 @@ type Props = {
   onAttachingPhotoChange: (isAttachingPhoto: boolean) => void;
 };
 
-const FIELD_LABEL_CLASSES = 'font-semibold text-gray-700';
+const FIELD_LABEL_CLASSES = 'font-semibold text-muted-foreground';
 
 // The email as the provider will get it: every field comes from the server, nothing is retyped here.
 function EmailPreview({ email, isAttachingPhoto, isDisabled, onAttachingPhotoChange }: Props) {

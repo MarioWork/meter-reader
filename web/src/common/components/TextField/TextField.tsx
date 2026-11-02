@@ -43,16 +43,16 @@ function TextField({
         max={latestDate}
         aria-invalid={error !== undefined}
         aria-describedby={describedBy || undefined}
-        className="rounded-sm border border-gray-300 px-2 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="rounded-sm border border-input px-2 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         {...registration}
       />
       {hint && (
-        <p id={hintId} className="text-sm text-gray-600">
+        <p id={hintId} className="text-sm text-muted-foreground">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-red-700">
+        <p id={errorId} className="text-destructive">
           {error}
         </p>
       )}

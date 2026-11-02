@@ -11,13 +11,13 @@ type Props = {
 function ReadingHistory({ readings }: Props) {
   const { tableRef } = useHistoryFocus(readings);
 
-  if (readings.length === 0) return <p className="text-gray-600">No readings yet. Save your first one.</p>;
+  if (readings.length === 0) return <p className="text-muted-foreground">No readings yet. Save your first one.</p>;
 
   return (
     <table
       ref={tableRef}
       tabIndex={-1}
-      className="w-full border-collapse bg-white text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+      className="w-full border-collapse bg-card text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <caption className="sr-only">History</caption>
       <thead>

@@ -17,7 +17,7 @@ function statusMessage({ isFindingDigits, hasFoundNothing }: Props): string {
 // it is often missed). Empty, it is visually hidden but stays in the accessibility tree (display: none would not).
 function PhotoDigitsStatus({ isFindingDigits, hasFoundNothing }: Props) {
   return (
-    <p role="status" className="text-sm text-gray-600 empty:sr-only">
+    <p role="status" className="text-sm text-muted-foreground empty:sr-only">
       {statusMessage({ isFindingDigits, hasFoundNothing })}
     </p>
   );

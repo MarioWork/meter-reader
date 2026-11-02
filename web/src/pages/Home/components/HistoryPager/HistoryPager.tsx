@@ -22,7 +22,7 @@ function HistoryPager({ currentPage, totalResultNumber }: Props) {
   return (
     <nav aria-label="History pages" className="grid grid-cols-3 items-center gap-4">
       <div>{hasNewer && <TextLink to={{ search: pageSearch(currentPage - 1) }}>Newer readings</TextLink>}</div>
-      <p className="text-center text-gray-600">
+      <p className="text-center text-muted-foreground">
         Page {currentPage} of {pageCount}
       </p>
       <div className="flex justify-end">

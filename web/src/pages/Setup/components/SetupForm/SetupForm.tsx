@@ -51,7 +51,7 @@ function SetupForm({ code }: Props) {
         <input
           id={PASSKEY_CHECKBOX_ID}
           type="checkbox"
-          className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           {...register('hasPasskey')}
         />
         <label htmlFor={PASSKEY_CHECKBOX_ID}>Also add a passkey on this device</label>

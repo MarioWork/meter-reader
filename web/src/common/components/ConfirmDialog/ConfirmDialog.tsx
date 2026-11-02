@@ -46,7 +46,7 @@ function ConfirmDialog({
       aria-labelledby={titleId}
       aria-describedby={messageId}
       onCancel={handleCancel}
-      className="m-auto max-w-md rounded-sm p-6 shadow-lg backdrop:bg-gray-900/50"
+      className="m-auto max-w-md rounded-sm bg-popover p-6 text-popover-foreground shadow-lg backdrop:bg-scrim/50"
     >
       <h2 id={titleId} className="text-lg font-bold">
         {title}

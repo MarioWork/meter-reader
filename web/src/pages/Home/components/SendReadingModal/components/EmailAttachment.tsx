@@ -15,7 +15,7 @@ const ATTACH_PHOTO_LABEL = 'Attach photo';
 // The "Attach photo" toggle, only when the reading has a photo, and the photo itself while it is attached. Its alt
 // text is the file name the provider will see.
 function EmailAttachment({ attachment, isAttachingPhoto, isDisabled, onAttachingPhotoChange }: Props) {
-  if (!attachment) return <span className="text-gray-600">{NO_PHOTO_LABEL}</span>;
+  if (!attachment) return <span className="text-muted-foreground">{NO_PHOTO_LABEL}</span>;
 
   return (
     <div className="flex flex-col gap-2">
@@ -25,7 +25,7 @@ function EmailAttachment({ attachment, isAttachingPhoto, isDisabled, onAttaching
           checked={isAttachingPhoto}
           disabled={isDisabled}
           onChange={(event) => onAttachingPhotoChange(event.target.checked)}
-          className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         />
         {ATTACH_PHOTO_LABEL}
       </label>
@@ -35,7 +35,7 @@ function EmailAttachment({ attachment, isAttachingPhoto, isDisabled, onAttaching
           alt={attachment.name}
           width={PREVIEW_SIZE_PX}
           height={PREVIEW_SIZE_PX}
-          className="size-24 rounded-sm border border-gray-300 object-cover"
+          className="size-24 rounded-sm border border-input object-cover"
         />
       )}
     </div>

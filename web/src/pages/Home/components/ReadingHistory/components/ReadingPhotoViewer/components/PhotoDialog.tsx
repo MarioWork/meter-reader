@@ -29,7 +29,7 @@ function PhotoDialog({ isOpen, title, photoUrl, photoDescription, onClose }: Pro
       ref={dialogRef}
       aria-labelledby={titleId}
       onCancel={handleCancel}
-      className="m-auto max-w-[95vw] rounded-sm p-4 shadow-lg backdrop:bg-gray-900/70"
+      className="m-auto max-w-[95vw] rounded-sm bg-popover p-4 text-popover-foreground shadow-lg backdrop:bg-scrim/70"
     >
       <h2 id={titleId} className="text-lg font-bold">
         {title}

@@ -13,8 +13,8 @@ const ACCEPTED_FILES = 'image/*';
 const BACK_CAMERA = 'environment';
 
 const LABEL_CLASSES = `
-  min-h-6 cursor-pointer rounded-sm border border-blue-700 bg-white px-3 py-1 text-blue-700
-  has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-blue-700
+  min-h-6 cursor-pointer rounded-sm border border-primary bg-background px-3 py-1 text-primary
+  has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring
   has-disabled:cursor-not-allowed has-disabled:opacity-60
 `;
 
