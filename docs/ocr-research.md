@@ -56,7 +56,8 @@ white at its own threshold (Otsu's method), and read with only the digits 0–9 
 fills the Reading field; the user checks it and can change it. No crop step yet.
 
 Tesseract's worker, core and English data are served by the app (`web/tesseractAssetsPlugin.ts`) and precached
-by the service worker, so it works offline. That adds about 15 MB to the first install.
+by the service worker, so it works offline. That adds about 7 MB to the first install. Only Tesseract's
+WebAssembly SIMD core build ships (Safari 16.4+, Chrome 91+, Firefox 89+).
 
 ## Measuring the hit rate
 

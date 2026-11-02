@@ -14,8 +14,7 @@ import { SAVE_FAILED_MESSAGE } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
 import PhotoDigitsStatus from './components/PhotoDigitsStatus';
 import PhotoPicker from './components/PhotoPicker';
-import { usePhotoDigits } from './hooks/usePhotoDigits';
-import { usePhotoPicker } from './hooks/usePhotoPicker';
+import { useReadingPhoto } from './hooks/useReadingPhoto';
 import { getInitialValues, newReadingFormSchema, toPayload, type NewReadingFormValues } from './newReadingFormUtils';
 
 type Props = {
@@ -43,28 +42,18 @@ function NewReadingForm({ lastReading }: Props) {
   // The React Compiler would memoize that spread, so the inputs would stop reaching the form state.
   'use no memo';
 
-  const { register, handleSubmit, formState, control, setValue } = useForm<NewReadingFormValues>({
+  const { register, handleSubmit, formState, control, getValues, setValue } = useForm<NewReadingFormValues>({
     defaultValues: getInitialValues(),
     resolver: yupResolver(newReadingFormSchema),
   });
 
   const fetcher = useFetcher<JSONResponseUtil>();
-  const { photo, previewUrl, isShrinking, errorMessage, pickPhoto, removePhoto } = usePhotoPicker();
-  // Filled in as if typed, so the digits are checked and compared with the last reading the same way.
-  const { isReading, hasFoundNothing, readDigits, forgetDigits } = usePhotoDigits((found) =>
-    setValue('digits', found, { shouldDirty: true, shouldValidate: formState.isSubmitted }),
-  );
-
-  async function handlePick(picked: File) {
-    const shrunk = await pickPhoto(picked);
-
-    if (shrunk) await readDigits(shrunk);
-  }
-
-  function handleRemove() {
-    removePhoto();
-    forgetDigits();
-  }
+  const { photo, previewUrl, isShrinking, errorMessage, isFindingDigits, hasFoundNothing, pickPhoto, removePhoto } =
+    useReadingPhoto({
+      getDigits: () => getValues('digits'),
+      // Filled in as if typed, so the digits are checked and compared with the last reading the same way.
+      fillDigits: (digits) => setValue('digits', digits, { shouldDirty: true, shouldValidate: formState.isSubmitted }),
+    });
 
   const onSubmit = handleSubmit((values) =>
     fetcher.submit(createFormData({ reading: toPayload(values), photo }), {
@@ -92,7 +81,7 @@ function NewReadingForm({ lastReading }: Props) {
         {...register('digits')}
       />
       {isLower && lastReading && <LowerReadingWarning id={WARNING_ID} lastReading={lastReading} />}
-      <PhotoDigitsStatus isReading={isReading} hasFoundNothing={hasFoundNothing} />
+      <PhotoDigitsStatus isFindingDigits={isFindingDigits} hasFoundNothing={hasFoundNothing} />
       <TextField
         id={DATE_FIELD_ID}
         label="Date"
@@ -103,11 +92,11 @@ function NewReadingForm({ lastReading }: Props) {
       />
       <PhotoPicker
         previewUrl={previewUrl}
-        isBusy={isShrinking || isReading}
         isShrinking={isShrinking}
+        isFindingDigits={isFindingDigits}
         errorMessage={errorMessage}
-        onPick={(picked) => void handlePick(picked)}
-        onRemove={handleRemove}
+        onPick={(picked) => void pickPhoto(picked)}
+        onRemove={removePhoto}
       />
       {failureMessage && <FormAlert message={failureMessage} />}
       <Button type="submit" isDisabled={!canSave}>

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '../fixtures/app.fixture';
-import type { PhotoFile } from '../fixtures/photo.fixture';
+import { OCR_TIMEOUT_MS, type PhotoFile } from '../fixtures/photo.fixture';
 import { NewReadingPage } from '../pages/NewReadingPage.page';
 
 // Not part of the normal run: measures how often OCR reads real meter photos right (issue #5).
@@ -10,7 +10,6 @@ import { NewReadingPage } from '../pages/NewReadingPage.page';
 // photo of the same reading. JPEG or PNG (export iPhone HEIC photos as JPEG first: desktop Chromium cannot open
 // HEIC). Every photo goes through the real page: shrink, black and white, Tesseract.
 const PHOTOS_DIR = process.env.OCR_PHOTOS_DIR;
-const OCR_TIMEOUT_MS = 60_000;
 const PHOTO_TYPES: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' };
 const EXPECTED_DIGITS = /^\d+/;
 
@@ -41,7 +40,9 @@ test('OCR hit rate on the real meter photos in OCR_PHOTOS_DIR', async ({ page })
 
   for (const { photo, expected } of photoCases) {
     await newReadingPage.goto();
-    const digitsRead = await newReadingPage.readPhoto(photo, OCR_TIMEOUT_MS);
+    await newReadingPage.pickPhoto(photo);
+    await expect.poll(() => newReadingPage.hasFinishedWithPhoto(), { timeout: OCR_TIMEOUT_MS }).toBe(true);
+    const digitsRead = await newReadingPage.readingField.inputValue();
     const isHit = digitsRead === expected;
 
     if (isHit) hits += 1;

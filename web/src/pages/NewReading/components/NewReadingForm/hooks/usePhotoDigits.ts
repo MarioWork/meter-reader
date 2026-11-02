@@ -17,24 +17,24 @@ async function readDigitsOrNothing(photo: File): Promise<string> {
 // The reading in the photo, read on the phone once the photo is picked. onFound gets the digits to fill in; the
 // user still checks them and can change them.
 export function usePhotoDigits(onFound: (digits: string) => void) {
-  const [isReading, setIsReading] = useState(false);
+  const [isFindingDigits, setIsFindingDigits] = useState(false);
   const [hasFoundNothing, setHasFoundNothing] = useState(false);
 
   async function readDigits(photo: File) {
-    setIsReading(true);
+    setIsFindingDigits(true);
     setHasFoundNothing(false);
 
     const digits = await readDigitsOrNothing(photo);
 
-    setIsReading(false);
+    setIsFindingDigits(false);
 
     if (digits) onFound(digits);
     else setHasFoundNothing(true);
   }
 
-  function forgetDigits() {
+  function clearDigitsStatus() {
     setHasFoundNothing(false);
   }
 
-  return { isReading, hasFoundNothing, readDigits, forgetDigits };
+  return { isFindingDigits, hasFoundNothing, readDigits, clearDigitsStatus };
 }
