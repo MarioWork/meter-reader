@@ -5,7 +5,7 @@ import { NewReadingPage } from '../pages/NewReadingPage.page';
 // A 12-megapixel phone camera, 4:3.
 const CAMERA_WIDTH = 4032;
 const CAMERA_HEIGHT = 3024;
-const PHOTO_MAX_BYTES = 3_000_000;
+const PHOTO_MAX_BYTES = 2_500_000;
 
 test('a reading typed in by hand tops the history with its leading zeros', async ({ page }) => {
   const newReadingPage = new NewReadingPage(page);
