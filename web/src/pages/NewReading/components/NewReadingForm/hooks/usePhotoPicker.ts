@@ -4,12 +4,13 @@ import { PhotoShrinkError, readAsDataUrl, shrinkPhoto } from '../photoShrinkUtil
 type PickedPhoto = { file: File; previewUrl: string };
 
 // The photo for the new reading: shrunk on the phone as soon as it is picked, so the save sends the small one.
+// pickPhoto hands back the shrunk photo, or nothing when the file could not be used.
 export function usePhotoPicker() {
   const [picked, setPicked] = useState<PickedPhoto>();
   const [isShrinking, setIsShrinking] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
 
-  async function pickPhoto(photo: File) {
+  async function pickPhoto(photo: File): Promise<File | undefined> {
     setIsShrinking(true);
     setErrorMessage(undefined);
 
@@ -18,11 +19,15 @@ export function usePhotoPicker() {
       const previewUrl = await readAsDataUrl(shrunk);
 
       setPicked({ file: shrunk, previewUrl });
+
+      return shrunk;
     } catch (error) {
       if (!(error instanceof PhotoShrinkError)) throw error;
 
       setPicked(undefined);
       setErrorMessage(error.message);
+
+      return undefined;
     } finally {
       setIsShrinking(false);
     }

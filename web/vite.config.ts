@@ -8,6 +8,7 @@ import path from 'node:path';
 import { loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { configDefaults, defineConfig } from 'vitest/config';
+import { tesseractAssets } from './tesseractAssetsPlugin';
 
 const alias = {
   '@api': path.resolve(import.meta.dirname, 'src/common/api'),
@@ -40,6 +41,10 @@ const APP_NAME = 'Meter Reader';
 const APP_DESCRIPTION = 'Read a water meter from a photo';
 const THEME_COLOR = '#0b4f8a';
 const BACKGROUND_COLOR = '#ffffff';
+// The app's code and icons, plus Tesseract's gzipped language data (photo OCR must work offline).
+const PRECACHE_GLOBS = ['**/*.{js,css,html,ico,png,svg,webmanifest,gz}'];
+// Workbox skips anything over 2 MB by default; Tesseract's core builds are about 3.9 MB each.
+const PRECACHE_MAX_FILE_BYTES = 5_000_000;
 
 // Files that `vi.mock` a module get their own project, so a module mock never leaks into another file.
 const mockingTests = globSync('src/**/*.test.{ts,tsx}')
@@ -61,13 +66,20 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       // Serves the MSW worker script in dev and provides `virtual:msw` (see src/mocks/browser.ts).
       msw(),
+      // Tesseract's worker, core and language data, served by the app itself (photo OCR offline).
+      tesseractAssets(),
       // Installable app: web manifest, generated icons and an offline cache. Off in dev by default.
       VitePWA({
         disable: useMocks,
         registerType: 'autoUpdate',
         pwaAssets: { config: true },
         // The MSW worker ships in the build too, but the app never needs it offline.
-        workbox: { globIgnores: ['**/mockServiceWorker.js'], navigateFallbackDenylist: [API_PAGES] },
+        workbox: {
+          globPatterns: PRECACHE_GLOBS,
+          globIgnores: ['**/mockServiceWorker.js'],
+          maximumFileSizeToCacheInBytes: PRECACHE_MAX_FILE_BYTES,
+          navigateFallbackDenylist: [API_PAGES],
+        },
         manifest: {
           name: APP_NAME,
           short_name: APP_NAME,

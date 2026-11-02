@@ -3,6 +3,8 @@ import PhotoInput from './components/PhotoInput';
 
 type Props = {
   previewUrl?: string;
+  // Shrinking or reading the last photo: a new one waits until that is done.
+  isBusy: boolean;
   isShrinking: boolean;
   errorMessage?: string;
   onPick: (photo: File) => void;
@@ -13,8 +15,9 @@ const CAMERA_INPUT_ID = 'reading-photo-camera';
 const FILE_INPUT_ID = 'reading-photo-file';
 const ERROR_ID = 'reading-photo-error';
 
-// Optional: take the photo with the camera, or pick one already on the device. Either way it is shrunk first.
-function PhotoPicker({ previewUrl, isShrinking, errorMessage, onPick, onRemove }: Props) {
+// Optional: take the photo with the camera, or pick one already on the device. Either way it is shrunk first,
+// then the number in it is read into the Reading field.
+function PhotoPicker({ previewUrl, isBusy, isShrinking, errorMessage, onPick, onRemove }: Props) {
   const errorId = errorMessage ? ERROR_ID : undefined;
 
   return (
@@ -32,19 +35,19 @@ function PhotoPicker({ previewUrl, isShrinking, errorMessage, onPick, onRemove }
           id={CAMERA_INPUT_ID}
           label="Take a photo"
           isCamera
-          isDisabled={isShrinking}
+          isDisabled={isBusy}
           describedById={errorId}
           onPick={onPick}
         />
         <PhotoInput
           id={FILE_INPUT_ID}
           label="Choose a photo"
-          isDisabled={isShrinking}
+          isDisabled={isBusy}
           describedById={errorId}
           onPick={onPick}
         />
         {previewUrl && (
-          <Button variant="secondary" onClick={onRemove}>
+          <Button variant="secondary" isDisabled={isBusy} onClick={onRemove}>
             Remove photo
           </Button>
         )}
