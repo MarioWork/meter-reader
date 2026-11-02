@@ -24,8 +24,8 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    start(["api starts for the first time"]) --> link["Prints a one-time /setup?code=… link"]
-    link --> setup["User opens it, sets a password and/or a passkey"]
+    start(["api starts for the first time"]) --> setupLink["Prints a one-time /setup?code=… link"]
+    setupLink --> setup["User opens it, sets a password and/or a passkey"]
     setup --> signedIn(["Signed in"])
 
     reg["Register the app with Microsoft<br/>(README, once)"] --> connect["yarn mail:connect"]
@@ -67,9 +67,9 @@ flowchart TD
     home -- "Send / Try again" --> preview["Preview: to, subject, body,<br/>Attach photo toggle"]
     preview --> canSend{"Hotmail connected?"}
     canSend -- "no" --> blocked["Send is disabled"]
-    canSend -- "yes" --> graph["api sends through Graph sendMail"]
-    graph -- "accepted" --> sent["Sent + time"]
-    graph -- "refused / never got" --> failed["Failed + the server's reason"]
+    canSend -- "yes" --> mailSend["api sends through Graph sendMail"]
+    mailSend -- "accepted" --> sent["Sent + time"]
+    mailSend -- "refused / never got" --> failed["Failed + the server's reason"]
     sent --> home
     failed --> home
 
@@ -80,14 +80,13 @@ flowchart TD
 
 ## A reading's status
 
+Every reading starts as **Not sent**. Sending moves it to **Sent** or **Failed**. A failed one can be tried again.
+
 ```mermaid
-stateDiagram-v2
-    [*] --> NotSent: saved
-    NotSent --> Sent: Send, mail accepted
-    NotSent --> Failed: Send, mail refused or never got
-    Failed --> Sent: Try again, mail accepted
-    Failed --> Failed: Try again, refused again
-    NotSent --> [*]: deleted
-    Failed --> [*]: deleted
-    Sent --> [*]: deleted
+flowchart LR
+    notSent["Not sent"] -- "Send works" --> sent["Sent"]
+    notSent -- "Send fails" --> failed["Failed"]
+    failed -- "Try again works" --> sent
 ```
+
+If Try again fails too, the reading stays **Failed**. Any reading can be deleted, whatever its status.
