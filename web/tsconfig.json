@@ -7,5 +7,17 @@
     {
       "path": "./tsconfig.node.json"
     }
-  ]
+  ],
+  /* Read by the shadcn CLI only, which resolves components.json's aliases from this file (tsc -b builds the references).
+     Same targets as tsconfig.app.json; the bare entries let it resolve the folder aliases. */
+  "compilerOptions": {
+    "paths": {
+      "@components": ["./src/common/components"],
+      "@components/*": ["./src/common/components/*"],
+      "@utils": ["./src/common/utils"],
+      "@utils/*": ["./src/common/utils/*"],
+      "@hooks": ["./src/common/hookUtils"],
+      "@hooks/*": ["./src/common/hookUtils/*"]
+    }
+  }
 }

@@ -121,7 +121,8 @@ export default defineConfig(({ mode }) => {
       testTimeout: 60000,
       minWorkers: 1,
       maxWorkers,
-      css: false,
+      // Stylesheets stay empty in tests, except one read as text (?raw): themeContrast.test.ts checks index.css.
+      css: { include: [/\.css\?raw$/] },
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html', 'lcov'],
