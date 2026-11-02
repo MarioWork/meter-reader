@@ -2,6 +2,7 @@ import { defineNetworkFixture, type NetworkFixture, type NetworkFixtureOptions }
 import { test as base, expect } from '@playwright/test';
 import { http, HttpResponse } from 'msw/http';
 import { getHandlers } from '../../src/mocks/handlers';
+import { resetMockReadings } from '../../src/mocks/handlers/reading/readingMockState';
 import { BASE_URL } from '../playwright.config';
 
 // The app calls the API on its own origin (VITE_BASE_API_URL='/api'), so the mocks listen on the dev server's URL.
@@ -18,6 +19,8 @@ export const test = base.extend<Fixtures>({
   handlers: [getHandlers(BASE_API_URL), { option: true }],
   network: [
     async ({ context, handlers }, use) => {
+      // The mock history lives in this worker: each test starts from the same rows.
+      resetMockReadings();
       const network = defineNetworkFixture({ context, handlers });
 
       await network.enable();

@@ -14,6 +14,10 @@ export const AUTH_SEARCH_PARAMS = {
   SETUP_CODE: 'code',
 };
 
+export const READING_ROUTES_PATHS = {
+  NEW: '/readings/new',
+};
+
 export const ITEM_ROUTES_PATHS = {
   BASE: '/items',
 };

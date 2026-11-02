@@ -5,5 +5,6 @@ export type { JSONResponseUtil } from './jsonResponseUtil.type';
 export type { LoaderDataUtil } from './loaderDataUtil.type';
 export { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from './paginationUtil.type';
 export type { PaginationUtil } from './paginationUtil.type';
+export { ReadingStatusUtil } from './readingStatusUtil.type';
 export type { ResponseWithPaginationUtil } from './responseWithPaginationUtil.type';
 export { SortingDirectionUtil } from './sortingDirectionUtil.type';

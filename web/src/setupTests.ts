@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import axios from 'axios';
 import { resetMockAuthState } from './mocks/handlers/auth/authMockState';
+import { resetMockReadings } from './mocks/handlers/reading/readingMockState';
 import { server, TEST_BASE_API_URL } from './mocks/server';
 
 axios.defaults.baseURL = TEST_BASE_API_URL;
@@ -13,5 +14,6 @@ beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   server.resetHandlers();
   resetMockAuthState();
+  resetMockReadings();
 });
 afterAll(() => server.close());
