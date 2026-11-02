@@ -1,0 +1,88 @@
+# Home server deployment. Everything worth backing up lives in ./data (the Postgres files, later ./data/uploads).
+# The database password comes from a .env file next to this one: POSTGRES_PASSWORD=<letters and digits> (README,
+# .env.example).
+# The web container (Caddy) is the only thing on the LAN: it serves the app over HTTPS on port 8443 and proxies /api
+# to the api container. Neither the api nor the database is published.
+# Ports 80 and 443 belong to my-funko-collection on the same host, so this app stays off them.
+x-app-address: &app-address https://meter.home.arpa:8443
+
+services:
+  web:
+    build: ./web
+    container_name: meter-reader-web
+    restart: unless-stopped
+    ports:
+      - '8443:8443'
+    environment:
+      # A name needs a DNS/hosts entry on each device. HTTPS is required for the camera and for installing the app.
+      SITE_ADDRESS: *app-address
+    volumes:
+      # Caddy's local CA lives here. Keep it, or every device has to trust a new certificate after a rebuild.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Runs once per `up`: applies pending database migrations, then exits. The api waits for it to succeed.
+  migrate:
+    build:
+      context: ./api
+      target: migrate
+    container_name: meter-reader-migrate
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgresql://meter:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meter
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./api
+      target: runtime
+    container_name: meter-reader-api
+    restart: unless-stopped
+    expose:
+      - '3000'
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: 3000
+      # The password goes inside a URL, hence letters and digits only.
+      DATABASE_URL: postgresql://meter:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meter
+      # Caddy is the one proxy in front: read the real device address from X-Forwarded-For (for rate limits).
+      TRUST_PROXY_HOPS: 1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3000/ready').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:18
+    container_name: meter-reader-db
+    restart: unless-stopped
+    expose:
+      - '5432'
+    environment:
+      POSTGRES_USER: meter
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: meter
+    volumes:
+      # Postgres 18 images keep their data under /var/lib/postgresql/18/docker: mount the parent.
+      - ./data/postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'meter', '-d', 'meter']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -24,17 +24,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-/coverage
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
+coverage
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Yarn 4 (the release in .yarn/releases is committed on purpose)
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
+**/.yarn/*
+!**/.yarn/patches
+!**/.yarn/plugins
+!**/.yarn/releases
+!**/.yarn/sdks
+!**/.yarn/versions
+
+# Secrets: the root .env holds the database password (copy .env.example). Never committed.
+.env
+
+# Home server data (Postgres files, later uploads): lives on the server, backed up, never committed.
+/data/
