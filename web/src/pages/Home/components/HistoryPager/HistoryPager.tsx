@@ -1,22 +1,17 @@
-import { Link } from 'react-router';
 import { ApiUrlParamsUtil, PAGE_SIZE } from '@app-types/utility';
+import TextLink from '@components/TextLink';
 
 type Props = {
   currentPage: number;
   totalResultNumber: number;
 };
 
-const LINK_CLASSES = `
-  min-h-6 rounded-sm px-2 py-1 text-blue-700 underline
-  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700
-`;
-
 // Only the page changes, so the link keeps the current path.
 function pageSearch(page: number): string {
   return `?${new URLSearchParams({ [ApiUrlParamsUtil.page]: String(page) }).toString()}`;
 }
 
-// Newer pages first: page 1 holds the latest readings.
+// Newer pages first: page 1 holds the latest readings. The links sit at either end, the page count in the middle.
 function HistoryPager({ currentPage, totalResultNumber }: Props) {
   const pageCount = Math.ceil(totalResultNumber / Number(PAGE_SIZE));
   const hasNewer = currentPage > 1;
@@ -25,24 +20,14 @@ function HistoryPager({ currentPage, totalResultNumber }: Props) {
   if (pageCount <= 1) return null;
 
   return (
-    <nav aria-label="History pages" className="flex items-center justify-between gap-4">
-      {hasNewer ? (
-        <Link to={{ search: pageSearch(currentPage - 1) }} className={LINK_CLASSES}>
-          Newer readings
-        </Link>
-      ) : (
-        <span />
-      )}
-      <span className="text-gray-600">
+    <nav aria-label="History pages" className="grid grid-cols-3 items-center gap-4">
+      <div>{hasNewer && <TextLink to={{ search: pageSearch(currentPage - 1) }}>Newer readings</TextLink>}</div>
+      <p className="text-center text-gray-600">
         Page {currentPage} of {pageCount}
-      </span>
-      {hasOlder ? (
-        <Link to={{ search: pageSearch(currentPage + 1) }} className={LINK_CLASSES}>
-          Older readings
-        </Link>
-      ) : (
-        <span />
-      )}
+      </p>
+      <div className="flex justify-end">
+        {hasOlder && <TextLink to={{ search: pageSearch(currentPage + 1) }}>Older readings</TextLink>}
+      </div>
     </nav>
   );
 }
