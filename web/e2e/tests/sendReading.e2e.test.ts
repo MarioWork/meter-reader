@@ -14,6 +14,7 @@ test('a reading is previewed and sent with its photo, and the history shows it s
   await homePage.sendFromPreview();
 
   await expect(homePage.sendDialog).toBeHidden();
+  await expect(homePage.notification('Reading sent')).toBeVisible();
   await expect(homePage.historyRows.nth(1)).toContainText('Sent 2 Nov 2026');
   await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeHidden();
   // The Send link that opened the preview is gone, so focus goes to the history, never to the top of the page.

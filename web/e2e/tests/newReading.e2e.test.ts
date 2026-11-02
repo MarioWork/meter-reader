@@ -17,6 +17,9 @@ test('a reading typed in by hand tops the history with its leading zeros', async
   await expect(newest).toContainText('31 Oct 2026');
   await expect(newest).toContainText('00600');
   await expect(newest).toContainText('Not sent');
+  // The polite live region screen readers announce.
+  const notifications = page.getByRole('region', { name: 'Notifications' });
+  await expect(notifications.getByRole('dialog', { name: 'Reading saved' })).toBeVisible();
 });
 
 test('a camera photo is shrunk to a JPEG of at most 2000 px and saved with its reading', async ({ page }) => {

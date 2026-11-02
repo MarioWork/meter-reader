@@ -20,6 +20,11 @@ function historyRows() {
     .slice(1);
 }
 
+// Toasts: each one is named by its title inside the polite live region.
+function notification(title: string) {
+  return within(screen.getByRole('region', { name: 'Notifications' })).findByRole('dialog', { name: title });
+}
+
 // An open dialog hides the page behind it from screen readers, the history included.
 function historyBehindDialog() {
   return screen.getByRole('table', { name: 'History', hidden: true });
@@ -150,6 +155,7 @@ describe('deleting a reading', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent('1 Sept 2026'));
+    expect(await notification('Reading deleted')).toBeVisible();
     expect(screen.getByRole('table', { name: 'History' })).not.toHaveTextContent('00529');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'History' })).toHaveFocus();
@@ -179,6 +185,7 @@ describe('deleting a reading', () => {
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Reading 14 not found');
     expect(historyBehindDialog()).toHaveTextContent('00529');
+    expect(await notification('Reading not deleted')).toBeVisible();
   });
 
   it('does not show an earlier failure when the dialog is opened again', async () => {
@@ -247,6 +254,7 @@ describe('sending a reading', () => {
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent(/Sent 2 Nov 2026/));
+    expect(await notification('Reading sent')).toBeVisible();
     expect(received).toEqual([{ attachPhoto: true }]);
     expect(within(historyRows()[0]).queryByRole('link', { name: SEND_NEWEST })).not.toBeInTheDocument();
   });
@@ -289,6 +297,7 @@ describe('sending a reading', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'Microsoft did not send the email (ErrorInvalidRecipients). Try again',
     );
+    expect(await notification('Reading not sent')).toBeVisible();
   });
 
   it('opens the preview again from Try again on a failed reading', async () => {
