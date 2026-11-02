@@ -1,7 +1,7 @@
 import ErrorAlert from '@components/ErrorAlert';
 import { Button } from '@components/ui/button';
+import ResponsiveDialog from '../ResponsiveDialog';
 import EmailPreview from './components/EmailPreview';
-import ResponsiveDialog from './components/ResponsiveDialog';
 import { useSendReading } from './hooks/useSendReading';
 
 const DIALOG_TITLE = 'Send this reading?';
@@ -39,7 +39,7 @@ function SendReadingModal() {
   );
 
   return (
-    <ResponsiveDialog title={DIALOG_TITLE} onOpenChange={handleOpenChange} footer={footer}>
+    <ResponsiveDialog title={DIALOG_TITLE} isOpen onOpenChange={handleOpenChange} footer={footer}>
       <EmailPreview
         email={readingEmail}
         isAttachingPhoto={isAttachingPhoto}
