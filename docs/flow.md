@@ -1,0 +1,93 @@
+# How Meter Reader works
+
+Words follow `docs/GLOSSARY.md`. Decisions behind the flow are in `docs/adr/`.
+
+## The pieces
+
+```mermaid
+flowchart LR
+    phone["Phone<br/>(web app, PWA)"]
+    api["api<br/>(Fastify)"]
+    db[("Postgres<br/>readings, photos,<br/>login, mail connection")]
+    uploads[("./data/uploads<br/>photo files")]
+    ms["Microsoft<br/>sign-in + Graph sendMail"]
+    provider["Provider<br/>inbox"]
+
+    phone -- "session cookie" --> api
+    api --> db
+    api --> uploads
+    api -- "Mail.Send token" --> ms
+    ms -- "email from the user's Hotmail" --> provider
+```
+
+## One-time setup (on the server)
+
+```mermaid
+flowchart TD
+    start(["api starts for the first time"]) --> link["Prints a one-time /setup?code=… link"]
+    link --> setup["User opens it, sets a password and/or a passkey"]
+    setup --> signedIn(["Signed in"])
+
+    reg["Register the app with Microsoft<br/>(README, once)"] --> connect["yarn mail:connect"]
+    connect --> code["Prints a code + microsoft.com/devicelogin"]
+    code --> approve["User approves on their phone"]
+    approve --> saved(["Token saved; refreshed every 30 min"])
+
+    lost["Forgot the login?"] --> reset["yarn auth:reset<br/>prints a new setup link"]
+    reset --> setup
+```
+
+## Taking and sending a reading
+
+```mermaid
+flowchart TD
+    open(["Open the app"]) --> session{"Signed in?"}
+    session -- "no login yet" --> setupPage["/setup"]
+    session -- "no" --> login["/login<br/>password or passkey"]
+    session -- "yes" --> home
+    login --> home
+
+    home["/home: history<br/>date · reading · photo · status"]
+    home --> banner{"Hotmail connected?"}
+    banner -- "no" --> warn["Banner: run yarn mail:connect"]
+
+    home -- "New reading" --> newReading["/readings/new"]
+    newReading --> photo{"Add a photo?"}
+    photo -- "camera or file" --> shrink["Phone shrinks it:<br/>JPEG, ≤ 2000 px, ≤ 2.5 MB"]
+    shrink --> ocr["Tesseract reads the digits<br/>in the browser, offline"]
+    ocr --> field["Reading field filled in<br/>(user checks and can fix it)"]
+    photo -- "no" --> type["User types the reading"]
+    field --> save
+    type --> save
+    save["Save"] --> lower{"Lower than the newest reading?"}
+    lower -- "yes" --> warning["Warning, but saving still works"] --> stored
+    lower -- "no" --> stored["POST /photos, then POST /readings<br/>status: Not sent"]
+    stored --> home
+
+    home -- "Send / Try again" --> preview["Preview: to, subject, body,<br/>Attach photo toggle"]
+    preview --> canSend{"Hotmail connected?"}
+    canSend -- "no" --> blocked["Send is disabled"]
+    canSend -- "yes" --> graph["api sends through Graph sendMail"]
+    graph -- "accepted" --> sent["Sent + time"]
+    graph -- "refused / never got" --> failed["Failed + the server's reason"]
+    sent --> home
+    failed --> home
+
+    home -- "Delete" --> confirm{"Confirm dialog"}
+    confirm -- "cancel" --> home
+    confirm -- "delete" --> gone["Reading and its photo file removed"] --> home
+```
+
+## A reading's status
+
+```mermaid
+stateDiagram-v2
+    [*] --> NotSent: saved
+    NotSent --> Sent: Send, mail accepted
+    NotSent --> Failed: Send, mail refused or never got
+    Failed --> Sent: Try again, mail accepted
+    Failed --> Failed: Try again, refused again
+    NotSent --> [*]: deleted
+    Failed --> [*]: deleted
+    Sent --> [*]: deleted
+```
