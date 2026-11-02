@@ -30,6 +30,10 @@ const maxWorkers = process.env.VITEST_MAX_FORKS
 // Playwright specs end in .e2e.test.ts, which vitest's default include would pick up.
 const baseExclude = [...configDefaults.exclude, 'e2e/**', 'tests-examples/*'];
 
+// Where `cd api && yarn dev` listens.
+const API_DEV_URL = 'http://localhost:3000';
+const API_PREFIX = /^\/api/;
+
 const APP_NAME = 'Meter Reader';
 const APP_DESCRIPTION = 'Read a water meter from a photo';
 const THEME_COLOR = '#0b4f8a';
@@ -124,6 +128,16 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias,
+    },
+    // Same origin in dev as on the server: /api/<path> goes to the api as /<path>, like Caddy's handle_path.
+    server: {
+      proxy: {
+        '/api': {
+          target: API_DEV_URL,
+          changeOrigin: true,
+          rewrite: (requestPath) => requestPath.replace(API_PREFIX, ''),
+        },
+      },
     },
   };
 });
