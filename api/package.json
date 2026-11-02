@@ -24,7 +24,8 @@
     "db:studio": "prisma studio",
     "postgres:start": "brew services run postgresql@18",
     "postgres:stop": "brew services stop postgresql@18",
-    "auth:reset": "node --env-file=.env src/cli/resetAuth.ts"
+    "auth:reset": "node --env-file=.env src/cli/resetAuth.ts",
+    "mail:connect": "node --env-file=.env src/cli/connectMail.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11",
@@ -51,6 +52,7 @@
     "@types/pg": "^8",
     "eslint": "^10",
     "eslint-config-prettier": "^10",
+    "msw": "^3",
     "pino-pretty": "^13",
     "prettier": "^3.9",
     "typescript": "~6.0",

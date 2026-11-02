@@ -1,7 +1,18 @@
 import { pino } from 'pino';
 import { env } from '../config/env.ts';
 
-const REDACTED_PATHS = ['*.password', '*.token', '*.secret', 'req.headers.authorization', 'req.headers.cookie'];
+// A safety net, not the policy (nothing should log these at all): the Hotmail tokens too, in both spellings.
+const REDACTED_PATHS = [
+  '*.password',
+  '*.token',
+  '*.secret',
+  '*.accessToken',
+  '*.refreshToken',
+  '*.access_token',
+  '*.refresh_token',
+  'req.headers.authorization',
+  'req.headers.cookie',
+];
 
 // JSON lines everywhere. `yarn dev` pipes them through pino-pretty (options in .pino-prettyrc) for one readable,
 // coloured line per entry; pino-pretty is a dev dependency, never loaded by the process itself.

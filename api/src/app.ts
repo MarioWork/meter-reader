@@ -18,6 +18,7 @@ import { logger } from './lib/logger.ts';
 import { authRoutes } from './modules/auth/auth.route.ts';
 import { healthRoutes } from './modules/health/health.route.ts';
 import { readingsRoutes } from './modules/readings/readings.route.ts';
+import { mailRoutes } from './modules/mail/mail.route.ts';
 import { authPlugin } from './plugins/auth.plugin.ts';
 import { prismaPlugin } from './plugins/prisma.plugin.ts';
 
@@ -27,6 +28,7 @@ const RATE_LIMIT_WINDOW = '1 minute';
 const DOCS_ROUTE_PREFIX = '/docs';
 const AUTH_ROUTE_PREFIX = '/auth';
 const READINGS_ROUTE_PREFIX = '/readings';
+const MAIL_ROUTE_PREFIX = '/mail';
 const REQUEST_LOG_MESSAGE = 'request';
 // A request no route matched (a 404) has no pattern to log.
 const UNMATCHED_ROUTE = '(no route)';
@@ -80,6 +82,7 @@ export async function buildApp() {
   await app.register(healthRoutes);
   await app.register(authRoutes, { prefix: AUTH_ROUTE_PREFIX });
   await app.register(readingsRoutes, { prefix: READINGS_ROUTE_PREFIX });
+  await app.register(mailRoutes, { prefix: MAIL_ROUTE_PREFIX });
 
   return app;
 }
