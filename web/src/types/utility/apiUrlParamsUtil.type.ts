@@ -4,6 +4,9 @@ export const ApiUrlParamsUtil = {
   sortingDirection: 'direction',
   page: 'page',
   pageSize: 'size',
+  // The ends of a list's day range, both inclusive calendar days (YYYY-MM-DD).
+  dateFrom: 'from',
+  dateTo: 'to',
 } as const;
 
 export type ApiUrlParamsUtil = (typeof ApiUrlParamsUtil)[keyof typeof ApiUrlParamsUtil];
