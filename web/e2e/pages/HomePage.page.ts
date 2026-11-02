@@ -21,7 +21,7 @@ export class HomePage {
   }
 
   get deleteDialog() {
-    return this.page.getByRole('dialog', { name: DELETE_DIALOG_NAME });
+    return this.page.getByRole('alertdialog', { name: DELETE_DIALOG_NAME });
   }
 
   get dialogCancelButton() {
@@ -33,7 +33,7 @@ export class HomePage {
   }
 
   get sendDialog() {
-    return this.page.getByRole('dialog', { name: SEND_DIALOG_NAME });
+    return this.page.getByRole('alertdialog', { name: SEND_DIALOG_NAME });
   }
 
   get sendDialogSendButton() {
@@ -92,7 +92,7 @@ export class HomePage {
   async isFocusBehindDialog() {
     return this.page.evaluate(() => {
       const focused = document.activeElement;
-      const isInDialog = focused?.closest('dialog') !== null;
+      const isInDialog = focused?.closest('[role="alertdialog"]') !== null;
 
       return focused !== document.body && !isInDialog;
     });
