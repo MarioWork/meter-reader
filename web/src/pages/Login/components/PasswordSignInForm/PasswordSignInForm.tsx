@@ -2,10 +2,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
-import { Button } from '@components/ui/button';
 import ErrorAlert from '@components/ErrorAlert';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@components/ui/field';
-import { Input } from '@components/ui/input';
+import PasswordInputField from '@components/PasswordInputField';
+import { Button } from '@components/ui/button';
+import { FieldGroup } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
 import { LoginIntents, SIGN_IN_FAILED_MESSAGE } from '../../loginUtils';
@@ -17,7 +17,6 @@ import {
 } from './passwordSignInFormUtils';
 
 const PASSWORD_FIELD_ID = 'sign-in-password';
-const PASSWORD_ERROR_ID = 'sign-in-password-error';
 
 function PasswordSignInForm() {
   // react-hook-form drives uncontrolled inputs through the `ref` callback `register()` returns on every render.
@@ -39,25 +38,17 @@ function PasswordSignInForm() {
 
   const isSigningIn = fetcher.state !== 'idle';
   const failureMessage = useFetcherFailure(fetcher, SIGN_IN_FAILED_MESSAGE);
-  const passwordError = formState.errors.password?.message;
-  const hasPasswordError = passwordError !== undefined;
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-3">
       <FieldGroup>
-        {/* autocomplete lets password managers fill it, and nothing blocks paste (WCAG 2.2 accessible authentication). */}
-        <Field data-invalid={hasPasswordError}>
-          <FieldLabel htmlFor={PASSWORD_FIELD_ID}>Password</FieldLabel>
-          <Input
-            id={PASSWORD_FIELD_ID}
-            type="password"
-            autoComplete="current-password"
-            aria-invalid={hasPasswordError}
-            aria-describedby={hasPasswordError ? PASSWORD_ERROR_ID : undefined}
-            {...register('password')}
-          />
-          <FieldError id={PASSWORD_ERROR_ID}>{passwordError}</FieldError>
-        </Field>
+        <PasswordInputField
+          id={PASSWORD_FIELD_ID}
+          label="Password"
+          autoComplete="current-password"
+          error={formState.errors.password?.message}
+          registration={register('password')}
+        />
       </FieldGroup>
       {failureMessage && <ErrorAlert message={failureMessage} />}
       <Button type="submit" disabled={isSigningIn}>
