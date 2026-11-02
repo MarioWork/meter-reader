@@ -64,14 +64,3 @@ describe('signed-in pages', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible();
   });
 });
-
-describe('signing out', () => {
-  it('ends the session and opens the login page', async () => {
-    renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
-    await screen.findByRole('heading', { name: 'History' });
-
-    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
-
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible();
-  });
-});

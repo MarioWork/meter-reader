@@ -107,6 +107,12 @@
     @apply border-border outline-ring/50;
   }
 
+  /* The signed-in header is sticky and h-14 tall: scrolling a focused element into view stops below it
+     (WCAG 2.4.11). */
+  html {
+    @apply scroll-pt-16;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
