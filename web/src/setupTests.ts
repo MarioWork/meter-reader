@@ -9,6 +9,18 @@ axios.defaults.baseURL = TEST_BASE_API_URL;
 // in both the node and the jsdom projects, so every test talks to the same mock layer.
 axios.defaults.adapter = 'fetch';
 
+// jsdom has <dialog> but not its modal methods. Only the open state is faked here; focus and Escape are the
+// browser's job and are covered by the e2e suite.
+if (typeof HTMLDialogElement !== 'undefined' && !HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
+}
+
 // A request with no handler fails the test instead of passing on a warning nobody reads.
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {

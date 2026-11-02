@@ -42,6 +42,13 @@ export class ConflictError extends HttpError {
   }
 }
 
+// The thing the request names does not exist (a reading already deleted).
+export class NotFoundError extends HttpError {
+  constructor(entity: string, id: string | number) {
+    super(`${entity} ${id} not found`, { code: 'NOT_FOUND', statusCode: 404 });
+  }
+}
+
 export class BadRequestError extends HttpError {
   constructor(message: string, code = 'BAD_REQUEST') {
     super(message, { code, statusCode: 400 });

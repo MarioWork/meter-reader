@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { renderRoutes, screen, userEvent, within } from '@test-utils';
+import { renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
 
 async function renderHome() {
   renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
@@ -56,4 +56,63 @@ it('opens the new reading page from the New reading link', async () => {
   await userEvent.click(screen.getByRole('link', { name: 'New reading' }));
 
   expect(await screen.findByRole('heading', { name: 'New reading' })).toBeVisible();
+});
+
+it('moves to the last page when the asked page is past the end of the history', async () => {
+  renderRoutes(routes, { initialEntries: [`${BASE_ROUTES_PATHS.HOME}?page=3`] });
+
+  expect(await screen.findByText('Page 2 of 2')).toBeVisible();
+  expect(historyRows()).toHaveLength(4);
+});
+
+describe('deleting a reading', () => {
+  const NEWEST_READING = 'Delete the reading of 1 Oct 2026';
+
+  it('asks for confirmation before anything is deleted', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Delete this reading?' });
+    expect(dialog).toHaveTextContent('00529 from 1 Oct 2026');
+    expect(historyRows()[0]).toHaveTextContent('00529');
+  });
+
+  it('removes the reading from the history when the user confirms', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete this reading?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(historyRows()[0]).toHaveTextContent('1 Sept 2026'));
+    expect(screen.getByRole('table', { name: 'History' })).not.toHaveTextContent('00529');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps the reading when the user cancels', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(historyRows()[0]).toHaveTextContent('00529');
+  });
+
+  it('keeps the dialog open with the reason when the delete fails', async () => {
+    server.use(
+      http.delete(`${TEST_BASE_API_URL}/readings/:id`, () =>
+        HttpResponse.json({ code: 'NOT_FOUND', message: 'Reading 14 not found' }, { status: 404 }),
+      ),
+    );
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete this reading?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Reading 14 not found');
+    expect(historyRows()[0]).toHaveTextContent('00529');
+  });
 });

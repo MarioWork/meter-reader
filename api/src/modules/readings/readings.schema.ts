@@ -17,6 +17,8 @@ export const CreateReadingSchema = z.strictObject({
 
 export const ListReadingsQuerySchema = PaginationQuerySchema;
 
+export const ReadingParamsSchema = z.object({ id: z.coerce.number().int().positive() });
+
 export const ReadingResponseSchema = z
   .object({
     id: z.number().int(),
@@ -31,6 +33,7 @@ export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponse
 
 export type CreateReading = z.infer<typeof CreateReadingSchema>;
 export type ListReadingsQuery = z.infer<typeof ListReadingsQuerySchema>;
+export type ReadingParams = z.infer<typeof ReadingParamsSchema>;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 export type ReadingResponse = z.infer<typeof ReadingResponseSchema>;
 export type ReadingListResponse = z.infer<typeof ReadingListResponseSchema>;

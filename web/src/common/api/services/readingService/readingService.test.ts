@@ -66,3 +66,32 @@ describe('addReading', () => {
     });
   });
 });
+
+describe('deleteReading', () => {
+  it('sends a DELETE for the reading and returns a success envelope', async () => {
+    let receivedMethod = '';
+    let receivedPath = '';
+    server.use(
+      http.delete(`${API}/readings/:id`, ({ request }) => {
+        receivedMethod = request.method;
+        receivedPath = new URL(request.url).pathname;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const response = await readingService.deleteReading(14);
+
+    expect(receivedMethod).toBe('DELETE');
+    expect(receivedPath).toBe('/api/readings/14');
+    expect(response.success).toBe(true);
+  });
+
+  it('returns a failure envelope instead of throwing when the reading is gone', async () => {
+    const response = await readingService.deleteReading(999);
+
+    expect(response).toEqual({
+      success: false,
+      error: { statusCode: 404, code: 'NOT_FOUND', message: 'Reading 999 not found' },
+    });
+  });
+});
