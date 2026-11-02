@@ -1,6 +1,38 @@
 # Meter Reader
 
-A bare-bones React + TypeScript starter. It ships the tooling and one small example of the data flow, and nothing else.
+Take a photo of your water meter, check the reading, and email it to your water provider from your own Hotmail. One user, one meter, one provider, on your home server.
+
+A reading is sent exactly as read: every digit, leading zeros kept, red digits included. Words used here are defined in [`GLOSSARY.md`](./GLOSSARY.md); the big decisions are in [`docs/adr/`](./docs/adr/).
+
+## Running on the home server
+
+> To do: filled in by a later ticket.
+
+The app is served at `https://meter.home.arpa:8443` (port 8443).
+
+## First sign-in
+
+> To do: filled in by a later ticket.
+
+On first start the server prints a one-time setup link. Open it to set a password (15+ characters), a passkey, or both. See [ADR 0002](./docs/adr/0002-one-user-login.md).
+
+## Resetting the login (`auth:reset`)
+
+> To do: filled in by a later ticket.
+
+## Connecting Hotmail (`mail:connect`)
+
+> To do: filled in by a later ticket.
+
+The app sends mail through Microsoft Graph with send-only permission (`Mail.Send`). See [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md). The provider's address, the subject and the mail settings live in the server `.env`.
+
+## Where data lives
+
+> To do: filled in by a later ticket.
+
+## Local development
+
+> To do: filled in by a later ticket. The sections below describe the web starter and will move under here.
 
 ## Stack
 
