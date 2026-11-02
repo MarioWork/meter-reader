@@ -20,7 +20,13 @@ export function useDeleteReading(readingId: ReadingId) {
     setIsOpen(true);
   };
 
-  const closeDialog = () => setIsOpen(false);
+  // The dialog asks to close on Escape and on Cancel. Once the delete is under way it cannot be called back, so the
+  // dialog stays open until it is done.
+  const handleOpenChange = (isOpening: boolean) => {
+    if (isOpening || isDeleting) return;
+
+    setIsOpen(false);
+  };
 
   const deleteReading = () =>
     void fetcher.submit(null, {
@@ -28,5 +34,5 @@ export function useDeleteReading(readingId: ReadingId) {
       action: READING_ROUTES_PATHS.delete(String(readingId)),
     });
 
-  return { isOpen, isDeleting, failureMessage, openDialog, closeDialog, deleteReading };
+  return { isOpen, isDeleting, failureMessage, openDialog, handleOpenChange, deleteReading };
 }

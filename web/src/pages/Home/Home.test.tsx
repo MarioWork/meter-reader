@@ -20,6 +20,11 @@ function historyRows() {
     .slice(1);
 }
 
+// An open dialog hides the page behind it from screen readers, the history included.
+function historyBehindDialog() {
+  return screen.getByRole('table', { name: 'History', hidden: true });
+}
+
 it('lists the history newest first with the date, the reading and its status', async () => {
   await renderHome();
 
@@ -111,9 +116,9 @@ describe('deleting a reading', () => {
 
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
 
-    const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
+    const dialog = screen.getByRole('alertdialog', { name: DELETE_DIALOG });
     expect(dialog).toHaveTextContent('00529 from 1 Oct 2026');
-    expect(historyRows()[0]).toHaveTextContent('00529');
+    expect(historyBehindDialog()).toHaveTextContent('00529');
   });
 
   it('says the photo goes too when the reading has one', async () => {
@@ -121,7 +126,7 @@ describe('deleting a reading', () => {
 
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
 
-    expect(screen.getByRole('dialog', { name: DELETE_DIALOG })).toHaveTextContent(
+    expect(screen.getByRole('alertdialog', { name: DELETE_DIALOG })).toHaveTextContent(
       'will be removed from the history, with its photo.',
     );
   });
@@ -132,7 +137,7 @@ describe('deleting a reading', () => {
     // The mock history's 1 Jun 2026 reading has no photo.
     await userEvent.click(screen.getByRole('button', { name: 'Delete the reading of 1 Jun 2026' }));
 
-    const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
+    const dialog = screen.getByRole('alertdialog', { name: DELETE_DIALOG });
     expect(dialog).toHaveTextContent('will be removed from the history. This cannot be undone.');
     expect(dialog).not.toHaveTextContent('photo');
   });
@@ -141,12 +146,12 @@ describe('deleting a reading', () => {
     await renderHome();
 
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
-    const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
+    const dialog = screen.getByRole('alertdialog', { name: DELETE_DIALOG });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent('1 Sept 2026'));
     expect(screen.getByRole('table', { name: 'History' })).not.toHaveTextContent('00529');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'History' })).toHaveFocus();
   });
 
@@ -156,7 +161,7 @@ describe('deleting a reading', () => {
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(historyRows()[0]).toHaveTextContent('00529');
   });
 
@@ -169,11 +174,11 @@ describe('deleting a reading', () => {
     await renderHome();
 
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
-    const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
+    const dialog = screen.getByRole('alertdialog', { name: DELETE_DIALOG });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Reading 14 not found');
-    expect(historyRows()[0]).toHaveTextContent('00529');
+    expect(historyBehindDialog()).toHaveTextContent('00529');
   });
 
   it('does not show an earlier failure when the dialog is opened again', async () => {
@@ -184,14 +189,14 @@ describe('deleting a reading', () => {
     );
     await renderHome();
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
-    const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
+    const dialog = screen.getByRole('alertdialog', { name: DELETE_DIALOG });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
     await within(dialog).findByRole('alert');
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
 
-    expect(within(screen.getByRole('dialog')).queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('alertdialog')).queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 
@@ -203,7 +208,7 @@ describe('sending a reading', () => {
     await renderHome();
     await userEvent.click(within(historyRows()[0]).getByRole('link', { name: SEND_NEWEST }));
 
-    return screen.findByRole('dialog', { name: SEND_DIALOG });
+    return screen.findByRole('alertdialog', { name: SEND_DIALOG });
   }
 
   // Keeps what the app asked to send, then lets the mock API answer it as usual (a resolver that returns nothing
@@ -240,7 +245,7 @@ describe('sending a reading', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent(/Sent 2 Nov 2026/));
     expect(received).toEqual([{ attachPhoto: true }]);
     expect(within(historyRows()[0]).queryByRole('link', { name: SEND_NEWEST })).not.toBeInTheDocument();
@@ -263,7 +268,7 @@ describe('sending a reading', () => {
     // The mock history's 1 Jun 2026 reading has no photo and was never sent.
     await userEvent.click(screen.getByRole('link', { name: 'Send the reading of 1 Jun 2026' }));
 
-    const dialog = await screen.findByRole('dialog', { name: SEND_DIALOG });
+    const dialog = await screen.findByRole('alertdialog', { name: SEND_DIALOG });
     expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
     expect(dialog).toHaveTextContent('No photo');
   });
@@ -294,7 +299,7 @@ describe('sending a reading', () => {
     expect(failed).toHaveTextContent('Failed');
     await userEvent.click(within(failed).getByRole('link', { name: 'Try again: send the reading of 1 Sept 2026' }));
 
-    expect(await screen.findByRole('dialog', { name: SEND_DIALOG })).toHaveTextContent('Reading: 00520');
+    expect(await screen.findByRole('alertdialog', { name: SEND_DIALOG })).toHaveTextContent('Reading: 00520');
   });
 
   it('disables Send and says why when Hotmail is not connected', async () => {
@@ -314,7 +319,7 @@ describe('sending a reading', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(received).toEqual([]);
     expect(historyRows()[0]).toHaveTextContent('Not sent');
   });
