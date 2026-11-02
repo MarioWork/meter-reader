@@ -326,6 +326,13 @@ describe('GET /readings/:id/email', () => {
     expect(response.json()).toMatchObject({ body: 'Date: 31 October 2026\nReading: 000045', attachment: null });
   });
 
+  it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
+    const response = await getReadingEmail('abc');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
   it('returns 404 NOT_FOUND when the reading does not exist', async () => {
     const response = await getReadingEmail(999_999);
 

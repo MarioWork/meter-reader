@@ -25,7 +25,7 @@ function EmailAttachment({ attachment, isAttachingPhoto, isDisabled, onAttaching
           checked={isAttachingPhoto}
           disabled={isDisabled}
           onChange={(event) => onAttachingPhotoChange(event.target.checked)}
-          className="size-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         />
         {ATTACH_PHOTO_LABEL}
       </label>
