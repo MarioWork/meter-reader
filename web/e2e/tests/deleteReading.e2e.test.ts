@@ -33,7 +33,7 @@ test('focus stays inside the open dialog, and Escape cancels and keeps the readi
   // Round the dialog's two buttons a few times: focus never reaches the page behind it.
   for (let press = 0; press < TAB_PRESSES; press++) {
     await homePage.moveFocusWithTab();
-    expect(await homePage.isFocusBehindDialog()).toBe(false);
+    await expect.poll(() => homePage.isFocusBehindDialog()).toBe(false);
   }
 
   await homePage.cancelWithEscape();

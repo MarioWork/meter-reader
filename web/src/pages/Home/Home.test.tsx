@@ -4,7 +4,7 @@ import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
 
-const NEWEST_READING = 'Delete the reading of 1 Oct 2026';
+const NEWEST_DELETE_BUTTON = 'Delete the reading of 1 Oct 2026';
 const DELETE_DIALOG = 'Delete this reading?';
 
 async function renderHome() {
@@ -73,7 +73,7 @@ describe('deleting a reading', () => {
   it('asks for confirmation before anything is deleted', async () => {
     await renderHome();
 
-    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
 
     const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
     expect(dialog).toHaveTextContent('00529 from 1 Oct 2026');
@@ -83,7 +83,7 @@ describe('deleting a reading', () => {
   it('removes the reading from the history when the user confirms', async () => {
     await renderHome();
 
-    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
     const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
@@ -96,7 +96,7 @@ describe('deleting a reading', () => {
   it('keeps the reading when the user cancels', async () => {
     await renderHome();
 
-    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('deleting a reading', () => {
     );
     await renderHome();
 
-    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
     const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
@@ -126,13 +126,13 @@ describe('deleting a reading', () => {
       ),
     );
     await renderHome();
-    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
     const dialog = screen.getByRole('dialog', { name: DELETE_DIALOG });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
     await within(dialog).findByRole('alert');
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    await userEvent.click(screen.getByRole('button', { name: NEWEST_READING }));
+    await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
 
     expect(within(screen.getByRole('dialog')).queryByRole('alert')).not.toBeInTheDocument();
   });

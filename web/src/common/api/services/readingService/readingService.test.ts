@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw/http';
-import { ReadingStatusUtil } from '@app-types/utility';
+import { HttpVerbsUtil, ReadingStatusUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import readingService from './readingService';
 
@@ -81,7 +81,7 @@ describe('deleteReading', () => {
 
     const response = await readingService.deleteReading(14);
 
-    expect(receivedMethod).toBe('DELETE');
+    expect(receivedMethod).toBe(HttpVerbsUtil.DELETE);
     expect(receivedPath).toBe('/api/readings/14');
     expect(response.success).toBe(true);
   });
