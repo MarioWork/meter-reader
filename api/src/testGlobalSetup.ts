@@ -2,6 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import {
   TEMPLATE_DATABASE,
+  TEST_ENV_FILE,
   assertServerReachable,
   createDatabase,
   dropTestDatabases,
@@ -11,7 +12,7 @@ import {
 const PRISMA_BIN = 'node_modules/.bin/prisma';
 
 export async function setup(): Promise<void> {
-  process.loadEnvFile('.env.test');
+  process.loadEnvFile(TEST_ENV_FILE);
 
   const { env } = await import('./config/env.ts');
 

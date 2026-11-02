@@ -2,6 +2,8 @@
 import pg from 'pg';
 import { AppError } from './lib/errors.ts';
 
+// The test environment, loaded by testGlobalSetup.ts (once per run) and setupTests.ts (once per test file).
+export const TEST_ENV_FILE = '.env.test';
 export const TEST_DATABASE_PREFIX = 'meter_test_';
 export const TEMPLATE_DATABASE = `${TEST_DATABASE_PREFIX}template`;
 // Every server has this one; CREATE and DROP DATABASE are run from it.
@@ -40,16 +42,18 @@ async function onMaintenance<Result>(serverUrl: string, run: (client: pg.Client)
 
 const CONNECTION_REFUSED = 'ECONNREFUSED';
 
-type ErrorWithCode = { code?: unknown };
+function isConnectionRefused(error: unknown): boolean {
+  const hasCode = typeof error === 'object' && error !== null && 'code' in error;
+
+  return hasCode && error.code === CONNECTION_REFUSED;
+}
 
 // A refused connection almost always means the local Postgres is not started: say how to start it.
 export async function assertServerReachable(serverUrl: string): Promise<void> {
   try {
     await onMaintenance(serverUrl, (client) => client.query('select 1'));
   } catch (error: unknown) {
-    const isRefused = (error as ErrorWithCode | undefined)?.code === CONNECTION_REFUSED;
-
-    if (!isRefused) throw error;
+    if (!isConnectionRefused(error)) throw error;
 
     throw new AppError('Postgres is not running on localhost:5432. Start it first (README, "Local development")', {
       code: 'POSTGRES_NOT_RUNNING',
