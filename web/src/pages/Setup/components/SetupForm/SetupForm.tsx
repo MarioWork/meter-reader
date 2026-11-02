@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import { Button } from '@components/ui/button';
-import { Alert, AlertTitle } from '@components/ui/alert';
+import ErrorAlert from '@components/ErrorAlert';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@components/ui/field';
 import { Input } from '@components/ui/input';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
@@ -70,11 +70,7 @@ function SetupForm({ code }: Props) {
           <label htmlFor={PASSKEY_CHECKBOX_ID}>Also add a passkey on this device</label>
         </div>
       </FieldGroup>
-      {failureMessage && (
-        <Alert variant="destructive">
-          <AlertTitle>{failureMessage}</AlertTitle>
-        </Alert>
-      )}
+      {failureMessage && <ErrorAlert message={failureMessage} />}
       <Button type="submit" disabled={isSaving}>
         Finish setup
       </Button>

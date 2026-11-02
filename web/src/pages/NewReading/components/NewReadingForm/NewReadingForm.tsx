@@ -4,7 +4,7 @@ import { useFetcher } from 'react-router';
 import type { ReadingApiModel } from '@app-types/models';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import { Button } from '@components/ui/button';
-import { Alert, AlertTitle } from '@components/ui/alert';
+import ErrorAlert from '@components/ErrorAlert';
 import { FieldGroup } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
@@ -87,11 +87,7 @@ function NewReadingForm({ lastReading }: Props) {
           onRemove={removePhoto}
         />
       </FieldGroup>
-      {failureMessage && (
-        <Alert variant="destructive">
-          <AlertTitle>{failureMessage}</AlertTitle>
-        </Alert>
-      )}
+      {failureMessage && <ErrorAlert message={failureMessage} />}
       <Button type="submit" disabled={!canSave}>
         Save reading
       </Button>

@@ -1,5 +1,5 @@
 import type { ReadingApiModel } from '@app-types/models';
-import { Alert, AlertTitle } from '@components/ui/alert';
+import ErrorAlert from '@components/ErrorAlert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,11 +46,7 @@ function DeleteReadingDialog({
           The reading <span className="font-mono tabular-nums">{reading.digits}</span> from {readingDate} will be
           removed from the history{hasPhoto && ', with its photo'}. This cannot be undone.
         </AlertDialogDescription>
-        {failureMessage && (
-          <Alert variant="destructive">
-            <AlertTitle>{failureMessage}</AlertTitle>
-          </Alert>
-        )}
+        {failureMessage && <ErrorAlert message={failureMessage} />}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction variant="destructive" disabled={isDeleting} onClick={onDelete}>
