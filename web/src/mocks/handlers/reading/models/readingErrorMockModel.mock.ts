@@ -1,6 +1,6 @@
 import type { ReadingId } from '@app-types/models';
 
-type ReadingErrorMockModel = { code: string; message: string };
+export type ReadingErrorMockModel = { code: string; message: string };
 
 // The API's error envelope when the reading's email went out already.
 export const createReadingAlreadySentMockModel = (): ReadingErrorMockModel => ({
@@ -12,4 +12,10 @@ export const createReadingAlreadySentMockModel = (): ReadingErrorMockModel => ({
 export const createReadingNotFoundMockModel = (id: ReadingId): ReadingErrorMockModel => ({
   code: 'NOT_FOUND',
   message: `Reading ${id} not found`,
+});
+
+// The API's error envelope when a request's query fails its checks (a day range that ends before it starts).
+export const createReadingValidationErrorMockModel = (): ReadingErrorMockModel => ({
+  code: 'VALIDATION_ERROR',
+  message: 'Request validation failed',
 });

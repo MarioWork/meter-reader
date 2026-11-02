@@ -3,6 +3,21 @@ import { HttpVerbsUtil, ReadingStatusUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import readingService from './readingService';
 
+const EMPTY_PAGE = { data: [], currentPage: 1, totalResultNumber: 0 };
+
+// Answers the list with an empty page and hands back the query it received.
+function captureListQuery(): { query: URLSearchParams } {
+  const received = { query: new URLSearchParams() };
+  server.use(
+    http.get(`${API}/readings`, ({ request }) => {
+      received.query = new URL(request.url).searchParams;
+      return HttpResponse.json(EMPTY_PAGE);
+    }),
+  );
+
+  return received;
+}
+
 const API = TEST_BASE_API_URL;
 
 describe('getReadings', () => {
@@ -19,6 +34,31 @@ describe('getReadings', () => {
 
     expect(receivedQuery.get('page')).toBe('2');
     expect(receivedQuery.get('size')).toBe('1');
+  });
+
+  it('sends the day range and the statuses under their wire names, the statuses comma-separated', async () => {
+    const received = captureListQuery();
+
+    await readingService.getReadings({
+      pagination: { page: '1', size: '10' },
+      dateFrom: '2026-09-01',
+      dateTo: '2026-09-30',
+      statuses: [ReadingStatusUtil.NOT_SENT, ReadingStatusUtil.FAILED],
+    });
+
+    expect(received.query.get('from')).toBe('2026-09-01');
+    expect(received.query.get('to')).toBe('2026-09-30');
+    expect(received.query.get('status')).toBe('notSent,failed');
+  });
+
+  it('leaves out the filters that are not set, and the statuses when none is asked for', async () => {
+    const received = captureListQuery();
+
+    await readingService.getReadings({ pagination: { page: '1', size: '10' }, statuses: [] });
+
+    expect(received.query.has('from')).toBe(false);
+    expect(received.query.has('to')).toBe(false);
+    expect(received.query.has('status')).toBe(false);
   });
 
   it('returns the page the API sent', async () => {

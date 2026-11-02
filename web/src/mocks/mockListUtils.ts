@@ -2,6 +2,8 @@ import { ApiUrlParamsUtil, SortingDirectionUtil, type ResponseWithPaginationUtil
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 10;
+// A param that carries several values separates them with a comma, as `sorting_fields` does.
+const CHOICE_SEPARATOR = ',';
 
 type FieldReader<T> = (item: T) => string | number | boolean | Date | null | undefined;
 
@@ -10,6 +12,8 @@ type MockRange<T> = { from: string; to: string; read: (item: T) => string };
 type MockListOptions<T> = {
   /** Keyed by the service's `*ApiSearchFields` values, the names the request carries. */
   filters?: Record<string, FieldReader<T>>;
+  /** Keyed like `filters`, for a param that carries several values comma-separated; a row matches any one, whole. */
+  choices?: Record<string, FieldReader<T>>;
   ranges?: MockRange<T>[];
   /** Keyed by the service's `*ApiSortingFields` values. */
   sorts?: Record<string, FieldReader<T>>;
@@ -32,7 +36,7 @@ export const anyOf = <T, V>(values: T[], read: (value: T) => V) => values.map(re
 export function paginateMockList<T>(
   request: Request,
   items: T[],
-  { filters = {}, ranges = [], sorts = {} }: MockListOptions<T> = {},
+  { filters = {}, choices = {}, ranges = [], sorts = {} }: MockListOptions<T> = {},
 ): ResponseWithPaginationUtil<T> {
   const params = new URL(request.url).searchParams;
 
@@ -42,7 +46,17 @@ export function paginateMockList<T>(
     return wanted ? rows.filter((row) => matches(read(row), wanted)) : rows;
   }, items);
 
-  // Compared as text: the endpoints carry both ends as ISO timestamps, which sort that way.
+  const chosen = Object.entries(choices).reduce((rows, [field, read]) => {
+    const wanted = params.get(field);
+
+    if (!wanted) return rows;
+
+    const wantedValues = wanted.split(CHOICE_SEPARATOR);
+
+    return rows.filter((row) => wantedValues.includes(String(read(row))));
+  }, matched);
+
+  // Compared as text: the endpoints carry both ends as ISO timestamps or days, which sort that way.
   const narrowed = ranges.reduce((rows, { from, to, read }) => {
     const after = params.get(from);
     const before = params.get(to);
@@ -53,7 +67,7 @@ export function paginateMockList<T>(
 
       return isAfterStart && isBeforeEnd;
     });
-  }, matched);
+  }, chosen);
 
   // Comma-separated: a second field breaks ties on the first.
   const sortReaders = (params.get(ApiUrlParamsUtil.sorting_fields) ?? '')

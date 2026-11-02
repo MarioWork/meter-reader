@@ -89,6 +89,26 @@ describe('paginateMockList', () => {
     expect(response.data[0]).toMatchObject({ name: 'Alpha', country: 'PT' });
   });
 
+  it('keeps the rows whose value is any one of a comma-separated choice', () => {
+    const items = [row({ country: 'PT' }), row({ country: 'ES' }), row({ country: 'FR' })];
+
+    const response = paginateMockList(requestWith({ country: 'PT,FR' }), items, {
+      choices: { country: (item) => item.country },
+    });
+
+    expect(response.data.map((item) => item.country)).toEqual(['PT', 'FR']);
+  });
+
+  it('matches a choice on the whole value, so PT does not answer for PTX', () => {
+    const items = [row({ country: 'PT' }), row({ country: 'PTX' })];
+
+    const response = paginateMockList(requestWith({ country: 'PT' }), items, {
+      choices: { country: (item) => item.country },
+    });
+
+    expect(response.data.map((item) => item.country)).toEqual(['PT']);
+  });
+
   it('keeps only the rows inside a range, on both ends', () => {
     const items = [
       row({ name: 'Early', issuedAt: '2026-01-01T00:00:00.000Z' }),

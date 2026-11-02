@@ -6,23 +6,45 @@ import {
   HttpVerbsUtil,
   type JSONResponseUtil,
   type PaginationUtil,
+  type ReadingStatusUtil,
   type ResponseWithPaginationUtil,
 } from '@app-types/utility';
 import type { CreateReading, SendReading } from './readingService.type';
 
 const BASE_READINGS_URL = '/readings';
+// The API takes several statuses in one param, the way it takes several sorting fields.
+const STATUS_SEPARATOR = ',';
 
-// The history is always newest first, so the list takes a page and nothing else.
+// The history is always newest first, so the list takes a page and its filters, no sort. Not the `SearchFields`
+// mapped type: the days are a range and the statuses a list, not one text value per field. The caller drops empty days.
 type GetReadingsFields = {
   pagination: PaginationUtil;
+  dateFrom?: string;
+  dateTo?: string;
+  statuses?: ReadingStatusUtil[];
 };
 
+// Undefined when no status is asked for, so the param stays off the wire.
+function toStatusParam(statuses: ReadingStatusUtil[] = []): string | undefined {
+  if (statuses.length === 0) return undefined;
+
+  return statuses.join(STATUS_SEPARATOR);
+}
+
 export default {
-  getReadings: async ({ pagination }: GetReadingsFields): Promise<ResponseWithPaginationUtil<ReadingApiModel>> => {
+  getReadings: async ({
+    pagination,
+    dateFrom,
+    dateTo,
+    statuses,
+  }: GetReadingsFields): Promise<ResponseWithPaginationUtil<ReadingApiModel>> => {
     const response = await axios.get<ResponseWithPaginationUtil<ReadingApiModel>>(BASE_READINGS_URL, {
       params: {
         [ApiUrlParamsUtil.page]: pagination.page,
         [ApiUrlParamsUtil.pageSize]: pagination.size,
+        [ApiUrlParamsUtil.dateFrom]: dateFrom,
+        [ApiUrlParamsUtil.dateTo]: dateTo,
+        [ReadingApiSearchFields.STATUS]: toStatusParam(statuses),
       },
     });
 
@@ -46,3 +68,8 @@ export default {
   sendReading: async (id: ReadingId, fields: SendReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
     axiosActions<ReadingApiModel>({ url: `${BASE_READINGS_URL}/${id}/send`, method: HttpVerbsUtil.POST, data: fields }),
 };
+
+export const ReadingApiSearchFields = {
+  STATUS: 'status',
+} as const;
+export type ReadingApiSearchFields = (typeof ReadingApiSearchFields)[keyof typeof ReadingApiSearchFields];
