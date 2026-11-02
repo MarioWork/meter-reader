@@ -56,6 +56,8 @@ services:
       TRUST_PROXY_HOPS: 1
       # Where the app is opened: the setup link points here, and passkeys belong to this host name.
       APP_ORIGIN: *app-address
+      # The Microsoft Entra app the server sends mail through (README, "Connecting Hotmail"). Empty until registered.
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

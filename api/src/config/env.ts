@@ -29,6 +29,10 @@ const EnvSchema = z
     // Where the user opens the app: the setup link points here, and passkeys belong to its host name for good. Only the
     // origin counts (scheme, host, port). Must be https in production.
     APP_ORIGIN: z.url().default(DEFAULT_APP_ORIGIN),
+    // The Application (client) id of the app registered in Microsoft Entra for sending mail (README, "Connecting
+    // Hotmail"). Not a secret: the app is a public client. Empty until that one-time setup is done; the api still
+    // starts, and the web app shows that Hotmail is not connected.
+    MICROSOFT_CLIENT_ID: z.string().trim().default(''),
   })
   .refine((value) => value.NODE_ENV !== 'production' || new URL(value.APP_ORIGIN).protocol === HTTPS_PROTOCOL, {
     message: 'APP_ORIGIN must be https in production',

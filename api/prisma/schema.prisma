@@ -129,3 +129,19 @@ model Reading {
   @@index([date(sort: Desc), id(sort: Desc)], map: "readings_date_id_idx")
   @@map("readings")
 }
+
+// The Hotmail sign-in the server sends mail with (ADR 0001): send-only, renewed by the server itself. One row at most:
+// yarn mail:connect replaces it, and a refresh Microsoft refuses (revoked, expired) deletes it. The tokens are kept as
+// Microsoft gave them: the server must hand them back, so they cannot be hashed. Never logged, never sent to a browser.
+model MailConnection {
+  id                   Int      @id @default(autoincrement())
+  // Long-lived; traded for a new access token (and a new refresh token) whenever the access token runs out.
+  refreshToken         String   @map("refresh_token")
+  // Short-lived (about an hour): the bearer token for Graph's sendMail.
+  accessToken          String   @map("access_token")
+  accessTokenExpiresAt DateTime @map("access_token_expires_at") @db.Timestamptz(3)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("mail_connections")
+}

@@ -3,9 +3,13 @@ import { buildApp } from './app.ts';
 import { env } from './config/env.ts';
 import { logger } from './lib/logger.ts';
 import { addSetupCode, getSetupLink } from './modules/auth/setup/setup.service.ts';
+import { refreshMailToken } from './modules/mail/mail.service.ts';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 const LISTEN_HOST = '0.0.0.0';
+// The Hotmail token is renewed this often: well inside the access token's hour, and a revoked token shows on the web
+// app's banner within this long.
+const MAIL_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 process.on('unhandledRejection', (reason) => {
   logger.fatal({ err: reason }, 'unhandled rejection');
@@ -30,12 +34,19 @@ if (setupCode) {
 
 await app.listen({ port: env.PORT, host: LISTEN_HOST });
 
+// The server keeps the Hotmail token alive by itself, from start (ADR 0001). refreshMailToken never rejects: a
+// failure is logged and the next round tries again.
+void refreshMailToken();
+const mailRefreshTimer = setInterval(() => void refreshMailToken(), MAIL_REFRESH_INTERVAL_MS);
+
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   logger.info({ signal }, 'shutting down');
 
   // Stop taking requests, finish in-flight ones, close the database; force exit if that hangs.
   const forceExit = setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MS);
   forceExit.unref();
+
+  clearInterval(mailRefreshTimer);
 
   await app.close();
   process.exit(0);

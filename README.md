@@ -72,9 +72,49 @@ Open the printed link and set up the login again, as in **First sign-in**. Anyon
 
 ## Connecting Hotmail (`mail:connect`)
 
-> To do: filled in by a later ticket.
+The app sends readings from your own Hotmail through Microsoft Graph (see [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md)). It asks for one mail permission only, `Mail.Send` (plus `offline_access`, so the token can renew itself): it can send mail as you, but never read, list or delete it. The provider's address, the subject and the mail settings live in the server `.env`.
 
-The app sends mail through Microsoft Graph with send-only permission (`Mail.Send`). See [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md). The provider's address, the subject and the mail settings live in the server `.env`.
+Until Hotmail is connected, the app shows a banner: "Hotmail not connected". Connecting takes two one-time steps.
+
+### 1. Register the app with Microsoft (once)
+
+1. Open the [Microsoft Entra admin center](https://entra.microsoft.com) and sign in with a Microsoft account. If it says you need a directory (tenant), create a free Azure account first: it makes one.
+2. Go to **Applications → App registrations → New registration**.
+   - Name: `Meter Reader`.
+   - Supported account types: **Personal Microsoft accounts only**.
+   - Redirect URI: leave empty.
+   - Press **Register**.
+3. On the app's **Overview**, copy the **Application (client) ID**.
+4. **Authentication** → **Advanced settings** → **Allow public client flows**: **Yes**. Save. (This turns on the device code sign-in. There is no client secret.)
+5. **API permissions**: **Add a permission → Microsoft Graph → Delegated permissions**, tick `Mail.Send` and `offline_access`, and add them. Remove `User.Read` if it is listed. No admin consent is needed: you approve the permission yourself when you sign in.
+6. Put the client id in the `.env` next to `compose.yaml`, then restart the api:
+
+   ```bash
+   echo "MICROSOFT_CLIENT_ID=<the Application (client) ID>" >> .env
+   docker compose up -d
+   ```
+
+   The client id is not a secret. In local development it goes in `api/.env` instead.
+
+### 2. Sign in to Hotmail (once, and again if the token is ever revoked)
+
+```bash
+docker compose exec api node dist/cli/connectMail.js
+```
+
+In local development: `cd api && yarn mail:connect`.
+
+It prints a code and an address (`https://www.microsoft.com/link` or `microsoft.com/devicelogin`). On your phone or laptop, open the address, type the code, sign in with **the Hotmail account your water provider knows**, and accept "Send mail as you". The command then says "Hotmail connected" and saves the token in the database. The code works for 15 minutes; if it runs out, run the command again.
+
+After that the server renews the token by itself, every 30 minutes, and saves each new one. Nothing needs doing between readings.
+
+### When the banner comes back
+
+The banner shows again when the server no longer holds a working token: you revoked it, changed the account password, or Microsoft expired it. Run step 2 again. Running it while connected is harmless: the new sign-in replaces the old one (this is also how you switch accounts).
+
+To take the app's access away, open [account.microsoft.com/privacy/app-access](https://account.microsoft.com/privacy/app-access), find **Meter Reader** and remove it. Within 30 minutes the server notices, drops the token and the banner shows.
+
+The token is stored in the database as Microsoft gave it (the server has to send it back, so it cannot be hashed) and is never logged. Someone with a shell on the server could use it to send mail as you, but never to read your mail (ADR 0002, "What it does not protect against").
 
 ## Where data lives
 
@@ -151,17 +191,18 @@ yarn dev | yarn pino-pretty   # runs src/server.ts with --watch, logs made reada
 
 The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answer `{"status":"ok"}`; the OpenAPI docs are at `http://localhost:3000/docs`. Every other route needs a session: on a fresh database the api prints a setup link to `http://localhost:5173/setup?code=…` (the web dev server, `APP_ORIGIN` in `api/.env`). Open it with the web app running against the real api (below).
 
-| Script             | Does                                                           |
-| ------------------ | -------------------------------------------------------------- |
-| `yarn dev`         | Runs the api in watch mode (JSON logs; pipe to `pino-pretty`)  |
-| `yarn build`       | Compiles `src/` to `dist/`                                     |
-| `yarn typecheck`   | Type-checks without emitting                                   |
-| `yarn lint`        | Runs ESLint and the Prettier check                             |
-| `yarn test`        | Runs the tests once                                            |
-| `yarn db:deploy`   | Applies pending migrations                                     |
-| `yarn db:migrate`  | Makes a new migration from `prisma/schema.prisma`              |
-| `yarn db:generate` | Regenerates the Prisma client (`yarn install` already does it) |
-| `yarn auth:reset`  | Removes the login and prints a new setup link (data is kept)   |
+| Script              | Does                                                           |
+| ------------------- | -------------------------------------------------------------- |
+| `yarn dev`          | Runs the api in watch mode (JSON logs; pipe to `pino-pretty`)  |
+| `yarn build`        | Compiles `src/` to `dist/`                                     |
+| `yarn typecheck`    | Type-checks without emitting                                   |
+| `yarn lint`         | Runs ESLint and the Prettier check                             |
+| `yarn test`         | Runs the tests once                                            |
+| `yarn db:deploy`    | Applies pending migrations                                     |
+| `yarn db:migrate`   | Makes a new migration from `prisma/schema.prisma`              |
+| `yarn db:generate`  | Regenerates the Prisma client (`yarn install` already does it) |
+| `yarn auth:reset`   | Removes the login and prints a new setup link (data is kept)   |
+| `yarn mail:connect` | Signs the server in to Hotmail (README, Connecting Hotmail)    |
 
 Postgres keeps running until you stop it: `yarn postgres:stop` / `yarn postgres:start` in `api/` (those two scripts are Homebrew only), or your system's service manager.
 
@@ -171,13 +212,13 @@ The tests need the same local Postgres and the `meter` role: each run makes a mi
 
 Each `.env` belongs to the folder that reads it:
 
-| File                   | Read by               | Holds                                                     |
-| ---------------------- | --------------------- | --------------------------------------------------------- |
-| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`               |
-| `web/.env.development` | `yarn dev` in `web/`  | The `VITE_*` dev values (committed, nothing secret)       |
-| `web/.env.example`     | nobody                | Every `VITE_*` key; copy to `.env.development.local`      |
-| `api/.env`             | `yarn dev` in `api/`  | The api's settings (copy `api/.env.example`, git-ignored) |
-| `api/.env.test`        | `yarn test` in `api/` | The test settings (committed)                             |
+| File                   | Read by               | Holds                                                              |
+| ---------------------- | --------------------- | ------------------------------------------------------------------ |
+| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`, `MICROSOFT_CLIENT_ID` |
+| `web/.env.development` | `yarn dev` in `web/`  | The `VITE_*` dev values (committed, nothing secret)                |
+| `web/.env.example`     | nobody                | Every `VITE_*` key; copy to `.env.development.local`               |
+| `api/.env`             | `yarn dev` in `api/`  | The api's settings (copy `api/.env.example`, git-ignored)          |
+| `api/.env.test`        | `yarn test` in `api/` | The test settings (committed)                                      |
 
 `VITE_*` values are built into the bundle at build time, so they are never secrets:
 
