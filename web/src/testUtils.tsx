@@ -75,11 +75,12 @@ export function queryAllNotifications() {
   return notificationsRegion().queryAllByRole('dialog');
 }
 
-// Real route objects, so a page's loader and action run as they do in the app.
+// Real route objects, so a page's loader and action run as they do in the app. The router comes back too, for a test
+// that checks the url a page navigated to.
 export function renderRoutes(routes: RouteObject[], { initialEntries = ['/'], ...options }: RenderRoutesOptions = {}) {
   const router = createMemoryRouter(withFreshLazyObjects(routes), { initialEntries });
 
-  return renderWithProviders(<RouterProvider router={router} />, options);
+  return { ...renderWithProviders(<RouterProvider router={router} />, options), router };
 }
 
 export { act, renderWithProviders as render, renderHookWithProviders as renderHook, screen, waitFor, within };
