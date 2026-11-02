@@ -7,12 +7,14 @@ import { CreateReadingSchema } from '@services/readingService/readingService.typ
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { JSONResponseUtil } from '@app-types/utility';
 import { parseFormData } from '@utils/formDataUtils';
+import { toastActionResult } from '@utils/toastUtils';
 import type { NewReadingFormData } from './newReadingUtils';
 
-// Saved, the app goes back to Home, where the new reading tops the history. A reading lower than the last one is
-// saved too: the form only warns about it. The photo goes up first and the reading is saved with its id, so a failed
-// upload saves nothing and the user can simply try again.
-export const createReadingAction = async ({ request }: ActionFunctionArgs): Promise<JSONResponseUtil | Response> => {
+const SAVE_TOAST_MESSAGES = { success: 'Reading saved', failure: 'Reading not saved' };
+
+// The photo goes up first and the reading is saved with its id, so a failed upload saves nothing and the user can
+// simply try again.
+async function createReading({ request }: ActionFunctionArgs): Promise<JSONResponseUtil | Response> {
   const { reading, photo } = parseFormData<NewReadingFormData>(await request.formData());
 
   try {
@@ -32,4 +34,9 @@ export const createReadingAction = async ({ request }: ActionFunctionArgs): Prom
 
     throw error;
   }
-};
+}
+
+// Saved, the app goes back to Home, where the new reading tops the history. A reading lower than the last one is
+// saved too: the form only warns about it. Either way a toast says how it went.
+export const createReadingAction = async (args: ActionFunctionArgs): Promise<JSONResponseUtil | Response> =>
+  toastActionResult(await createReading(args), SAVE_TOAST_MESSAGES);

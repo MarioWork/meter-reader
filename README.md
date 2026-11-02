@@ -305,6 +305,7 @@ A yup rule used by both the form and the service lives once in `common/utils/` (
 - `public/theme-init.js` applies the stored choice before the first paint. It mirrors `src/common/utils/themeUtils.ts`: change both together.
 - Add a shadcn component with `yarn shadcn add <name>` (from `web/`). It lands in `src/common/components/ui/`. Join classes with `cn()` from `@utils/classNameUtils`.
 - The CLI writes `import { cn } from "cn"` and adds the `cn` package. Change the import to `@utils/classNameUtils` and `yarn remove cn`. Leave the rest of the file as the CLI wrote it, so a later `yarn shadcn add <name> --diff` stays readable; ESLint relaxes a few style rules for `ui/` for the same reason.
+- Toasts come from shadcn's Base UI `toast` (`@components/ui/toast`); the `Toaster` sits in `AppProviders`. A route action says how its write went by passing its answer through `toastActionResult()` (`@utils/toastUtils`). Toasts sit in a polite live region, so screen readers announce them; a failure still shows next to its form too.
 
 ## Adding a feature
 

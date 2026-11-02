@@ -44,6 +44,11 @@ export class HomePage {
     return this.sendDialog.getByRole('checkbox', { name: 'Attach photo' });
   }
 
+  // A toast, named by its title, inside the polite live region screen readers announce.
+  notification(title: string) {
+    return this.page.getByRole('region', { name: 'Notifications' }).getByRole('dialog', { name: title });
+  }
+
   sendLinkFor(readingDate: string) {
     return this.page.getByRole('link', { name: `Send the reading of ${readingDate}` });
   }

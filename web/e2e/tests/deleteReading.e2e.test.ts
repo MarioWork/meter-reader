@@ -18,6 +18,7 @@ test('a reading is deleted from the history with the keyboard alone', async ({ p
   await homePage.pressFocusedButton();
 
   await expect(homePage.deleteDialog).toBeHidden();
+  await expect(homePage.notification('Reading deleted')).toBeVisible();
   await expect(homePage.historyRows.nth(1)).toContainText('1 Sept 2026');
   await expect(homePage.historyTable).not.toContainText('00529');
   await expect(homePage.historyTable).toBeFocused();

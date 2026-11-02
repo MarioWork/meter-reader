@@ -40,6 +40,11 @@ function readingField() {
   return screen.getByRole('textbox', { name: 'Reading' });
 }
 
+// Toasts: each one is named by its title inside the polite live region.
+function notification(title: string) {
+  return within(screen.getByRole('region', { name: 'Notifications' })).findByRole('dialog', { name: title });
+}
+
 async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Save reading' }));
 }
@@ -71,6 +76,7 @@ it('saves the reading with its leading zeros and the chosen date, then shows it 
   const newest = within(screen.getByRole('table', { name: 'History' })).getAllByRole('row')[1];
   expect(newest).toHaveTextContent('31 Oct 2026');
   expect(newest).toHaveTextContent(HIGHER_THAN_LAST);
+  expect(await notification('Reading saved')).toBeVisible();
 });
 
 it('warns when the reading is lower than the last one', async () => {
@@ -138,6 +144,7 @@ it("shows the API's message and keeps the input when the save fails", async () =
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
   expect(readingField()).toHaveValue(HIGHER_THAN_LAST);
+  expect(await notification('Reading not saved')).toBeVisible();
 });
 
 it('marks the date and sends nothing when the day has not happened yet', async () => {
