@@ -38,13 +38,37 @@ Data: the Postgres files live in `./data/postgres` (later, photos go in `./data/
 
 ## First sign-in
 
-> To do: filled in by a later ticket.
+The app has one login (see [ADR 0002](./docs/adr/0002-one-user-login.md)). Every page except the login and setup pages, and every api route except `/health` and `/ready`, needs it.
 
-On first start the server prints a one-time setup link. Open it to set a password (15+ characters), a passkey, or both. See [ADR 0002](./docs/adr/0002-one-user-login.md).
+1. Start the app (`docker compose up -d --build`). While nobody has set it up, every api start prints a one-time setup link in the log:
+
+   ```bash
+   docker compose logs api | grep "/setup?code="
+   ```
+
+   It looks like `https://meter.home.arpa:8443/setup?code=…`. Each restart prints a new one and the old one stops working.
+
+2. Open the link on your phone or laptop. Choose how you sign in:
+   - a **password** of at least 15 characters (a few words in a row works well; very common passwords are refused),
+   - a **passkey** on this device (Face ID, Touch ID or a passkey manager), or
+   - **both**.
+3. Press **Finish setup**. You are signed in and the setup link is dead.
+
+After that, the login page offers the password and the passkey. Five wrong passwords in a minute from one device get "too many tries"; wait a minute and try again. There is no lockout.
+
+A passkey belongs to the address it was made on (`meter.home.arpa`). Open the app by that name, never by IP address, or the passkey will not work.
 
 ## Resetting the login (`auth:reset`)
 
-> To do: filled in by a later ticket.
+Forgot the password and lost the passkey? Reset the login on the server. It removes the password, every passkey and every session, then prints a new setup link. Readings, photos and mail settings are kept.
+
+```bash
+docker compose exec api node dist/cli/resetAuth.js
+```
+
+In local development: `cd api && yarn auth:reset`.
+
+Open the printed link and set up the login again, as in **First sign-in**. Anyone who can run this already has a shell on the server, so it needs no password.
 
 ## Connecting Hotmail (`mail:connect`)
 
@@ -125,7 +149,7 @@ yarn db:deploy                # applies pending migrations; run again after pull
 yarn dev | yarn pino-pretty   # runs src/server.ts with --watch, logs made readable
 ```
 
-The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answer `{"status":"ok"}`; the OpenAPI docs are at `http://localhost:3000/docs`.
+The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answer `{"status":"ok"}`; the OpenAPI docs are at `http://localhost:3000/docs`. Every other route needs a session: on a fresh database the api prints a setup link to `http://localhost:5173/setup?code=…` (the web dev server, `APP_ORIGIN` in `api/.env`). Open it with the web app running against the real api (below).
 
 | Script             | Does                                                           |
 | ------------------ | -------------------------------------------------------------- |
@@ -137,6 +161,7 @@ The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answe
 | `yarn db:deploy`   | Applies pending migrations                                     |
 | `yarn db:migrate`  | Makes a new migration from `prisma/schema.prisma`              |
 | `yarn db:generate` | Regenerates the Prisma client (`yarn install` already does it) |
+| `yarn auth:reset`  | Removes the login and prints a new setup link (data is kept)   |
 
 Postgres keeps running until you stop it: `yarn postgres:stop` / `yarn postgres:start` in `api/` (those two scripts are Homebrew only), or your system's service manager.
 

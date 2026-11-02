@@ -1,5 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router';
 import RouteError from '@pages/Error/RouteError';
+import { authMiddleware } from './authMiddleware';
+import { authRoutes } from './featureRoutes/authRoutes';
 import { itemRoutes } from './featureRoutes/itemRoutes';
 import { BASE_ROUTES_PATHS, defaultRedirectRoute } from './routesUtils';
 
@@ -13,16 +15,25 @@ const routes: RouteObject[] = [
         Loading…
       </p>
     ),
+    // Any 401 from a loader or an action, anywhere below, becomes a trip to the login page.
+    middleware: [authMiddleware],
     children: [
+      ...authRoutes,
       {
-        index: true,
-        element: <Navigate to={defaultRedirectRoute} />,
+        // Every app page needs a signed-in browser: this layout's loader sends anyone else to setup or login.
+        lazy: () => import('@application/layout/SignedInLayout/SignedInLayout.route'),
+        children: [
+          {
+            index: true,
+            element: <Navigate to={defaultRedirectRoute} />,
+          },
+          {
+            path: BASE_ROUTES_PATHS.HOME,
+            lazy: () => import('@pages/Home/Home.route'),
+          },
+          ...itemRoutes,
+        ],
       },
-      {
-        path: BASE_ROUTES_PATHS.HOME,
-        lazy: () => import('@pages/Home/Home.route'),
-      },
-      ...itemRoutes,
     ],
   },
 ];

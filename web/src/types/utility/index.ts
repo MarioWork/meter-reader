@@ -1,4 +1,5 @@
 export { ApiUrlParamsUtil } from './apiUrlParamsUtil.type';
+export { AuthStateUtil } from './authStateUtil.type';
 export { HttpVerbsUtil } from './httpVerbsUtil.type';
 export type { JSONResponseUtil } from './jsonResponseUtil.type';
 export type { LoaderDataUtil } from './loaderDataUtil.type';
