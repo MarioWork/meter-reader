@@ -8,7 +8,8 @@ on:
 env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
   # The committed Yarn release, relative to each package folder. Bump it here when packageManager changes.
-  YARN_RELEASE: .yarn/releases/yarn-4.18.1.cjs
+  # Not YARN_*: Yarn reads every YARN_* variable as a setting and fails on unknown ones.
+  COMMITTED_YARN: .yarn/releases/yarn-4.18.1.cjs
 
 jobs:
   web:
@@ -64,15 +65,15 @@ jobs:
           node-version-file: api/.node-version
 
       # The committed release runs through yarnPath, so no global Yarn or Corepack is needed (Node 26 has none).
-      - run: node "$YARN_RELEASE" install --immutable
+      - run: node "$COMMITTED_YARN" install --immutable
         env:
           # `prisma generate` (postinstall) reads prisma.config.ts, which needs some URL; nothing is contacted.
           DATABASE_URL: postgresql://meter:meter@localhost:5432/meter_test
 
-      - run: node "$YARN_RELEASE" lint
+      - run: node "$COMMITTED_YARN" lint
 
-      - run: node "$YARN_RELEASE" typecheck
+      - run: node "$COMMITTED_YARN" typecheck
 
-      - run: node "$YARN_RELEASE" test
+      - run: node "$COMMITTED_YARN" test
 
-      - run: node "$YARN_RELEASE" build
+      - run: node "$COMMITTED_YARN" build
