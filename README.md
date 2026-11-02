@@ -138,6 +138,8 @@ The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answe
 | `yarn db:migrate`  | Makes a new migration from `prisma/schema.prisma`              |
 | `yarn db:generate` | Regenerates the Prisma client (`yarn install` already does it) |
 
+Postgres keeps running until you stop it: `yarn postgres:stop` / `yarn postgres:start` in `api/` (those two scripts are Homebrew only), or your system's service manager.
+
 The tests need the same local Postgres and the `meter` role: each run makes a migrated `meter_test_template` database, gives every test file its own copy, and drops them all at the end (`api/.env.test`).
 
 ### Environment files
