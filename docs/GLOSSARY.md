@@ -24,6 +24,9 @@ _Avoid_: Supplier, utility, company
 Emailing one reading, with its photo, from the user's own mail account to the provider.
 _Avoid_: Submit, upload, report
 
+**Not sent**:
+A reading that is saved but whose email has not gone out yet. Every reading starts here.
+
 **Sent**:
 A reading whose email the mail service accepted.
 

@@ -1,4 +1,3 @@
-import type { ReadingStatus as ReadingStatusRow } from '../../generated/prisma/client.ts';
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { readingsRepository, type ReadingRow } from './readings.repository.ts';
@@ -15,7 +14,7 @@ const log = logger.child({ module: 'readings' });
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
 
-const STATUS_MAP: Record<ReadingStatusRow, ReadingStatus> = {
+const STATUS_MAP: Record<ReadingRow['status'], ReadingStatus> = {
   NOT_SENT: 'notSent',
   SENT: 'sent',
   FAILED: 'failed',

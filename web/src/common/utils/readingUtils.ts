@@ -1,4 +1,5 @@
 import { string } from 'yup';
+import { todayAsIsoDate } from './dateUtils';
 
 // The API's limits: digits only, at most 15 of them, leading zeros kept.
 export const READING_DIGITS_MAX_LENGTH = 15;
@@ -13,9 +14,11 @@ export const readingDigitsSchema = string()
   .matches(DIGITS_ONLY, 'Use digits only, as the meter shows them')
   .max(READING_DIGITS_MAX_LENGTH, `Keep it to ${READING_DIGITS_MAX_LENGTH} digits or fewer`);
 
+// Not after today, in the user's own time zone. YYYY-MM-DD strings sort as the days do.
 export const readingDateSchema = string()
   .required('Pick the day you read the meter')
-  .matches(ISO_DATE, 'Pick the day you read the meter');
+  .matches(ISO_DATE, 'Pick the day you read the meter')
+  .test('not-in-future', 'Pick today or a day before it', (date) => date <= todayAsIsoDate());
 
 function withoutLeadingZeros(digits: string): string {
   return digits.replace(/^0+/, '');
@@ -24,10 +27,10 @@ function withoutLeadingZeros(digits: string): string {
 // Compared as whole numbers of any length, never through Number (it loses digits past 15). A longer number, once its
 // leading zeros are gone, is the bigger one; same length compares digit by digit.
 export function isReadingLower(digits: string, otherDigits: string): boolean {
-  const value = withoutLeadingZeros(digits);
-  const otherValue = withoutLeadingZeros(otherDigits);
+  const number = withoutLeadingZeros(digits);
+  const otherNumber = withoutLeadingZeros(otherDigits);
 
-  if (value.length !== otherValue.length) return value.length < otherValue.length;
+  if (number.length !== otherNumber.length) return number.length < otherNumber.length;
 
-  return value < otherValue;
+  return number < otherNumber;
 }
