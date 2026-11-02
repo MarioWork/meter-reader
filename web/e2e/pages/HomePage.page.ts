@@ -33,15 +33,19 @@ export class HomePage {
   }
 
   get sendDialog() {
-    return this.page.getByRole('alertdialog', { name: SEND_DIALOG_NAME });
+    return this.page.getByRole('dialog', { name: SEND_DIALOG_NAME });
+  }
+
+  get sendDialogCloseButton() {
+    return this.sendDialog.getByRole('button', { name: 'Close' });
   }
 
   get sendDialogSendButton() {
     return this.sendDialog.getByRole('button', { name: 'Send' });
   }
 
-  get attachPhotoCheckbox() {
-    return this.sendDialog.getByRole('checkbox', { name: 'Attach photo' });
+  get attachPhotoSwitch() {
+    return this.sendDialog.getByRole('switch', { name: 'Attach photo' });
   }
 
   // A toast, named by its title, inside the polite live region screen readers announce.
@@ -75,6 +79,10 @@ export class HomePage {
     await this.sendDialogSendButton.click();
   }
 
+  async closePreview() {
+    await this.sendDialogCloseButton.click();
+  }
+
   // Keyboard only: focus the row's Send link and press Enter.
   async openSendPreviewWithKeyboard(readingDate: string) {
     await this.sendLinkFor(readingDate).focus();
@@ -91,6 +99,16 @@ export class HomePage {
 
   async cancelWithEscape() {
     await this.page.keyboard.press('Escape');
+  }
+
+  // True when the send preview sits on the bottom edge of the screen, as a bottom sheet does.
+  async isSendSheetAtBottom() {
+    const sheetBox = await this.sendDialog.boundingBox();
+    const viewport = this.page.viewportSize();
+
+    if (!sheetBox || !viewport) return false;
+
+    return Math.round(sheetBox.y + sheetBox.height) === viewport.height;
   }
 
   // True when keyboard focus sits on something in the page behind the open dialog.

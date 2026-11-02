@@ -211,7 +211,7 @@ describe('sending a reading', () => {
     await renderHome();
     await userEvent.click(within(historyRows()[0]).getByRole('link', { name: SEND_NEWEST }));
 
-    return screen.findByRole('alertdialog', { name: SEND_DIALOG });
+    return screen.findByRole('dialog', { name: SEND_DIALOG });
   }
 
   // Keeps what the app asked to send, then lets the mock API answer it as usual (a resolver that returns nothing
@@ -228,6 +228,19 @@ describe('sending a reading', () => {
     return received;
   }
 
+  // A screen at least as wide as Tailwind's `sm` breakpoint; every other media query (dark mode) still answers "no".
+  function showOnAWideScreen() {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          matches: query.includes('min-width'),
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+  }
+
   it('previews exactly what will be sent: the address, the subject, the body and the photo', async () => {
     const dialog = await openNewestPreview();
 
@@ -235,7 +248,7 @@ describe('sending a reading', () => {
     expect(within(dialog).getByText('test')).toBeVisible();
     // The body's line break reads as a space once the text is normalised.
     expect(within(dialog).getByText('Date: 1 October 2026 Reading: 00529')).toBeVisible();
-    expect(within(dialog).getByRole('checkbox', { name: 'Attach photo' })).toBeChecked();
+    expect(within(dialog).getByRole('switch', { name: 'Attach photo' })).toBeChecked();
     expect(within(dialog).getByRole('img', { name: 'meter-2026-10-01.jpg' })).toHaveAttribute(
       'src',
       `${TEST_BASE_API_URL}/photos/14`,
@@ -248,7 +261,7 @@ describe('sending a reading', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
 
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument());
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent(/Sent 2 Nov 2026/));
     expect(await findNotification('Reading sent')).toBeVisible();
     expect(received).toEqual([{ attachPhoto: true }]);
@@ -259,7 +272,7 @@ describe('sending a reading', () => {
     const received = recordSendRequests();
     const dialog = await openNewestPreview();
 
-    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Attach photo' }));
+    await userEvent.click(within(dialog).getByRole('switch', { name: 'Attach photo' }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
 
     await waitFor(() => expect(received).toEqual([{ attachPhoto: false }]));
@@ -272,8 +285,8 @@ describe('sending a reading', () => {
     // The mock history's 1 Jun 2026 reading has no photo and was never sent.
     await userEvent.click(screen.getByRole('link', { name: 'Send the reading of 1 Jun 2026' }));
 
-    const dialog = await screen.findByRole('alertdialog', { name: SEND_DIALOG });
-    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: SEND_DIALOG });
+    expect(within(dialog).queryByRole('switch')).not.toBeInTheDocument();
     expect(dialog).toHaveTextContent('No photo');
   });
 
@@ -305,7 +318,7 @@ describe('sending a reading', () => {
     expect(failed).toHaveTextContent('Failed');
     await userEvent.click(within(failed).getByRole('link', { name: 'Try again: send the reading of 1 Sept 2026' }));
 
-    expect(await screen.findByRole('alertdialog', { name: SEND_DIALOG })).toHaveTextContent('Reading: 00520');
+    expect(await screen.findByRole('dialog', { name: SEND_DIALOG })).toHaveTextContent('Reading: 00520');
   });
 
   it('disables Send and says why when Hotmail is not connected', async () => {
@@ -319,15 +332,38 @@ describe('sending a reading', () => {
     expect(dialog).toHaveTextContent('Hotmail is not connected');
   });
 
-  it('closes the preview and sends nothing when the user cancels', async () => {
+  it('closes the preview and sends nothing when the user presses Close', async () => {
     const received = recordSendRequests();
     const dialog = await openNewestPreview();
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
 
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument();
     expect(received).toEqual([]);
     expect(historyRows()[0]).toHaveTextContent('Not sent');
+  });
+
+  it('gives focus back to the Send link that opened the preview when it closes', async () => {
+    const dialog = await openNewestPreview();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    expect(screen.getByRole('link', { name: SEND_NEWEST })).toHaveFocus();
+  });
+
+  // jsdom answers "no" to every media query, so the tests above get the phone's bottom sheet. A wide screen gets a
+  // centred dialog instead, with the same content and the same Close.
+  it('previews and closes the same way on a wide screen', async () => {
+    showOnAWideScreen();
+    const received = recordSendRequests();
+    const dialog = await openNewestPreview();
+
+    expect(within(dialog).getByText('readings@water-provider.example')).toBeVisible();
+    expect(within(dialog).getByRole('switch', { name: 'Attach photo' })).toBeChecked();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument();
+    expect(received).toEqual([]);
   });
 
   it('shows a sent reading with the day it was sent and no way to send it again', async () => {
