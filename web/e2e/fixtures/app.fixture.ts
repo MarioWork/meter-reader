@@ -2,9 +2,10 @@ import { defineNetworkFixture, type NetworkFixture, type NetworkFixtureOptions }
 import { test as base, expect } from '@playwright/test';
 import { http, HttpResponse } from 'msw/http';
 import { getHandlers } from '../../src/mocks/handlers';
+import { BASE_URL } from '../playwright.config';
 
-// Matches VITE_BASE_API_URL in .env.development, which the dev server runs with.
-export const BASE_API_URL = 'http://localhost:8080/api';
+// The app calls the API on its own origin (VITE_BASE_API_URL='/api'), so the mocks listen on the dev server's URL.
+export const BASE_API_URL = `${BASE_URL}/api`;
 
 type Fixtures = {
   handlers: NetworkFixtureOptions['handlers'];
