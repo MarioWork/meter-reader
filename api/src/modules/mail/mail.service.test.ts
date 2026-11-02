@@ -27,6 +27,7 @@ import {
   graphErrorAnswer,
   throttledAnswer,
 } from './mail.microsoftGraph.mock.ts';
+import { PHOTO_MAX_BYTES } from '../photos/photos.schema.ts';
 import { mailRepository, type MailConnection } from './mail.repository.ts';
 import { connectMail, getMailStatus, refreshMailToken, sendMail } from './mail.service.ts';
 
@@ -72,9 +73,8 @@ const MAIL_SCOPES = 'https://graph.microsoft.com/Mail.Send offline_access';
 const STORED_REFRESH_TOKEN = 'stored-refresh-token';
 const STORED_ACCESS_TOKEN = 'stored-access-token';
 const PROVIDER_EMAIL = 'readings@water-provider.example';
-// The phone's cap on a photo: 4,000,000 bytes once base64 adds a third, so with the rest of the mail it is over the
-// 4,000,000-byte request limit.
-const LARGEST_PHOTO_BYTES = 3_000_000;
+// 4,000,000 bytes once base64 adds a third, so with the rest of the mail it is over the 4,000,000-byte request limit.
+const OVER_LIMIT_PHOTO_BYTES = 3_000_000;
 const READING_MAIL = { to: PROVIDER_EMAIL, subject: 'test', body: 'Date: 31 October 2026\nReading: 00123' };
 
 function storedConnection(accessTokenExpiresAt: Date): MailConnection {
@@ -464,10 +464,23 @@ describe('sendMail', () => {
     });
   });
 
+  it('sends the mail when the photo is as large as the photo size limit allows', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    const received = answerSendMail();
+    const contents = Buffer.alloc(PHOTO_MAX_BYTES);
+
+    await sendMail({
+      ...READING_MAIL,
+      attachment: { name: 'meter.jpg', contentType: 'image/jpeg', contents },
+    });
+
+    expect(received).toHaveLength(1);
+  });
+
   it('throws MAIL_TOO_LARGE, asking Microsoft nothing, when the encoded mail is over Graph limit', async () => {
     vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
     const received = answerSendMail();
-    const contents = Buffer.alloc(LARGEST_PHOTO_BYTES);
+    const contents = Buffer.alloc(OVER_LIMIT_PHOTO_BYTES);
 
     const sending = sendMail({
       ...READING_MAIL,

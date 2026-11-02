@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-// The phone shrinks every photo before it sends it (docs/adr/0001: Graph takes at most 3 MB of attachments).
-export const PHOTO_MAX_BYTES = 3_000_000;
+// The phone shrinks every photo before it sends it. 2.5 MB grows to about 3.3 MB once base64-encoded for the mail,
+// which leaves room under Graph's 4 MB request limit (docs/adr/0001).
+export const PHOTO_MAX_BYTES = 2_500_000;
 export const PHOTO_MAX_SIDE_PX = 2000;
 export const PHOTO_CONTENT_TYPE = 'image/jpeg';
 

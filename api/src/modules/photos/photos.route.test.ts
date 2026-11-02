@@ -66,7 +66,7 @@ describe('POST /photos', () => {
     expect(await prisma.photo.count()).toBe(0);
   });
 
-  it('returns 413 when the file is over 3 MB', async () => {
+  it('returns 413 when the file is over the photo size limit', async () => {
     const response = await addPhoto(fakeJpeg({ width: 2000, height: 1500, paddingBytes: PHOTO_MAX_BYTES }));
 
     expect(response.statusCode).toBe(413);

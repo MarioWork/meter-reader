@@ -1,7 +1,7 @@
 import { mixed, type InferType } from 'yup';
 import { PHOTO_CONTENT_TYPE, PHOTO_MAX_BYTES, PHOTO_MAX_MEGABYTES } from '@utils/photoUtils';
 
-// What the API keeps: a JPEG the phone already shrank, under 3 MB.
+// What the API keeps: a JPEG the phone already shrank, at most 2.5 MB.
 export const AddPhotoSchema = mixed<Blob>()
   .required()
   .test('is-jpeg', 'The photo must be a JPEG', (photo) => photo.type === PHOTO_CONTENT_TYPE)

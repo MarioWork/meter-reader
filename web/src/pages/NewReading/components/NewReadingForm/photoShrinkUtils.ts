@@ -52,7 +52,7 @@ async function drawShrunk(photo: Blob): Promise<HTMLCanvasElement> {
 }
 
 // On the phone, before upload: any photo (camera or file) becomes a JPEG at most 2000 px on its longest side and
-// under 3 MB. Throws PhotoShrinkError when the file is not a photo or will not fit.
+// under 2.5 MB. Throws PhotoShrinkError when the file is not a photo or will not fit.
 export async function shrinkPhoto(photo: Blob): Promise<File> {
   const canvas = await drawShrunk(photo);
 
