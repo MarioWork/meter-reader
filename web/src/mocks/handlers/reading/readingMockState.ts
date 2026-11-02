@@ -4,7 +4,8 @@ import { createReadingMockModelList, READING_MOCK_COUNT } from './models/reading
 
 let readings: ReadingApiModel[] = createReadingMockModelList(READING_MOCK_COUNT);
 
-function isNewer(reading: ReadingApiModel, other: ReadingApiModel): number {
+// A sort comparator: the newer reading comes first.
+function byNewestFirst(reading: ReadingApiModel, other: ReadingApiModel): number {
   if (reading.date !== other.date) return other.date.localeCompare(reading.date);
 
   return other.id - reading.id;
@@ -12,7 +13,7 @@ function isNewer(reading: ReadingApiModel, other: ReadingApiModel): number {
 
 // Newest first, as the API orders the history: by date, then the one saved last. A sorted copy, never in place.
 export function getMockReadings(): ReadingApiModel[] {
-  return [...readings].sort(isNewer);
+  return [...readings].sort(byNewestFirst);
 }
 
 export function addMockReading(reading: Omit<ReadingApiModel, 'id'>): ReadingApiModel {

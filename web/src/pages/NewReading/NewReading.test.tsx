@@ -109,3 +109,15 @@ it("shows the API's message and keeps the input when the save fails", async () =
   expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
   expect(readingField()).toHaveValue(HIGHER_THAN_LAST);
 });
+
+it('marks the date and sends nothing when the day has not happened yet', async () => {
+  await renderNewReading();
+
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  await userEvent.clear(screen.getByLabelText('Date'));
+  await userEvent.type(screen.getByLabelText('Date'), '2999-01-01');
+  await save();
+
+  expect(screen.getByLabelText('Date')).toHaveAccessibleDescription('Pick today or a day before it');
+  expect(screen.getByRole('heading', { name: 'New reading' })).toBeVisible();
+});

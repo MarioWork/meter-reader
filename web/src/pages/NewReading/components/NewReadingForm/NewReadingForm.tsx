@@ -5,14 +5,13 @@ import type { ReadingApiModel } from '@app-types/models';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import Button from '@components/Button';
 import FormAlert from '@components/FormAlert';
+import TextField from '@components/TextField';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { todayAsIsoDate } from '@utils/dateUtils';
 import { createFormData } from '@utils/formDataUtils';
 import { isReadingLower, readingDigitsSchema } from '@utils/readingUtils';
 import { SAVE_FAILED_MESSAGE } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
-import ReadingDateField from './components/ReadingDateField';
-import ReadingDigitsField from './components/ReadingDigitsField';
 import { getInitialValues, newReadingFormSchema, toPayload, type NewReadingFormValues } from './newReadingFormUtils';
 
 type Props = {
@@ -53,16 +52,22 @@ function NewReadingForm({ lastReading }: Props) {
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
-      <ReadingDigitsField
+      {/* Text, not a number input: a number input drops leading zeros. inputMode still opens the digit keypad. */}
+      <TextField
         id={DIGITS_FIELD_ID}
+        label="Reading"
+        inputMode="numeric"
+        autoComplete="off"
         error={formState.errors.digits?.message}
-        warningId={isLower ? WARNING_ID : undefined}
+        describedById={isLower ? WARNING_ID : undefined}
         {...register('digits')}
       />
       {isLower && lastReading && <LowerReadingWarning id={WARNING_ID} lastReading={lastReading} />}
-      <ReadingDateField
+      <TextField
         id={DATE_FIELD_ID}
-        latestDay={todayAsIsoDate()}
+        label="Date"
+        type="date"
+        latestDate={todayAsIsoDate()}
         error={formState.errors.date?.message}
         {...register('date')}
       />

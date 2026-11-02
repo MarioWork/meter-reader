@@ -1,5 +1,5 @@
 // The history: every reading, newest first.
-import type { Prisma, ReadingStatus } from '../../generated/prisma/client.ts';
+import type { Prisma } from '../../generated/prisma/client.ts';
 import type { SkipTake } from '../../lib/pagination.ts';
 import { prisma } from '../../lib/prisma.ts';
 
@@ -16,13 +16,7 @@ const NEWEST_FIRST = [{ date: 'desc' }, { id: 'desc' }] as const satisfies Prism
 
 export type NewReading = { digits: string; date: Date };
 
-export type ReadingRow = {
-  id: number;
-  digits: string;
-  date: Date;
-  status: ReadingStatus;
-  createdAt: Date;
-};
+export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELECT }>;
 
 export type ReadingPage = { rows: ReadingRow[]; total: number };
 
