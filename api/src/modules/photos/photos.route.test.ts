@@ -100,7 +100,7 @@ describe('POST /photos', () => {
 });
 
 describe('GET /photos/:id', () => {
-  it('answers the JPEG it kept, cacheable by this browser only', async () => {
+  it('answers the JPEG it kept, cacheable by this browser only, when the photo exists', async () => {
     const { id } = (await addPhoto(SHRUNK_PHOTO)).json<{ id: number }>();
 
     const response = await getPhoto(id);

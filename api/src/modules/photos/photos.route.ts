@@ -1,10 +1,10 @@
 import type { FastifyPluginAsyncZod } from '@fastify/type-provider-zod';
-import { z } from 'zod';
 import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
 import {
   AddPhotoBodySchema,
   PHOTO_CONTENT_TYPE,
   PHOTO_MAX_BYTES,
+  PhotoFileSchema,
   PhotoParamsSchema,
   PhotoResponseSchema,
 } from './photos.schema.ts';
@@ -13,8 +13,6 @@ import { addPhoto, getPhotoFile } from './photos.service.ts';
 const TAGS = ['photos'];
 // A photo never changes under its id: the browser may keep it as long as it likes, for this user only.
 const PHOTO_CACHE_CONTROL = 'private, max-age=31536000, immutable';
-
-const PhotoFileSchema = z.any().meta({ description: 'The photo, a JPEG' });
 
 // Both routes need a session: the auth plugin locks every route that is not marked public (ADR 0002).
 export const photosRoutes: FastifyPluginAsyncZod = async (app) => {

@@ -8,7 +8,7 @@ describe('readJpegSize', () => {
     expect(size).toEqual({ width: 2000, height: 1500 });
   });
 
-  it('reads the size of a progressive JPEG', () => {
+  it('reads the width and the height when the JPEG is progressive', () => {
     const progressive = fakeJpeg({ width: 800, height: 600 });
     const frameMarkerIndex = progressive.indexOf(Buffer.from([0xff, 0xc0]));
     progressive[frameMarkerIndex + 1] = 0xc2;
