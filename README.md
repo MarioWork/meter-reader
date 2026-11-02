@@ -2,7 +2,7 @@
 
 Take a photo of your water meter, check the reading, and email it to your water provider from your own Hotmail. One user, one meter, one provider, on your home server.
 
-A reading is sent exactly as read: every digit, leading zeros kept, red digits included. Words used here are defined in [`GLOSSARY.md`](./GLOSSARY.md); the big decisions are in [`docs/adr/`](./docs/adr/).
+A reading is sent exactly as read: every digit, leading zeros kept, red digits included. Words used here are defined in [`docs/GLOSSARY.md`](./docs/GLOSSARY.md); the big decisions are in [`docs/adr/`](./docs/adr/).
 
 ## Running on the home server
 
