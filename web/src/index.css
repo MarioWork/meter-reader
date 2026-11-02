@@ -1,1 +1,110 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+/* `dark:` follows the `dark` class on <html>, which public/theme-init.js and the ThemeProvider set. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * The palette (meterpallet): dark green-grey #373F3C, grey #5E5F61, mid grey #8E8D92, lilac #BFB1C9, light grey
+ * #D6D6D6. Shades off the palette are darker or lighter steps of it, picked so every text and control pair passes
+ * WCAG 2.2 AA; src/themeContrast.test.ts checks each pair. Status colours are muted green, red and amber.
+ */
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #373f3c;
+  --card: #ffffff;
+  --card-foreground: #373f3c;
+  --popover: #ffffff;
+  --popover-foreground: #373f3c;
+  /* Lilac is too light for text or a button on white, so light mode uses a deeper step of it. */
+  --primary: #6b5a7a;
+  --primary-foreground: #ffffff;
+  --secondary: #ece7f0;
+  --secondary-foreground: #373f3c;
+  --muted: #f1f1f2;
+  --muted-foreground: #5e5f61;
+  --accent: #ece7f0;
+  --accent-foreground: #373f3c;
+  --destructive: #a23b3b;
+  --destructive-foreground: #ffffff;
+  --success: #2e6b45;
+  --success-foreground: #ffffff;
+  --warning: #8a5a00;
+  --warning-foreground: #ffffff;
+  --border: #d6d6d6;
+  --input: #858489;
+  --ring: #6b5a7a;
+  --radius: 0.625rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #373f3c;
+  --foreground: #d6d6d6;
+  --card: #404844;
+  --card-foreground: #d6d6d6;
+  --popover: #404844;
+  --popover-foreground: #d6d6d6;
+  --primary: #bfb1c9;
+  --primary-foreground: #373f3c;
+  --secondary: #463f52;
+  --secondary-foreground: #d6d6d6;
+  --muted: #404844;
+  --muted-foreground: #bdbcc1;
+  --accent: #463f52;
+  --accent-foreground: #d6d6d6;
+  --destructive: #e8a39e;
+  --destructive-foreground: #373f3c;
+  --success: #9ccba9;
+  --success-foreground: #373f3c;
+  --warning: #e2bf7a;
+  --warning-foreground: #373f3c;
+  --border: #5e5f61;
+  --input: #9a999e;
+  --ring: #bfb1c9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
