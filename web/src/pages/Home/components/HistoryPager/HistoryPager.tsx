@@ -1,5 +1,6 @@
+import { Link } from 'react-router';
 import { ApiUrlParamsUtil, PAGE_SIZE } from '@app-types/utility';
-import TextLink from '@components/TextLink';
+import { buttonVariants } from '@components/ui/button';
 
 type Props = {
   currentPage: number;
@@ -21,12 +22,22 @@ function HistoryPager({ currentPage, totalResultNumber }: Props) {
 
   return (
     <nav aria-label="History pages" className="grid grid-cols-3 items-center gap-4">
-      <div>{hasNewer && <TextLink to={{ search: pageSearch(currentPage - 1) }}>Newer readings</TextLink>}</div>
+      <div>
+        {hasNewer && (
+          <Link className={buttonVariants({ variant: 'link' })} to={{ search: pageSearch(currentPage - 1) }}>
+            Newer readings
+          </Link>
+        )}
+      </div>
       <p className="text-center text-muted-foreground">
         Page {currentPage} of {pageCount}
       </p>
       <div className="flex justify-end">
-        {hasOlder && <TextLink to={{ search: pageSearch(currentPage + 1) }}>Older readings</TextLink>}
+        {hasOlder && (
+          <Link className={buttonVariants({ variant: 'link' })} to={{ search: pageSearch(currentPage + 1) }}>
+            Older readings
+          </Link>
+        )}
       </div>
     </nav>
   );

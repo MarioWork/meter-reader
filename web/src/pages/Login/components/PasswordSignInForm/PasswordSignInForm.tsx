@@ -2,7 +2,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import { Alert, AlertTitle } from '@components/ui/alert';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@components/ui/field';
 import { Input } from '@components/ui/input';
@@ -64,7 +64,7 @@ function PasswordSignInForm() {
           <AlertTitle>{failureMessage}</AlertTitle>
         </Alert>
       )}
-      <Button type="submit" isDisabled={isSigningIn}>
+      <Button type="submit" disabled={isSigningIn}>
         Sign in
       </Button>
     </form>

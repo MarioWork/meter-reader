@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useFetcher } from 'react-router';
 import type { ReadingApiModel } from '@app-types/models';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import { Alert, AlertTitle } from '@components/ui/alert';
 import { FieldGroup } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
@@ -92,7 +92,7 @@ function NewReadingForm({ lastReading }: Props) {
           <AlertTitle>{failureMessage}</AlertTitle>
         </Alert>
       )}
-      <Button type="submit" isDisabled={!canSave}>
+      <Button type="submit" disabled={!canSave}>
         Save reading
       </Button>
     </form>

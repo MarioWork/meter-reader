@@ -1,5 +1,5 @@
 import type { ReadingApiModel } from '@app-types/models';
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import { formatIsoDate } from '@utils/dateUtils';
 import DeleteReadingDialog from './components/DeleteReadingDialog';
 import { useDeleteReading } from './hooks/useDeleteReading';
@@ -20,7 +20,7 @@ function DeleteReadingButton({ reading }: Props) {
 
   return (
     <>
-      <Button variant="secondary" ariaLabel={`${DELETE_LABEL} the reading of ${readingDate}`} onClick={openDialog}>
+      <Button variant="outline" aria-label={`${DELETE_LABEL} the reading of ${readingDate}`} onClick={openDialog}>
         {DELETE_LABEL}
       </Button>
       <DeleteReadingDialog
