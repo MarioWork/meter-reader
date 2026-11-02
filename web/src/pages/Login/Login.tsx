@@ -1,17 +1,19 @@
+import StandalonePage from '@components/StandalonePage';
+import OrDivider from './components/OrDivider';
 import PasskeySignInButton from './components/PasskeySignInButton';
 import PasswordSignInForm from './components/PasswordSignInForm';
 
 function Login() {
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-6">
-      <h1 className="text-2xl font-bold">Sign in</h1>
+    <StandalonePage title="Sign in">
       <PasswordSignInForm />
-      <p className="text-muted-foreground">or</p>
+      <OrDivider />
       <PasskeySignInButton />
       <p className="text-sm text-muted-foreground">
-        Locked out? Run <code>yarn auth:reset</code> on the server and open the new setup link it prints.
+        Locked out? Run <code className="rounded-sm bg-muted px-1 font-mono">yarn auth:reset</code> on the server and
+        open the new setup link it prints.
       </p>
-    </main>
+    </StandalonePage>
   );
 }
 
