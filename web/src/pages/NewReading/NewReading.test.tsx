@@ -2,7 +2,16 @@ import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { deferred, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
+import {
+  deferred,
+  findNotification,
+  queryAllNotifications,
+  renderRoutes,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from '@test-utils';
 import { todayAsIsoDate } from '@utils/dateUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
 import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
@@ -40,11 +49,6 @@ function readingField() {
   return screen.getByRole('textbox', { name: 'Reading' });
 }
 
-// Toasts: each one is named by its title inside the polite live region.
-function notification(title: string) {
-  return within(screen.getByRole('region', { name: 'Notifications' })).findByRole('dialog', { name: title });
-}
-
 async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Save reading' }));
 }
@@ -76,7 +80,7 @@ it('saves the reading with its leading zeros and the chosen date, then shows it 
   const newest = within(screen.getByRole('table', { name: 'History' })).getAllByRole('row')[1];
   expect(newest).toHaveTextContent('31 Oct 2026');
   expect(newest).toHaveTextContent(HIGHER_THAN_LAST);
-  expect(await notification('Reading saved')).toBeVisible();
+  expect(await findNotification('Reading saved')).toBeVisible();
 });
 
 it('warns when the reading is lower than the last one', async () => {
@@ -144,7 +148,8 @@ it("shows the API's message and keeps the input when the save fails", async () =
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
   expect(readingField()).toHaveValue(HIGHER_THAN_LAST);
-  expect(await notification('Reading not saved')).toBeVisible();
+  // The failure shows next to the form only, not as a toast too.
+  expect(queryAllNotifications()).toHaveLength(0);
 });
 
 it('marks the date and sends nothing when the day has not happened yet', async () => {

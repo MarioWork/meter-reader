@@ -60,6 +60,21 @@ function withFreshLazyObjects(routes: RouteObject[]): RouteObject[] {
   });
 }
 
+// The toasts' polite live region, which AppProviders' Toaster renders on every page.
+function notificationsRegion() {
+  return within(screen.getByRole('region', { name: 'Notifications' }));
+}
+
+// A toast, named by its title.
+export function findNotification(title: string) {
+  return notificationsRegion().findByRole('dialog', { name: title });
+}
+
+// Every toast showing now.
+export function queryAllNotifications() {
+  return notificationsRegion().queryAllByRole('dialog');
+}
+
 // Real route objects, so a page's loader and action run as they do in the app.
 export function renderRoutes(routes: RouteObject[], { initialEntries = ['/'], ...options }: RenderRoutesOptions = {}) {
   const router = createMemoryRouter(withFreshLazyObjects(routes), { initialEntries });

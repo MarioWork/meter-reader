@@ -3,9 +3,9 @@ import { ValidationError } from 'yup';
 import readingService from '@services/readingService/readingService';
 import { ReadingParamsSchema } from '@services/readingService/readingService.type';
 import type { JSONResponseUtil } from '@app-types/utility';
-import { toastActionResult } from '@utils/toastUtils';
+import { toastOnSuccess } from '@utils/toastUtils';
 
-const DELETE_TOAST_MESSAGES = { success: 'Reading deleted', failure: 'Reading not deleted' };
+const DELETED_MESSAGE = 'Reading deleted';
 
 async function deleteReading({ params }: ActionFunctionArgs): Promise<JSONResponseUtil> {
   try {
@@ -19,6 +19,6 @@ async function deleteReading({ params }: ActionFunctionArgs): Promise<JSONRespon
   }
 }
 
-// Deleted, the router runs Home's loader again and the reading leaves the history. A toast says how it went.
+// Deleted, the router runs Home's loader again and the reading leaves the history. A toast says it is gone.
 export const deleteReadingAction = async (args: ActionFunctionArgs): Promise<JSONResponseUtil> =>
-  toastActionResult(await deleteReading(args), DELETE_TOAST_MESSAGES);
+  toastOnSuccess(await deleteReading(args), DELETED_MESSAGE);

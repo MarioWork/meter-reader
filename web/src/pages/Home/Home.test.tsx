@@ -3,7 +3,7 @@ import routes from '@application/routes';
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
+import { findNotification, queryAllNotifications, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
 
 const NEWEST_DELETE_BUTTON = 'Delete the reading of 1 Oct 2026';
 const DELETE_DIALOG = 'Delete this reading?';
@@ -18,11 +18,6 @@ function historyRows() {
   return within(screen.getByRole('table', { name: 'History' }))
     .getAllByRole('row')
     .slice(1);
-}
-
-// Toasts: each one is named by its title inside the polite live region.
-function notification(title: string) {
-  return within(screen.getByRole('region', { name: 'Notifications' })).findByRole('dialog', { name: title });
 }
 
 // An open dialog hides the page behind it from screen readers, the history included.
@@ -155,7 +150,7 @@ describe('deleting a reading', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent('1 Sept 2026'));
-    expect(await notification('Reading deleted')).toBeVisible();
+    expect(await findNotification('Reading deleted')).toBeVisible();
     expect(screen.getByRole('table', { name: 'History' })).not.toHaveTextContent('00529');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'History' })).toHaveFocus();
@@ -185,7 +180,8 @@ describe('deleting a reading', () => {
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Reading 14 not found');
     expect(historyBehindDialog()).toHaveTextContent('00529');
-    expect(await notification('Reading not deleted')).toBeVisible();
+    // The failure shows in the dialog only, not as a toast too.
+    expect(queryAllNotifications()).toHaveLength(0);
   });
 
   it('does not show an earlier failure when the dialog is opened again', async () => {
@@ -254,7 +250,7 @@ describe('sending a reading', () => {
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     await waitFor(() => expect(historyRows()[0]).toHaveTextContent(/Sent 2 Nov 2026/));
-    expect(await notification('Reading sent')).toBeVisible();
+    expect(await findNotification('Reading sent')).toBeVisible();
     expect(received).toEqual([{ attachPhoto: true }]);
     expect(within(historyRows()[0]).queryByRole('link', { name: SEND_NEWEST })).not.toBeInTheDocument();
   });
@@ -297,7 +293,8 @@ describe('sending a reading', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'Microsoft did not send the email (ErrorInvalidRecipients). Try again',
     );
-    expect(await notification('Reading not sent')).toBeVisible();
+    // The failure shows in the preview only, not as a toast too.
+    expect(queryAllNotifications()).toHaveLength(0);
   });
 
   it('opens the preview again from Try again on a failed reading', async () => {
