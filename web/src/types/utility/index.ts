@@ -9,3 +9,5 @@ export type { PaginationUtil } from './paginationUtil.type';
 export { ReadingStatusUtil } from './readingStatusUtil.type';
 export type { ResponseWithPaginationUtil } from './responseWithPaginationUtil.type';
 export { SortingDirectionUtil } from './sortingDirectionUtil.type';
+export { ThemeUtil } from './themeUtil.type';
+export type { AppliedThemeUtil } from './themeUtil.type';
