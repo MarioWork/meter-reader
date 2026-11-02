@@ -5,6 +5,8 @@
 # to the api container. Neither the api nor the database is published.
 # Ports 80 and 443 belong to my-funko-collection on the same host, so this app stays off them.
 x-app-address: &app-address https://meter.home.arpa:8443
+# The one database URL, used by migrate and api. The password goes inside a URL, hence letters and digits only.
+x-database-url: &database-url postgresql://meter:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meter
 
 services:
   web:
@@ -32,7 +34,7 @@ services:
     container_name: meter-reader-migrate
     restart: 'no'
     environment:
-      DATABASE_URL: postgresql://meter:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meter
+      DATABASE_URL: *database-url
     depends_on:
       db:
         condition: service_healthy
@@ -49,8 +51,7 @@ services:
       NODE_ENV: production
       LOG_LEVEL: info
       PORT: 3000
-      # The password goes inside a URL, hence letters and digits only.
-      DATABASE_URL: postgresql://meter:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meter
+      DATABASE_URL: *database-url
       # Caddy is the one proxy in front: read the real device address from X-Forwarded-For (for rate limits).
       TRUST_PROXY_HOPS: 1
     depends_on:
