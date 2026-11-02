@@ -1,6 +1,7 @@
 // A fake of Microsoft's sign-in service for the mail tests: the device-code and token endpoints, answered from MSW.
 import { http, HttpResponse } from 'msw/http';
 import { setupServer } from 'msw/node';
+import { delay } from 'msw/utils/delay';
 import { DEVICE_CODE_URL, TOKEN_URL } from './mail.microsoftIdentity.ts';
 
 export const TEST_USER_CODE = 'F7KQ2LXP9';
@@ -10,7 +11,11 @@ export const TEST_REFRESH_TOKEN = 'test-refresh-token-M.C540_BAY.0.U';
 export const TEST_DEVICE_CODE = 'test-device-code-DAQABAAEAAAD';
 export const ACCESS_TOKEN_LIFETIME_SECONDS = 3600;
 
+const OK = 200;
 const BAD_REQUEST = 400;
+const SERVICE_UNAVAILABLE = 503;
+// Microsoft's real lifetime for a device code: 15 minutes.
+const DEVICE_CODE_LIFETIME_SECONDS = 900;
 
 export type MicrosoftAnswer = { status: number; body: Record<string, unknown> };
 
@@ -21,7 +26,7 @@ export const microsoftIdentityServer = setupServer();
 
 export function tokensAnswer(overrides: Record<string, unknown> = {}): MicrosoftAnswer {
   return {
-    status: 200,
+    status: OK,
     body: {
       token_type: 'Bearer',
       scope: 'https://graph.microsoft.com/Mail.Send',
@@ -40,12 +45,12 @@ export function errorAnswer(error: string): MicrosoftAnswer {
 
 export function deviceCodeAnswer(overrides: Record<string, unknown> = {}): MicrosoftAnswer {
   return {
-    status: 200,
+    status: OK,
     body: {
       device_code: TEST_DEVICE_CODE,
       user_code: TEST_USER_CODE,
       verification_uri: TEST_VERIFICATION_URI,
-      expires_in: 900,
+      expires_in: DEVICE_CODE_LIFETIME_SECONDS,
       // No wait between polls, so the tests run at full speed.
       interval: 0,
       message: `To sign in, open ${TEST_VERIFICATION_URI} and enter the code ${TEST_USER_CODE}.`,
@@ -80,6 +85,20 @@ export function answerDeviceCode(answer: MicrosoftAnswer = deviceCodeAnswer()): 
 
 export function answerToken(...answers: MicrosoftAnswer[]): ReceivedForm[] {
   return answerInTurn(TOKEN_URL, answers);
+}
+
+// Microsoft is having a passing outage: a 5xx with no OAuth error.
+export function outageAnswer(): MicrosoftAnswer {
+  return { status: SERVICE_UNAVAILABLE, body: {} };
+}
+
+// Microsoft takes the request and never answers.
+export function hangForever(url: string): void {
+  microsoftIdentityServer.use(
+    http.post(url, async () => {
+      await delay('infinite');
+    }),
+  );
 }
 
 // Microsoft cannot be reached at all (no network, DNS down).

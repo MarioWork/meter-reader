@@ -1,5 +1,4 @@
 import { inspect } from 'node:util';
-import { env } from '../../config/env.ts';
 import { AppError } from '../../lib/errors.ts';
 import { DEVICE_CODE_URL, TOKEN_URL } from './mail.microsoftIdentity.ts';
 import {
@@ -14,14 +13,21 @@ import {
   deviceCodeAnswer,
   errorAnswer,
   failNetwork,
+  hangForever,
   microsoftIdentityServer,
+  outageAnswer,
   tokensAnswer,
 } from './mail.microsoftIdentity.mock.ts';
 import { mailRepository, type MailConnection } from './mail.repository.ts';
-import { connectMail, getAccessToken, refreshMailToken } from './mail.service.ts';
+import { connectMail, getMailStatus, refreshMailToken } from './mail.service.ts';
 
-// Everything the mail module logs, kept so a test can prove no token is in it.
-const { logCalls } = vi.hoisted(() => ({ logCalls: [] as unknown[] }));
+// Everything the mail module logs, kept so a test can prove no token is in it; and an env a test can change.
+const { logCalls, testEnv } = vi.hoisted(() => ({
+  logCalls: [] as unknown[],
+  testEnv: { MICROSOFT_CLIENT_ID: '' },
+}));
+
+vi.mock('../../config/env.ts', () => ({ env: testEnv }));
 
 vi.mock('../../lib/logger.ts', () => {
   const record = (...args: unknown[]) => {
@@ -50,7 +56,7 @@ vi.mock('./mail.repository.ts', () => ({
   },
 }));
 
-const CLIENT_ID = env.MICROSOFT_CLIENT_ID;
+const CLIENT_ID = '5c1b2e8a-3f4d-4e6b-9a7c-2d8e1f0a4b6c';
 const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
 const MAIL_SCOPES = 'https://graph.microsoft.com/Mail.Send offline_access';
@@ -71,6 +77,10 @@ function loggedText(): string {
 
 beforeAll(() => {
   microsoftIdentityServer.listen({ onUnhandledFrame: 'error' });
+});
+
+beforeEach(() => {
+  testEnv.MICROSOFT_CLIENT_ID = CLIENT_ID;
 });
 
 afterEach(() => {
@@ -115,6 +125,32 @@ describe('connectMail', () => {
     expect(tokenForms).toHaveLength(2);
     expect(mailRepository.replaceConnection).toHaveBeenCalledTimes(1);
   }, 10_000);
+
+  it('keeps asking through a passing Microsoft outage', async () => {
+    answerDeviceCode();
+    const tokenForms = answerToken(outageAnswer(), errorAnswer('temporarily_unavailable'), tokensAnswer());
+
+    await connectMail(vi.fn());
+
+    expect(tokenForms).toHaveLength(3);
+    expect(mailRepository.replaceConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops with MICROSOFT_UNREACHABLE when Microsoft never answers and the wait is cut short', async () => {
+    hangForever(DEVICE_CODE_URL);
+    const stop = new AbortController();
+
+    const connecting = connectMail(vi.fn(), stop.signal);
+    stop.abort();
+
+    await expect(connecting).rejects.toMatchObject({ code: 'MICROSOFT_UNREACHABLE' });
+  });
+
+  it('throws MAIL_NOT_CONFIGURED, asking Microsoft nothing, when MICROSOFT_CLIENT_ID is not set', async () => {
+    testEnv.MICROSOFT_CLIENT_ID = '';
+
+    await expect(connectMail(vi.fn())).rejects.toMatchObject({ code: 'MAIL_NOT_CONFIGURED' });
+  });
 
   it('throws MAIL_CONNECT_DECLINED and saves nothing when the user declines', async () => {
     answerDeviceCode();
@@ -203,15 +239,18 @@ describe('refreshMailToken', () => {
     );
   });
 
-  it('removes the connection when Microsoft refuses the refresh token (revoked or expired)', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
-    answerToken(errorAnswer('invalid_grant'));
+  it.each(['invalid_grant', 'interaction_required', 'invalid_client', 'unauthorized_client'])(
+    'removes the connection when Microsoft refuses the refresh token with %s',
+    async (error) => {
+      vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
+      answerToken(errorAnswer(error));
 
-    await refreshMailToken();
+      await refreshMailToken();
 
-    expect(mailRepository.deleteConnection).toHaveBeenCalledWith(STORED_REFRESH_TOKEN);
-    expect(mailRepository.updateConnection).not.toHaveBeenCalled();
-  });
+      expect(mailRepository.deleteConnection).toHaveBeenCalledWith(STORED_REFRESH_TOKEN);
+      expect(mailRepository.updateConnection).not.toHaveBeenCalled();
+    },
+  );
 
   it('keeps the connection, without throwing, when Microsoft cannot be reached', async () => {
     vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
@@ -225,11 +264,24 @@ describe('refreshMailToken', () => {
 
   it('keeps the connection when Microsoft answers with a server error', async () => {
     vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
-    answerToken({ status: 503, body: { error: 'temporarily_unavailable' } });
+    answerToken(outageAnswer());
 
     await refreshMailToken();
 
     expect(mailRepository.deleteConnection).not.toHaveBeenCalled();
+  });
+
+  it('keeps the connection when Microsoft never answers and the server shuts down', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
+    hangForever(TOKEN_URL);
+    const shutdown = new AbortController();
+
+    const refreshing = refreshMailToken(shutdown.signal);
+    shutdown.abort();
+    await refreshing;
+
+    expect(mailRepository.deleteConnection).not.toHaveBeenCalled();
+    expect(mailRepository.updateConnection).not.toHaveBeenCalled();
   });
 
   it('asks Microsoft nothing when Hotmail is not connected', async () => {
@@ -251,51 +303,23 @@ describe('refreshMailToken', () => {
   });
 });
 
-describe('getAccessToken', () => {
-  it('returns the stored access token, asking Microsoft nothing, while it is still fresh', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
+describe('getMailStatus', () => {
+  it('answers connected when the server holds a connection', async () => {
+    vi.mocked(mailRepository.hasConnection).mockResolvedValueOnce(true);
 
-    expect(await getAccessToken()).toBe(STORED_ACCESS_TOKEN);
+    expect(await getMailStatus()).toEqual({ state: 'connected' });
   });
 
-  it('refreshes and returns the new access token when the stored one is about to run out', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(1)));
-    answerToken(tokensAnswer());
+  it('answers notConnected when yarn mail:connect has not run, or a refused token was removed', async () => {
+    vi.mocked(mailRepository.hasConnection).mockResolvedValueOnce(false);
 
-    expect(await getAccessToken()).toBe(TEST_ACCESS_TOKEN);
-    expect(mailRepository.updateConnection).toHaveBeenCalledTimes(1);
+    expect(await getMailStatus()).toEqual({ state: 'notConnected' });
   });
 
-  it('refreshes once when two sends need a new token at the same time', async () => {
-    vi.mocked(mailRepository.findConnection)
-      .mockResolvedValueOnce(storedConnection(minutesFromNow(-1)))
-      .mockResolvedValueOnce(storedConnection(minutesFromNow(-1)));
-    const tokenForms = answerToken(tokensAnswer());
+  it('answers notConnected when MICROSOFT_CLIENT_ID is not set, even with a stored connection', async () => {
+    testEnv.MICROSOFT_CLIENT_ID = '';
+    vi.mocked(mailRepository.hasConnection).mockResolvedValueOnce(true);
 
-    const accessTokens = await Promise.all([getAccessToken(), getAccessToken()]);
-
-    expect(accessTokens).toEqual([TEST_ACCESS_TOKEN, TEST_ACCESS_TOKEN]);
-    expect(tokenForms).toHaveLength(1);
-  });
-
-  it('throws MAIL_NOT_CONNECTED when Hotmail is not connected', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(undefined);
-
-    await expect(getAccessToken()).rejects.toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
-  });
-
-  it('throws MAIL_NOT_CONNECTED when Microsoft refuses the refresh token', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(-1)));
-    answerToken(errorAnswer('invalid_grant'));
-
-    await expect(getAccessToken()).rejects.toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
-    expect(mailRepository.deleteConnection).toHaveBeenCalledWith(STORED_REFRESH_TOKEN);
-  });
-
-  it('throws MICROSOFT_UNREACHABLE when the token is stale and Microsoft cannot be reached', async () => {
-    vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(-1)));
-    failNetwork(TOKEN_URL);
-
-    await expect(getAccessToken()).rejects.toMatchObject({ code: 'MICROSOFT_UNREACHABLE' });
+    expect(await getMailStatus()).toEqual({ state: 'notConnected' });
   });
 });
