@@ -6,6 +6,9 @@ import { useSendReading } from './hooks/useSendReading';
 const DIALOG_TITLE = 'Send this reading?';
 const SEND_LABEL = 'Send';
 const SENDING_LABEL = 'Sending…';
+const MAIL_NOT_CONNECTED_TEXT = "Hotmail is not connected, so the reading can't be sent. Run";
+const MAIL_NOT_CONNECTED_COMMAND = 'yarn mail:connect';
+const MAIL_NOT_CONNECTED_END = 'on the server first.';
 
 // The email exactly as it will go out, and Send. Send stays off while Hotmail is not connected (ADR 0001).
 function SendReadingModal() {
@@ -38,8 +41,8 @@ function SendReadingModal() {
       />
       {!isMailConnected && (
         <p className="text-amber-900">
-          Hotmail is not connected, so the reading can&apos;t be sent. Run{' '}
-          <code className="font-mono">yarn mail:connect</code> on the server first.
+          {MAIL_NOT_CONNECTED_TEXT} <code className="font-mono">{MAIL_NOT_CONNECTED_COMMAND}</code>{' '}
+          {MAIL_NOT_CONNECTED_END}
         </p>
       )}
       {failureMessage && <FormAlert message={failureMessage} />}

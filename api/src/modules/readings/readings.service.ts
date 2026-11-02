@@ -44,9 +44,10 @@ const EMAIL_DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
   year: 'numeric',
   timeZone: 'UTC',
 });
-// How a failed send answers, by the mail module's code. Anything else Microsoft did is a bad gateway.
+// How a failed send answers, by its code. Anything else is Microsoft's doing: a bad gateway.
 const SEND_FAILURE_ERRORS: Record<string, (message: string, code: string) => HttpError> = {
   MAIL_TOO_LARGE: (message, code) => new ContentTooLargeError(message, code),
+  PHOTO_FILE_MISSING: (message, code) => new ConflictError(message, code),
 };
 
 // The readings whose email is going out right now, so a double tap cannot send one twice. The api is one process,
@@ -87,6 +88,11 @@ function toEmailBody(row: ReadingRow): string {
 
 function toAttachmentName(row: ReadingRow): string {
   return `meter-${toIsoDate(row.date)}.jpg`;
+}
+
+// The address, the subject and the body: one builder for the preview and the send, so they cannot drift apart.
+function toMailContent(row: ReadingRow): OutgoingMail {
+  return { to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT, body: toEmailBody(row) };
 }
 
 async function findReading(id: number): Promise<ReadingRow> {
@@ -142,7 +148,7 @@ export async function getReadingEmail(id: number): Promise<ReadingEmailResponse>
   const row = await findReading(id);
   const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
 
-  return { to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT, body: toEmailBody(row), attachment };
+  return { ...toMailContent(row), attachment };
 }
 
 async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
@@ -153,8 +159,8 @@ async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
   return { name: toAttachmentName(row), contentType: JPEG_CONTENT_TYPE, contents };
 }
 
-async function toOutgoingMail(row: ReadingRow, attachPhoto: boolean): Promise<OutgoingMail> {
-  const mail = { to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT, body: toEmailBody(row) };
+async function toOutgoingMail(row: ReadingRow, { attachPhoto }: SendReading): Promise<OutgoingMail> {
+  const mail = toMailContent(row);
 
   if (!attachPhoto) return mail;
 
@@ -163,7 +169,7 @@ async function toOutgoingMail(row: ReadingRow, attachPhoto: boolean): Promise<Ou
 
 // What the user is told when the email did not go out: the mail module's own message, never more. A bug stays a
 // bug (500).
-function toSendFailure(error: unknown): unknown {
+function toHttpSendError(error: unknown): unknown {
   if (error instanceof HttpError) return error;
 
   const isExpected = error instanceof AppError && error.isOperational;
@@ -176,7 +182,7 @@ function toSendFailure(error: unknown): unknown {
 }
 
 // Refusals that try nothing, and so change nothing: unknown, sent already, no photo to attach, Hotmail not connected.
-async function findSendableReading(id: number, attachPhoto: boolean): Promise<ReadingRow> {
+async function findSendableReading(id: number, { attachPhoto }: SendReading): Promise<ReadingRow> {
   const row = await findReading(id);
 
   if (row.status === 'SENT') throw new ConflictError(ALREADY_SENT_MESSAGE, 'READING_ALREADY_SENT');
@@ -190,20 +196,42 @@ async function findSendableReading(id: number, attachPhoto: boolean): Promise<Re
   return row;
 }
 
-async function sendOnce(id: number, attachPhoto: boolean): Promise<ReadingResponse> {
-  const row = await findSendableReading(id, attachPhoto);
+// Saving the failure must not hide why the send failed: a database error here is logged, and the user still hears
+// Microsoft's reason.
+async function saveFailure(id: number): Promise<void> {
+  try {
+    await readingsRepository.markFailed(id);
+  } catch (error: unknown) {
+    log.error({ readingId: id, err: error }, 'failed send not saved on the reading');
+  }
+}
+
+// Microsoft has the email by now, so a database error here must be loud: the reading still looks unsent, and sending
+// it again would email the provider twice.
+async function saveSent(id: number): Promise<ReadingRow | null> {
+  try {
+    return await readingsRepository.markSent(id, new Date());
+  } catch (error: unknown) {
+    log.error({ readingId: id, err: error }, 'reading sent, but not saved as sent');
+
+    throw error;
+  }
+}
+
+async function sendOnce(id: number, fields: SendReading): Promise<ReadingResponse> {
+  const row = await findSendableReading(id, fields);
 
   try {
-    await sendMail(await toOutgoingMail(row, attachPhoto));
+    await sendMail(await toOutgoingMail(row, fields));
   } catch (error: unknown) {
-    await readingsRepository.markFailed(id);
+    await saveFailure(id);
     // The id and the stable code only: the message may name the provider.
     log.warn({ readingId: id, code: error instanceof AppError ? error.code : undefined }, 'reading not sent');
 
-    throw toSendFailure(error);
+    throw toHttpSendError(error);
   }
 
-  const sent = await readingsRepository.markSent(id, new Date());
+  const sent = await saveSent(id);
 
   if (!sent) throw new NotFoundError(ENTITY, id);
 
@@ -213,14 +241,15 @@ async function sendOnce(id: number, attachPhoto: boolean): Promise<ReadingRespon
 }
 
 // Emails the reading to the provider from the user's Hotmail. Sent: the reading is marked sent, with the time. Not
-// sent: it is marked failed, and the error says why, so the user can try again.
-export async function sendReading(id: number, { attachPhoto }: SendReading): Promise<ReadingResponse> {
+// sent: it is marked failed, and the error says why, so the user can try again. Failed covers every try that did not
+// reach the provider, a photo too large or missing included; only the checks in findSendableReading change nothing.
+export async function sendReading(id: number, fields: SendReading): Promise<ReadingResponse> {
   if (readingsBeingSent.has(id)) throw new ConflictError(BEING_SENT_MESSAGE, 'READING_BEING_SENT');
 
   readingsBeingSent.add(id);
 
   try {
-    return await sendOnce(id, attachPhoto);
+    return await sendOnce(id, fields);
   } finally {
     readingsBeingSent.delete(id);
   }
