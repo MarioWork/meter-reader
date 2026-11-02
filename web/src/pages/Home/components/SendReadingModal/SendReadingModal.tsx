@@ -1,5 +1,5 @@
 import ConfirmDialog from '@components/ConfirmDialog';
-import FormAlert from '@components/FormAlert';
+import { Alert, AlertTitle } from '@components/ui/alert';
 import EmailPreview from './components/EmailPreview';
 import { useSendReading } from './hooks/useSendReading';
 
@@ -45,7 +45,11 @@ function SendReadingModal() {
           {MAIL_NOT_CONNECTED_END}
         </p>
       )}
-      {failureMessage && <FormAlert message={failureMessage} />}
+      {failureMessage && (
+        <Alert variant="destructive">
+          <AlertTitle>{failureMessage}</AlertTitle>
+        </Alert>
+      )}
     </ConfirmDialog>
   );
 }

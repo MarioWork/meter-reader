@@ -1,7 +1,7 @@
 import type { ReadingApiModel } from '@app-types/models';
 import Button from '@components/Button';
 import ConfirmDialog from '@components/ConfirmDialog';
-import FormAlert from '@components/FormAlert';
+import { Alert, AlertTitle } from '@components/ui/alert';
 import { formatIsoDate } from '@utils/dateUtils';
 import { useDeleteReading } from './hooks/useDeleteReading';
 
@@ -37,7 +37,11 @@ function DeleteReadingButton({ reading }: Props) {
           The reading <span className="font-mono tabular-nums">{reading.digits}</span> from {readingDate} will be
           removed from the history{hasPhoto && ', with its photo'}. This cannot be undone.
         </p>
-        {failureMessage && <FormAlert message={failureMessage} />}
+        {failureMessage && (
+          <Alert variant="destructive">
+            <AlertTitle>{failureMessage}</AlertTitle>
+          </Alert>
+        )}
       </ConfirmDialog>
     </>
   );
