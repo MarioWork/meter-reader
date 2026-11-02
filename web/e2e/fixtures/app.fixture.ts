@@ -3,6 +3,7 @@ import { test as base, expect } from '@playwright/test';
 import { http, HttpResponse } from 'msw/http';
 import { getHandlers } from '../../src/mocks/handlers';
 import { MailStateUtil } from '@app-types/utility';
+import { resetMockPhotos } from '../../src/mocks/handlers/photo/photoMockState';
 import { resetMockReadings } from '../../src/mocks/handlers/reading/readingMockState';
 import { BASE_URL } from '../playwright.config';
 
@@ -22,8 +23,9 @@ export const test = base.extend<Fixtures>({
   handlers: [getHandlers(BASE_API_URL), { option: true }],
   network: [
     async ({ context, handlers }, use) => {
-      // The mock history lives in this worker: each test starts from the same rows.
+      // The mock history lives in this worker: each test starts from the same rows and no uploaded photos.
       resetMockReadings();
+      resetMockPhotos();
       const network = defineNetworkFixture({ context, handlers });
 
       await network.enable();

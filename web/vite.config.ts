@@ -33,6 +33,8 @@ const baseExclude = [...configDefaults.exclude, 'e2e/**', 'tests-examples/*'];
 // Where `cd api && yarn dev` listens.
 const API_DEV_URL = 'http://localhost:3000';
 const API_PREFIX = /^\/api/;
+// Pages the service worker must not answer with the app: an API url opened as a page (a full-size photo).
+const API_PAGES = /^\/api\//;
 
 const APP_NAME = 'Meter Reader';
 const APP_DESCRIPTION = 'Read a water meter from a photo';
@@ -65,7 +67,7 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         pwaAssets: { config: true },
         // The MSW worker ships in the build too, but the app never needs it offline.
-        workbox: { globIgnores: ['**/mockServiceWorker.js'] },
+        workbox: { globIgnores: ['**/mockServiceWorker.js'], navigateFallbackDenylist: [API_PAGES] },
         manifest: {
           name: APP_NAME,
           short_name: APP_NAME,

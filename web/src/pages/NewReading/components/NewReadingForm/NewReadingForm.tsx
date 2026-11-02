@@ -12,6 +12,8 @@ import { createFormData } from '@utils/formDataUtils';
 import { isReadingLower, readingDigitsSchema } from '@utils/readingUtils';
 import { SAVE_FAILED_MESSAGE } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
+import PhotoPicker from './components/PhotoPicker';
+import { usePhotoPicker } from './hooks/usePhotoPicker';
 import { getInitialValues, newReadingFormSchema, toPayload, type NewReadingFormValues } from './newReadingFormUtils';
 
 type Props = {
@@ -21,6 +23,8 @@ type Props = {
 const DIGITS_FIELD_ID = 'reading-digits';
 const DATE_FIELD_ID = 'reading-date';
 const WARNING_ID = 'reading-lower-warning';
+// The router sends a FormData url-encoded unless told otherwise, which turns the photo into its file name.
+const WITH_FILES = 'multipart/form-data';
 
 // Only digits that would pass are compared: half-typed or invalid input gets its error, not a warning.
 function isLowerThanLast(digits: string, lastReading?: ReadingApiModel): boolean {
@@ -43,14 +47,19 @@ function NewReadingForm({ lastReading }: Props) {
   });
 
   const fetcher = useFetcher<JSONResponseUtil>();
+  const { photo, previewUrl, isShrinking, errorMessage, pickPhoto, removePhoto } = usePhotoPicker();
 
   const onSubmit = handleSubmit((values) =>
-    fetcher.submit(createFormData({ reading: toPayload(values) }), { method: HttpVerbsUtil.POST }),
+    fetcher.submit(createFormData({ reading: toPayload(values), photo }), {
+      method: HttpVerbsUtil.POST,
+      encType: WITH_FILES,
+    }),
   );
 
   const digits = useWatch({ control, name: 'digits' });
   const isLower = isLowerThanLast(digits, lastReading);
   const isSaving = fetcher.state !== 'idle';
+  const canSave = !isSaving && !isShrinking;
   const failureMessage = useFetcherFailure(fetcher, SAVE_FAILED_MESSAGE);
 
   return (
@@ -74,8 +83,15 @@ function NewReadingForm({ lastReading }: Props) {
         error={formState.errors.date?.message}
         {...register('date')}
       />
+      <PhotoPicker
+        previewUrl={previewUrl}
+        isShrinking={isShrinking}
+        errorMessage={errorMessage}
+        onPick={(picked) => void pickPhoto(picked)}
+        onRemove={removePhoto}
+      />
       {failureMessage && <FormAlert message={failureMessage} />}
-      <Button type="submit" isDisabled={isSaving}>
+      <Button type="submit" isDisabled={!canSave}>
         Save reading
       </Button>
     </form>

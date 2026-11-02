@@ -1,6 +1,6 @@
 import { HISTORY_CELL_CLASSES } from './historyCellClasses';
 
-const COLUMN_NAMES = ['Date', 'Reading', 'Status'];
+const COLUMN_NAMES = ['Date', 'Reading', 'Status', 'Photo'];
 
 function ReadingHistoryHeader() {
   return (

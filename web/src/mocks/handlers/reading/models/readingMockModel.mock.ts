@@ -14,6 +14,10 @@ const MONTH_LENGTH = 2;
 // Every mock reading was taken at the same time of day.
 const MOCK_READ_TIME = 'T08:30:00.000Z';
 
+// Every fifth reading was saved without a photo, so the history shows both kinds.
+const NO_PHOTO_EVERY = 5;
+const NO_PHOTO_REMAINDER = 0;
+
 // More than one page, so paging can be seen working.
 export const READING_MOCK_COUNT = 14;
 
@@ -31,6 +35,7 @@ export const createReadingMockModel = (overrides?: Partial<ReadingApiModel>): Re
   date: monthStart(0),
   status: ReadingStatusUtil.NOT_SENT,
   createdAt: `${monthStart(0)}${MOCK_READ_TIME}`,
+  photoId: 1,
   ...overrides,
 });
 
@@ -42,6 +47,8 @@ export const createReadingMockModelList = (length: number, overrides?: Partial<R
       digits: String(FIRST_DIGITS + index * MONTHLY_USE).padStart(DIGIT_COUNT, '0'),
       date: monthStart(index),
       createdAt: `${monthStart(index)}${MOCK_READ_TIME}`,
+      // A mock history photo has its reading's id (getPhoto.mock.handler.ts draws it).
+      photoId: (index + 1) % NO_PHOTO_EVERY === NO_PHOTO_REMAINDER ? null : index + 1,
       ...overrides,
     }),
   );

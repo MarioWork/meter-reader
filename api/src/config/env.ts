@@ -3,6 +3,7 @@ import { z } from 'zod';
 const HTTPS_PROTOCOL = 'https:';
 // The web dev server (cd web && yarn dev).
 const DEFAULT_APP_ORIGIN = 'http://localhost:5173';
+const DEFAULT_UPLOADS_DIR = './data/uploads';
 
 const EnvSchema = z
   .object({
@@ -33,6 +34,9 @@ const EnvSchema = z
     // Hotmail"). Not a secret: the app is a public client. Empty until that one-time setup is done; the api still
     // starts, and the web app shows that Hotmail is not connected.
     MICROSOFT_CLIENT_ID: z.string().trim().default(''),
+    // The folder the photos are kept in, relative to where the api starts. In the container it is the
+    // ./data/uploads volume, so the photos outlive the container.
+    UPLOADS_DIR: z.string().min(1).default(DEFAULT_UPLOADS_DIR),
   })
   .refine((value) => value.NODE_ENV !== 'production' || new URL(value.APP_ORIGIN).protocol === HTTPS_PROTOCOL, {
     message: 'APP_ORIGIN must be https in production',

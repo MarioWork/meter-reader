@@ -21,20 +21,26 @@ First time:
 
 1. Make the name resolve on every device that opens the app: a DNS entry on the router, or a line in each device's hosts file, pointing `meter.home.arpa` at the server's LAN address.
 2. Copy `.env.example` to `.env` next to `compose.yaml` and set `POSTGRES_PASSWORD` (letters and digits only: it goes inside a database URL). `.env` is never committed.
-3. Start everything:
+3. Make the photo folder, owned by the api container's user (uid 1000). Without it the api stops at start with "The uploads folder … is not writable":
+
+   ```bash
+   mkdir -p data/uploads && sudo chown 1000:1000 data/uploads
+   ```
+
+4. Start everything:
 
    ```bash
    docker compose up -d --build
    ```
 
-4. Check it: `curl -k https://meter.home.arpa:8443/api/ready` answers `{"status":"ok"}` once the database is up.
-5. Trust Caddy's certificate on each device (Caddy uses its own local CA, `tls internal`). Copy it off the server with `docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./meter-reader-root.crt` and install it as a trusted root on the phone or laptop. HTTPS is needed for the camera and for installing the app.
+5. Check it: `curl -k https://meter.home.arpa:8443/api/ready` answers `{"status":"ok"}` once the database is up.
+6. Trust Caddy's certificate on each device (Caddy uses its own local CA, `tls internal`). Copy it off the server with `docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./meter-reader-root.crt` and install it as a trusted root on the phone or laptop. HTTPS is needed for the camera and for installing the app.
 
 Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service applies any new migrations before the api starts.
 
 Logs: `docker compose logs -f api` (or `web`, `db`, `migrate`).
 
-Data: the Postgres files live in `./data/postgres` (later, photos go in `./data/uploads`). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
+Data: the Postgres files live in `./data/postgres` and the photos in `./data/uploads` (one JPEG per photo, named by the server). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
 
 ## First sign-in
 

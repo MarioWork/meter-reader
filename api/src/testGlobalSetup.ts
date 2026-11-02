@@ -1,5 +1,6 @@
 // Runs once per `vitest run`, before any worker starts: one freshly migrated template database for the run.
 import { execFileSync } from 'node:child_process';
+import { rm } from 'node:fs/promises';
 import {
   TEMPLATE_DATABASE,
   TEST_ENV_FILE,
@@ -18,6 +19,7 @@ export async function setup(): Promise<void> {
 
   await assertServerReachable(env.DATABASE_URL);
   await dropTestDatabases(env.DATABASE_URL);
+  await rm(env.UPLOADS_DIR, { recursive: true, force: true });
   await createDatabase(env.DATABASE_URL, TEMPLATE_DATABASE);
 
   // The same `migrate deploy` the container runs, so the tests see exactly the production schema. The child
@@ -31,4 +33,6 @@ export async function teardown(): Promise<void> {
   const { env } = await import('./config/env.ts');
 
   await dropTestDatabases(env.DATABASE_URL);
+  // The photos the tests saved (UPLOADS_DIR in .env.test).
+  await rm(env.UPLOADS_DIR, { recursive: true, force: true });
 }

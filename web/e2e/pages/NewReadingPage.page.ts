@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { PhotoFile } from '../fixtures/photo.fixture';
 import { READING_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
 export class NewReadingPage {
@@ -10,6 +11,12 @@ export class NewReadingPage {
 
   async goto() {
     await this.page.goto(READING_ROUTES_PATHS.NEW);
+  }
+
+  // The camera button on a phone; Playwright hands the file over as the camera would.
+  async takePhoto(photo: PhotoFile) {
+    await this.page.getByLabel('Take a photo').setInputFiles(photo);
+    await this.page.getByRole('img', { name: 'The meter, as it will be saved' }).waitFor();
   }
 
   async save(digits: string, date: string) {

@@ -13,6 +13,8 @@ export const CreateReadingSchema = z.strictObject({
   digits: z.string().regex(DIGITS_ONLY, 'Use digits only').max(READING_DIGITS_MAX_LENGTH),
   // A calendar day (YYYY-MM-DD), the day the meter showed these digits.
   date: z.iso.date(),
+  // The photo it was read from, uploaded first (POST /photos). Optional: a reading can be saved without one.
+  photoId: z.number().int().positive().optional(),
 });
 
 export const ListReadingsQuerySchema = PaginationQuerySchema;
@@ -26,6 +28,8 @@ export const ReadingResponseSchema = z
     date: z.iso.date(),
     status: z.enum(READING_STATUSES),
     createdAt: z.iso.datetime(),
+    // GET /photos/:id serves it; null when the reading was saved without a photo.
+    photoId: z.number().int().nullable(),
   })
   .meta({ id: 'Reading' });
 

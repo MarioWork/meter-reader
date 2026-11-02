@@ -1,5 +1,6 @@
 import type { InjectOptions } from 'fastify';
 import { buildApp, type App } from '../../app.ts';
+import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
 import { prisma } from '../../lib/prisma.ts';
 import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
 
@@ -8,6 +9,18 @@ let token: string;
 
 function addReading(payload: InjectOptions['payload']) {
   return app.inject({ method: 'POST', url: '/readings', payload, ...withSession(token) });
+}
+
+async function addPhoto(): Promise<number> {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/photos',
+    headers: { 'content-type': 'image/jpeg' },
+    payload: fakeJpeg({ width: 2000, height: 1500 }),
+    ...withSession(token),
+  });
+
+  return response.json<{ id: number }>().id;
 }
 
 function getReadings(query = '') {
@@ -33,6 +46,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await prisma.photo.deleteMany();
   await prisma.reading.deleteMany();
   await resetAuthTables();
   token = await setUpWithPassword(app);
@@ -43,8 +57,46 @@ describe('POST /readings', () => {
     const response = await addReading({ digits: '00123', date: '2026-10-31' });
 
     expect(response.statusCode).toBe(201);
-    expect(Object.keys(response.json<object>()).sort()).toEqual(['createdAt', 'date', 'digits', 'id', 'status']);
-    expect(response.json()).toMatchObject({ digits: '00123', date: '2026-10-31', status: 'notSent' });
+    expect(Object.keys(response.json<object>()).sort()).toEqual([
+      'createdAt',
+      'date',
+      'digits',
+      'id',
+      'photoId',
+      'status',
+    ]);
+    expect(response.json()).toMatchObject({ digits: '00123', date: '2026-10-31', status: 'notSent', photoId: null });
+  });
+
+  it('links the photo to the reading when the photo id is given', async () => {
+    const photoId = await addPhoto();
+
+    const response = await addReading({ digits: '00123', date: '2026-10-31', photoId });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ photoId });
+    const photo = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } });
+    expect(photo.readingId).toBe(response.json<{ id: number }>().id);
+  });
+
+  it('returns 404 NOT_FOUND and saves nothing when no photo has the id', async () => {
+    const response = await addReading({ digits: '00123', date: '2026-10-31', photoId: 999_999 });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+    expect(await prisma.reading.count()).toBe(0);
+  });
+
+  it('returns 404 NOT_FOUND and keeps the first link when the photo already belongs to a reading', async () => {
+    const photoId = await addPhoto();
+    const first = await addReading({ digits: '00123', date: '2026-10-30', photoId });
+
+    const response = await addReading({ digits: '00124', date: '2026-10-31', photoId });
+
+    expect(response.statusCode).toBe(404);
+    const photo = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } });
+    expect(photo.readingId).toBe(first.json<{ id: number }>().id);
+    expect(await prisma.reading.count()).toBe(1);
   });
 
   it('keeps the leading zeros when the reading is read back', async () => {
@@ -89,6 +141,21 @@ describe('POST /readings', () => {
 });
 
 describe('GET /readings', () => {
+  it("lists each reading's photo id, or null when it has none", async () => {
+    const photoId = await addPhoto();
+    await addReading({ digits: '00100', date: '2026-09-01' });
+    await addReading({ digits: '00200', date: '2026-10-01', photoId });
+
+    const response = await getReadings();
+
+    expect(response.json()).toMatchObject({
+      data: [
+        { digits: '00200', photoId },
+        { digits: '00100', photoId: null },
+      ],
+    });
+  });
+
   it('lists the history newest first, by date then by save order, when several readings exist', async () => {
     await addReading({ digits: '00100', date: '2026-09-01' });
     await addReading({ digits: '00300', date: '2026-10-31' });
