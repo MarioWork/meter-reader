@@ -23,6 +23,14 @@ export class HomePage {
     return this.page.getByRole('dialog', { name: DELETE_DIALOG_NAME });
   }
 
+  get dialogCancelButton() {
+    return this.deleteDialog.getByRole('button', { name: 'Cancel' });
+  }
+
+  get dialogDeleteButton() {
+    return this.deleteDialog.getByRole('button', { name: 'Delete' });
+  }
+
   deleteButtonFor(readingDate: string) {
     return this.page.getByRole('button', { name: `Delete the reading of ${readingDate}` });
   }
@@ -37,7 +45,25 @@ export class HomePage {
     await this.page.keyboard.press('Enter');
   }
 
-  async pressKey(key: string) {
-    await this.page.keyboard.press(key);
+  async moveFocusWithTab() {
+    await this.page.keyboard.press('Tab');
+  }
+
+  async pressFocusedButton() {
+    await this.page.keyboard.press('Enter');
+  }
+
+  async cancelWithEscape() {
+    await this.page.keyboard.press('Escape');
+  }
+
+  // True when keyboard focus sits on something in the page behind the open dialog.
+  async isFocusBehindDialog() {
+    return this.page.evaluate(() => {
+      const focused = document.activeElement;
+      const isInDialog = focused?.closest('dialog') !== null;
+
+      return focused !== document.body && !isInDialog;
+    });
   }
 }

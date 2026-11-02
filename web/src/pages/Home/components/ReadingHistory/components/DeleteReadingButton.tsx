@@ -13,6 +13,9 @@ type Props = {
   reading: ReadingApiModel;
 };
 
+const DIALOG_TITLE = 'Delete this reading?';
+const CONFIRM_LABEL = 'Delete';
+const CONFIRMING_LABEL = 'Deleting…';
 const FAILURE_MESSAGE = 'The reading could not be deleted. Please try again.';
 
 // A reading saved by mistake: Delete asks first. Once deleted, Home's loader runs again and this row is gone.
@@ -23,7 +26,12 @@ function DeleteReadingButton({ reading }: Props) {
   const isDeleting = fetcher.state !== 'idle';
   const readingDate = formatIsoDate(reading.date);
 
-  const openDialog = () => setIsOpen(true);
+  // A failure from an earlier try is not shown again when the dialog reopens.
+  const openDialog = () => {
+    fetcher.reset();
+    setIsOpen(true);
+  };
+
   const closeDialog = () => setIsOpen(false);
 
   const deleteReading = () =>
@@ -39,15 +47,15 @@ function DeleteReadingButton({ reading }: Props) {
       </Button>
       <ConfirmDialog
         isOpen={isOpen}
-        title="Delete this reading?"
-        confirmLabel={isDeleting ? 'Deleting…' : 'Delete'}
+        title={DIALOG_TITLE}
+        confirmLabel={isDeleting ? CONFIRMING_LABEL : CONFIRM_LABEL}
         isConfirming={isDeleting}
         onConfirm={deleteReading}
         onCancel={closeDialog}
       >
         <p>
           The reading <span className="font-mono tabular-nums">{reading.digits}</span> from {readingDate} will be
-          removed from the history, with its photo. This cannot be undone.
+          removed from the history. This cannot be undone.
         </p>
         {failureMessage && <FormAlert message={failureMessage} />}
       </ConfirmDialog>
