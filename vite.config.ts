@@ -6,6 +6,7 @@ import fs, { globSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { loadEnv } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 const alias = {
@@ -29,6 +30,11 @@ const maxWorkers = process.env.VITEST_MAX_FORKS
 // Playwright specs end in .e2e.test.ts, which vitest's default include would pick up.
 const baseExclude = [...configDefaults.exclude, 'e2e/**', 'tests-examples/*'];
 
+const APP_NAME = 'Meter Reader';
+const APP_DESCRIPTION = 'Read a water meter from a photo';
+const THEME_COLOR = '#0b4f8a';
+const BACKGROUND_COLOR = '#ffffff';
+
 // Files that `vi.mock` a module get their own project, so a module mock never leaks into another file.
 const mockingTests = globSync('src/**/*.test.{ts,tsx}')
   .map((file) => file.replace(/\\/g, '/'))
@@ -37,6 +43,8 @@ const mockingTests = globSync('src/**/*.test.{ts,tsx}')
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
   const projectPath = env.VITE_PROJECT_PATH || '/';
+  // MSW registers its own service worker, and only one can control a scope, so mocked builds skip the PWA one.
+  const useMocks = env.VITE_USE_MOCKS === 'true';
 
   return {
     base: projectPath,
@@ -47,6 +55,22 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       // Serves the MSW worker script in dev and provides `virtual:msw` (see src/mocks/browser.ts).
       msw(),
+      // Installable app: web manifest, generated icons and an offline cache. Off in dev by default.
+      VitePWA({
+        disable: useMocks,
+        registerType: 'autoUpdate',
+        pwaAssets: { config: true },
+        // The MSW worker ships in the build too, but the app never needs it offline.
+        workbox: { globIgnores: ['**/mockServiceWorker.js'] },
+        manifest: {
+          name: APP_NAME,
+          short_name: APP_NAME,
+          description: APP_DESCRIPTION,
+          theme_color: THEME_COLOR,
+          background_color: BACKGROUND_COLOR,
+          display: 'standalone',
+        },
+      }),
     ],
     test: {
       globals: true,
