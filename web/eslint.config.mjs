@@ -76,7 +76,8 @@ export default defineConfig([
     },
   },
   {
-    files: ['**/*.mjs'],
+    // Plain JavaScript outside every TS project: config files, and the pre-paint script public/theme-init.js.
+    files: ['**/*.mjs', 'public/**/*.js'],
     extends: [tseslint.configs.disableTypeChecked],
   },
   // v7: includes the React Compiler rules (set-state-in-effect, purity, refs, static-components, ...).

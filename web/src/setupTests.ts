@@ -22,6 +22,22 @@ if (typeof HTMLDialogElement !== 'undefined' && !HTMLDialogElement.prototype.sho
   };
 }
 
+// jsdom has no matchMedia. This one answers "no" to every query (a light-mode device); a test that needs another
+// answer spies on it.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) satisfies MediaQueryList;
+}
+
 // A request with no handler fails the test instead of passing on a warning nobody reads.
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {

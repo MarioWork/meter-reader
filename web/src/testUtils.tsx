@@ -10,6 +10,7 @@ import {
 } from '@testing-library/react';
 import userEventBase from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
+import AppProviders from '@application/AppProviders';
 
 const ASYNC_QUERY_TIMEOUT_MS = 5000;
 
@@ -36,6 +37,15 @@ export function deferred<T>(): Deferred<T> {
   return { promise, ...settlers };
 }
 
+// The providers main.tsx wraps the app in, so a component reads the same context in a test as in the app.
+function renderWithProviders(ui: React.ReactNode, options: RenderOptions = {}) {
+  return render(ui, { wrapper: AppProviders, ...options });
+}
+
+function renderHookWithProviders<Result>(useHook: () => Result) {
+  return renderHook(useHook, { wrapper: AppProviders });
+}
+
 type RenderRoutesOptions = RenderOptions & { initialEntries?: string[] };
 
 // React Router empties an object-form `lazy` ({ action: ... }) in place once it has loaded it, and that object is
@@ -54,7 +64,7 @@ function withFreshLazyObjects(routes: RouteObject[]): RouteObject[] {
 export function renderRoutes(routes: RouteObject[], { initialEntries = ['/'], ...options }: RenderRoutesOptions = {}) {
   const router = createMemoryRouter(withFreshLazyObjects(routes), { initialEntries });
 
-  return render(<RouterProvider router={router} />, options);
+  return renderWithProviders(<RouterProvider router={router} />, options);
 }
 
-export { act, render, renderHook, screen, waitFor, within };
+export { act, renderWithProviders as render, renderHookWithProviders as renderHook, screen, waitFor, within };

@@ -39,7 +39,9 @@ const API_PAGES = /^\/api\//;
 
 const APP_NAME = 'Meter Reader';
 const APP_DESCRIPTION = 'Read a water meter from a photo';
-const THEME_COLOR = '#0b4f8a';
+// The light theme's page background (THEME_COLOURS in src/common/utils/themeUtils.ts). A manifest holds one colour;
+// index.html's theme-color tags give the dark one, and the browser prefers those tags.
+const THEME_COLOR = '#ffffff';
 const BACKGROUND_COLOR = '#ffffff';
 // The app's code and icons, plus Tesseract's gzipped language data (photo OCR must work offline).
 const PRECACHE_GLOBS = ['**/*.{js,css,html,ico,png,svg,webmanifest,gz}'];
@@ -72,7 +74,8 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         disable: useMocks,
         registerType: 'autoUpdate',
-        pwaAssets: { config: true },
+        // index.html carries its own theme-color tags, one per device setting, so the plugin adds none.
+        pwaAssets: { config: true, injectThemeColor: false },
         // The MSW worker ships in the build too, but the app never needs it offline.
         workbox: {
           globPatterns: PRECACHE_GLOBS,

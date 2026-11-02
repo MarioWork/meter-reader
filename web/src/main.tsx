@@ -2,6 +2,7 @@ import axios from 'axios';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
+import AppProviders from '@application/AppProviders';
 import routes from './application/routes';
 import './index.css';
 
@@ -29,4 +30,8 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 await setUpApp();
 
-root.render(<RouterProvider router={getRouter()} />);
+root.render(
+  <AppProviders>
+    <RouterProvider router={getRouter()} />
+  </AppProviders>,
+);
