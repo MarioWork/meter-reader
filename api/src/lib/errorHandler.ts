@@ -2,15 +2,10 @@ import { hasZodFastifySchemaValidationErrors } from '@fastify/type-provider-zod'
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
-  PG_CHECK_VIOLATION,
-  PG_FOREIGN_KEY_VIOLATION,
-  PG_NOT_NULL_VIOLATION,
-  PG_RESTRICT_VIOLATION,
-  PG_UNIQUE_VIOLATION,
   PRISMA_RECORD_NOT_FOUND,
+  PRISMA_UNIQUE_VIOLATION,
   getErrorLogFields,
   getPrismaErrorCode,
-  getSqlState,
 } from './databaseErrors.ts';
 import { HttpError } from './httpErrors.ts';
 
@@ -27,39 +22,17 @@ export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
 type MappedError = { statusCode: number; code: string; message: string };
 
-const SQL_STATE_ERROR_MAP: Record<string, MappedError> = {
-  [PG_UNIQUE_VIOLATION]: {
+const PRISMA_ERROR_MAP: Record<string, MappedError> = {
+  [PRISMA_UNIQUE_VIOLATION]: {
     statusCode: 409,
     code: 'CONFLICT',
     message: 'A record with these values already exists',
   },
-  [PG_FOREIGN_KEY_VIOLATION]: {
-    statusCode: 409,
-    code: 'CONFLICT',
-    message: 'A related record is missing or still referenced',
-  },
-  [PG_RESTRICT_VIOLATION]: {
-    statusCode: 409,
-    code: 'CONFLICT',
-    message: 'The record is still referenced by another one',
-  },
-  [PG_NOT_NULL_VIOLATION]: { statusCode: 400, code: 'VALIDATION_ERROR', message: 'A required value is missing' },
-  [PG_CHECK_VIOLATION]: {
-    statusCode: 400,
-    code: 'VALIDATION_ERROR',
-    message: 'A value is outside its allowed range',
-  },
-};
-
-const PRISMA_ERROR_MAP: Record<string, MappedError> = {
   [PRISMA_RECORD_NOT_FOUND]: { statusCode: 404, code: 'NOT_FOUND', message: 'Record not found' },
 };
 
 function toDatabaseMappedError(error: unknown): MappedError | undefined {
-  const sqlState = getSqlState(error);
   const prismaCode = getPrismaErrorCode(error);
-
-  if (sqlState && SQL_STATE_ERROR_MAP[sqlState]) return SQL_STATE_ERROR_MAP[sqlState];
 
   return prismaCode ? PRISMA_ERROR_MAP[prismaCode] : undefined;
 }
