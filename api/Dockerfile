@@ -3,6 +3,8 @@ FROM node:26-slim AS build
 # Prisma's engines need OpenSSL; the slim image ships without it.
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
+# The committed Yarn release. Bump it here when packageManager changes.
+ARG YARN_RELEASE=.yarn/releases/yarn-4.18.1.cjs
 # `prisma generate` reads prisma.config.ts, which needs some DATABASE_URL; no database is contacted while building.
 # Build stage only: the runtime stage gets the real one from compose.yaml.
 ENV DATABASE_URL=postgresql://build:unused@localhost:5432/unused
@@ -10,11 +12,11 @@ COPY package.json yarn.lock .yarnrc.yml prisma.config.ts ./
 COPY .yarn ./.yarn
 COPY prisma ./prisma
 # The committed Yarn release runs directly: no Corepack download inside the build.
-RUN node .yarn/releases/yarn-4.18.1.cjs install --immutable
+RUN node "$YARN_RELEASE" install --immutable
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
-RUN node .yarn/releases/yarn-4.18.1.cjs build \
-  && node .yarn/releases/yarn-4.18.1.cjs workspaces focus --production
+RUN node "$YARN_RELEASE" build \
+  && node "$YARN_RELEASE" workspaces focus --production
 # Prisma fetches its schema engine (used by `migrate deploy`) on first use. Fetch it now, so the container never
 # downloads anything at start-up. Comparing the schema with an empty one needs the engine but no database.
 RUN node_modules/.bin/prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > /dev/null

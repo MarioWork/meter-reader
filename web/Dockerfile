@@ -1,10 +1,12 @@
 # Build stage: install, type-check, bundle.
 FROM node:24-slim AS build
 WORKDIR /app
+# The committed Yarn release. Bump it here when packageManager changes.
+ARG YARN_RELEASE=.yarn/releases/yarn-4.18.1.cjs
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
 # The committed Yarn release runs directly: no Corepack download inside the build.
-RUN node .yarn/releases/yarn-4.18.1.cjs install --immutable
+RUN node "$YARN_RELEASE" install --immutable
 COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts pwa-assets.config.ts index.html ./
 COPY public ./public
 COPY src ./src
@@ -13,7 +15,7 @@ COPY src ./src
 ENV VITE_PROJECT_PATH=/ \
   VITE_BASE_API_URL=/api \
   VITE_USE_MOCKS=false
-RUN node .yarn/releases/yarn-4.18.1.cjs build
+RUN node "$YARN_RELEASE" build
 
 # Runtime stage: Caddy serves dist/ over HTTPS and proxies /api to the api container.
 FROM caddy:2-alpine
