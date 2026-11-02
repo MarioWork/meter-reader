@@ -20,7 +20,7 @@ beforeEach(async () => {
 });
 
 describe('GET /auth/status', () => {
-  it('answers setup before the app is set up', async () => {
+  it('answers setup when the app is not set up yet', async () => {
     const response = await getStatus();
 
     expect(response.statusCode).toBe(200);
@@ -41,7 +41,7 @@ describe('GET /auth/status', () => {
 });
 
 describe('POST /auth/logout', () => {
-  it('ends the session and clears the cookie', async () => {
+  it('ends the session and clears the cookie when the browser is signed in', async () => {
     const token = await setUpWithPassword(app);
 
     const response = await app.inject({ method: 'POST', url: '/auth/logout', ...withSession(token) });
@@ -52,7 +52,7 @@ describe('POST /auth/logout', () => {
     expect((await getStatus(token)).json()).toEqual({ state: 'signedOut' });
   });
 
-  it('answers 204 without a session', async () => {
+  it('answers 204 when there is no session', async () => {
     const response = await app.inject({ method: 'POST', url: '/auth/logout' });
 
     expect(response.statusCode).toBe(204);

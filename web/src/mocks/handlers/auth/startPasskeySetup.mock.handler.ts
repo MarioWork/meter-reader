@@ -5,7 +5,7 @@ import { AuthStateUtil } from '@app-types/utility';
 import type { StartPasskeySetup } from '@services/authService/authService.type';
 import { MOCK_DELAY } from '@mocks/handlers';
 import { getMockAuthState, MOCK_SETUP_CODE } from './authMockState';
-import { AUTH_ERROR_MOCKS } from './models/authErrorMockModel.mock';
+import { createAuthErrorMockModel } from './models/authErrorMockModel.mock';
 import { createRegistrationOptionsMockModel } from './models/passkeyOptionsMockModel.mock';
 
 export default (baseUrl: string) => [
@@ -15,12 +15,13 @@ export default (baseUrl: string) => [
       await delay(MOCK_DELAY);
 
       if (getMockAuthState() !== AuthStateUtil.SETUP) {
-        return HttpResponse.json(AUTH_ERROR_MOCKS.alreadySetUp, { status: 409 });
+        return HttpResponse.json(createAuthErrorMockModel('alreadySetUp'), { status: 409 });
       }
 
       const { code } = (await request.json()) as StartPasskeySetup;
 
-      if (code !== MOCK_SETUP_CODE) return HttpResponse.json(AUTH_ERROR_MOCKS.invalidSetupCode, { status: 401 });
+      if (code !== MOCK_SETUP_CODE)
+        return HttpResponse.json(createAuthErrorMockModel('invalidSetupCode'), { status: 401 });
 
       return HttpResponse.json(createRegistrationOptionsMockModel());
     },

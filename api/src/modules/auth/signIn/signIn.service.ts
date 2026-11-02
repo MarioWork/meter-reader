@@ -1,15 +1,14 @@
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 import { ConflictError, UnauthorizedError } from '../../../lib/httpErrors.ts';
 import { hashPassword, verifyPassword } from '../../../lib/passwordHash.ts';
+import { SESSION_ABSOLUTE_MS } from '../../../lib/sessionCookie.ts';
 import { createSecureToken } from '../../../lib/secureToken.ts';
 import { authRepository } from '../auth.repository.ts';
 import type { AuthenticationOptionsResponse } from '../auth.schema.ts';
 import {
   CEREMONY_TIMEOUT_MS,
   RP_ID,
-  SESSION_ABSOLUTE_MS,
   SESSION_IDLE_MS,
-  isSetUp,
   log,
   openSession,
   storeChallenge,
@@ -58,7 +57,7 @@ export async function addPasswordSession({ password }: PasswordSignIn, previous:
 
 // No allowCredentials: the browser offers whichever passkey it holds for this site, so there is nothing to type.
 export async function getSignInOptions(): Promise<AuthenticationOptionsResponse> {
-  if (!(await isSetUp())) throw new ConflictError(NOT_SET_UP_MESSAGE, 'NOT_SET_UP');
+  if (!(await authRepository.isSetUp())) throw new ConflictError(NOT_SET_UP_MESSAGE, 'NOT_SET_UP');
 
   const options = await generateAuthenticationOptions({
     rpID: RP_ID,
@@ -83,7 +82,10 @@ export async function addPasskeySession({ response }: PasskeySignIn, previous: A
 
   if (isOtherHandle) throw failure;
 
-  const authentication = await verifySignedAnswer(response, challenge.challenge, passkey, failure);
+  const authentication = await verifySignedAnswer(response, challenge.challenge, passkey);
+
+  if (!authentication) throw failure;
+
   const opened = openSession('PASSKEY');
 
   await authRepository.completePasskeySignIn({

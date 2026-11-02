@@ -2,6 +2,7 @@ import cookie from '@fastify/cookie';
 import type { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import { env } from '../config/env.ts';
+import { APP_ORIGIN } from '../lib/appOrigin.ts';
 import { ErrorResponseSchema } from '../lib/errorHandler.ts';
 import { ForbiddenError, UnauthorizedError } from '../lib/httpErrors.ts';
 import { SESSION_COOKIE_NAME } from '../lib/sessionCookie.ts';
@@ -26,7 +27,6 @@ const TRUSTED_FETCH_SITES = new Set(['same-origin', 'none']);
 const DOCS_PATH = '/docs';
 const UNAUTHORIZED_STATUS = 401;
 const FORBIDDEN_STATUS = 403;
-const APP_ORIGIN = new URL(env.APP_ORIGIN).origin;
 const SIGN_IN_MESSAGE = 'Sign in to continue';
 const CROSS_SITE_MESSAGE = 'Requests from other sites are not allowed';
 

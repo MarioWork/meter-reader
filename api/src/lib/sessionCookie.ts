@@ -1,12 +1,14 @@
 import type { CookieSerializeOptions } from '@fastify/cookie';
-import { env } from '../config/env.ts';
+import { IS_SECURE_APP_ORIGIN } from './appOrigin.ts';
 
-const SECONDS_PER_DAY = 24 * 60 * 60;
+const MS_PER_SECOND = 1000;
+const DAY_MS = 24 * 60 * 60 * MS_PER_SECOND;
 
-// The cookie's life matches the session's longest life; the server still checks both timeouts on every request.
-export const SESSION_MAX_AGE_SECONDS = 30 * SECONDS_PER_DAY;
+// NIST SP 800-63B-4 caps a session at 30 days. The server checks it on every request; the cookie lives as long.
+export const SESSION_ABSOLUTE_MS = 30 * DAY_MS;
+export const SESSION_MAX_AGE_SECONDS = SESSION_ABSOLUTE_MS / MS_PER_SECOND;
 
-const isSecureOrigin = new URL(env.APP_ORIGIN).protocol === 'https:';
+const isSecureOrigin = IS_SECURE_APP_ORIGIN;
 
 // `__Host-` makes the browser refuse the cookie unless it is Secure, host-only and Path=/. Plain http (local dev)
 // cannot carry a Secure cookie, so there it is a plain name with the same other flags.

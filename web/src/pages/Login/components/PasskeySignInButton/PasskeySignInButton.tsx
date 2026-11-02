@@ -2,6 +2,7 @@ import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import Button from '@components/Button';
 import FormAlert from '@components/FormAlert';
+import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
 import { LoginIntents, SIGN_IN_FAILED_MESSAGE } from '../../loginUtils';
 
@@ -9,8 +10,7 @@ import { LoginIntents, SIGN_IN_FAILED_MESSAGE } from '../../loginUtils';
 function PasskeySignInButton() {
   const fetcher = useFetcher<JSONResponseUtil>();
   const isSigningIn = fetcher.state !== 'idle';
-  const failure = fetcher.data?.success === false ? fetcher.data.error : undefined;
-  const hasFailed = fetcher.data?.success === false && !isSigningIn;
+  const failureMessage = useFetcherFailure(fetcher, SIGN_IN_FAILED_MESSAGE);
 
   const signIn = () =>
     void fetcher.submit(createFormData({ intent: LoginIntents.PASSKEY }), { method: HttpVerbsUtil.POST });
@@ -20,7 +20,7 @@ function PasskeySignInButton() {
       <Button variant="secondary" isDisabled={isSigningIn} onClick={signIn}>
         Sign in with a passkey
       </Button>
-      {hasFailed && <FormAlert message={failure?.message ?? SIGN_IN_FAILED_MESSAGE} />}
+      {failureMessage && <FormAlert message={failureMessage} />}
     </div>
   );
 }

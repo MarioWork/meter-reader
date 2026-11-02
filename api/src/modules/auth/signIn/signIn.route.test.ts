@@ -27,7 +27,12 @@ async function getSignInOptions(): Promise<AuthenticationOptionsResponse> {
 }
 
 function verifyPasskey(response: unknown) {
-  return app.inject({ method: 'POST', url: '/auth/login/verify', remoteAddress: nextAddress(), payload: { response } });
+  return app.inject({
+    method: 'POST',
+    url: '/auth/login/passkey',
+    remoteAddress: nextAddress(),
+    payload: { response },
+  });
 }
 
 function getStatus(token: string) {
@@ -77,7 +82,7 @@ describe('POST /auth/login/password', () => {
     expect(response.json()).toMatchObject({ code: 'SIGN_IN_FAILED' });
   });
 
-  it('returns 429 after 5 tries a minute from one address, but never locks the login', async () => {
+  it('returns 429 but never locks the login when one address tries more than 5 times a minute', async () => {
     await setUpWithPassword(app);
     const remoteAddress = nextAddress();
 
@@ -88,6 +93,18 @@ describe('POST /auth/login/password', () => {
 
     expect(responses.at(-1)?.statusCode).toBe(429);
     expect((await signInWithPassword(TEST_PASSWORD)).statusCode).toBe(204);
+  });
+
+  it('returns 400 VALIDATION_ERROR when the body has no password', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login/password',
+      remoteAddress: nextAddress(),
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
   it('ends the old session of this browser when it signs in again', async () => {
@@ -107,7 +124,7 @@ describe('POST /auth/login/password', () => {
 });
 
 describe('POST /auth/login/options', () => {
-  it('returns 409 NOT_SET_UP before setup', async () => {
+  it('returns 409 NOT_SET_UP when the app is not set up yet', async () => {
     const response = await app.inject({ method: 'POST', url: '/auth/login/options' });
 
     expect(response.statusCode).toBe(409);
@@ -115,7 +132,14 @@ describe('POST /auth/login/options', () => {
   });
 });
 
-describe('POST /auth/login/verify', () => {
+describe('POST /auth/login/passkey', () => {
+  it('returns 400 VALIDATION_ERROR when the answer is not a passkey answer', async () => {
+    const response = await verifyPasskey({ id: 'not base64url!' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
   it('signs in when the passkey answers a fresh challenge', async () => {
     const passkey = new TestPasskey();
     await setUpWithPasskey(app, passkey);
@@ -138,7 +162,7 @@ describe('POST /auth/login/verify', () => {
     expect(response.json()).toMatchObject({ code: 'SIGN_IN_FAILED' });
   });
 
-  it('returns 401 SIGN_IN_FAILED for a passkey the app never saved', async () => {
+  it('returns 401 SIGN_IN_FAILED when the passkey is one the app never saved', async () => {
     await setUpWithPasskey(app, new TestPasskey());
 
     const response = await verifyPasskey(new TestPasskey().authenticate(await getSignInOptions()));

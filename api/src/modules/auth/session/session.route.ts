@@ -30,7 +30,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      if (request.session) await deleteSession(request.session);
+      await deleteSession(request.session);
       clearSessionCookie(reply);
 
       return reply.code(204).send();

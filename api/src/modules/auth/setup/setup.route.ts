@@ -4,7 +4,7 @@ import { ErrorResponseSchema } from '../../../lib/errorHandler.ts';
 import { RegistrationOptionsResponseSchema } from '../auth.schema.ts';
 import { PUBLIC_CEREMONY_CONFIG, PUBLIC_PASSWORD_CONFIG, TAGS, setSessionCookie } from '../auth.routeOptions.ts';
 import { SetupOptionsSchema, SetupSchema } from './setup.schema.ts';
-import { completeSetup, getSetupOptions } from './setup.service.ts';
+import { addLogin, getSetupOptions } from './setup.service.ts';
 
 export const setupRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
@@ -46,7 +46,7 @@ export const setupRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      const token = await completeSetup(request.body);
+      const token = await addLogin(request.body);
       setSessionCookie(reply, token);
 
       return reply.code(204).send();

@@ -4,7 +4,7 @@ import { delay } from 'msw/utils/delay';
 import { AuthStateUtil } from '@app-types/utility';
 import { MOCK_DELAY } from '@mocks/handlers';
 import { getMockAuthState } from './authMockState';
-import { AUTH_ERROR_MOCKS } from './models/authErrorMockModel.mock';
+import { createAuthErrorMockModel } from './models/authErrorMockModel.mock';
 import { createAuthenticationOptionsMockModel } from './models/passkeyOptionsMockModel.mock';
 
 export default (baseUrl: string) => [
@@ -14,7 +14,7 @@ export default (baseUrl: string) => [
       await delay(MOCK_DELAY);
 
       if (getMockAuthState() === AuthStateUtil.SETUP) {
-        return HttpResponse.json(AUTH_ERROR_MOCKS.notSetUp, { status: 409 });
+        return HttpResponse.json(createAuthErrorMockModel('notSetUp'), { status: 409 });
       }
 
       return HttpResponse.json(createAuthenticationOptionsMockModel());

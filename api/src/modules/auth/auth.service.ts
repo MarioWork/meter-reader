@@ -8,8 +8,7 @@ import {
 } from '@simplewebauthn/server';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { env } from '../../config/env.ts';
-import type { HttpError } from '../../lib/httpErrors.ts';
+import { APP_HOSTNAME, APP_ORIGIN } from '../../lib/appOrigin.ts';
 import { logger } from '../../lib/logger.ts';
 import { createSecureToken, hashSecureToken } from '../../lib/secureToken.ts';
 import { authRepository, type AuthChallengePurpose, type NewSession, type PasskeyRow } from './auth.repository.ts';
@@ -21,8 +20,7 @@ const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-// NIST SP 800-63B-4 caps a session at 30 days; a week unused ends it sooner.
-export const SESSION_ABSOLUTE_MS = 30 * DAY_MS;
+// A week unused ends a session before its 30 days (SESSION_ABSOLUTE_MS, lib/sessionCookie.ts).
 export const SESSION_IDLE_MS = 7 * DAY_MS;
 // lastSeenAt is written at most this often, so reading a page is not a database write.
 export const SESSION_TOUCH_INTERVAL_MS = HOUR_MS;
@@ -35,9 +33,8 @@ const RP_NAME = 'Meter Reader';
 const PASSKEY_USER_NAME = 'Meter Reader';
 const WEBAUTHN_USER_ID_BYTES = 32;
 
-export const APP_ORIGIN = new URL(env.APP_ORIGIN).origin;
-// A passkey belongs to a host name for good: it never works on another one, and never on a bare IP address.
-export const RP_ID = new URL(env.APP_ORIGIN).hostname;
+// The passkey site (WebAuthn relying party): the app's host name.
+export const RP_ID = APP_HOSTNAME;
 
 const ClientDataSchema = z.object({ challenge: z.string().min(1) });
 
@@ -54,10 +51,6 @@ export function openSession(signInMethod: NewSession['signInMethod']): OpenedSes
 // The random WebAuthn user handle the account's passkeys carry. Never the row id.
 export function createWebauthnUserId(): string {
   return randomBytes(WEBAUTHN_USER_ID_BYTES).toString('base64url');
-}
-
-export async function isSetUp(): Promise<boolean> {
-  return authRepository.isSetUp();
 }
 
 // The challenge the browser signed, read from its client data. Undefined when the data is not what a browser sends.
@@ -108,8 +101,9 @@ export function buildRegistrationOptions(webauthnUserId: string) {
   });
 }
 
-// Checks a new passkey against the challenge it was made for. Any failure is the same `failure`.
-export async function verifyNewPasskey(response: RegistrationResponse, expectedChallenge: string, failure: HttpError) {
+// Checks a new passkey against the challenge it was made for. Undefined when it does not hold, whatever the reason
+// (logged here), so the caller gives one answer for every failure.
+export async function verifyNewPasskey(response: RegistrationResponse, expectedChallenge: string) {
   try {
     const verification = await verifyRegistrationResponse({
       response,
@@ -119,12 +113,11 @@ export async function verifyNewPasskey(response: RegistrationResponse, expectedC
       requireUserVerification: true,
     });
 
-    if (!verification.verified) throw failure;
-
-    return verification.registrationInfo;
+    return verification.verified ? verification.registrationInfo : undefined;
   } catch (error: unknown) {
     log.warn({ err: error }, 'passkey registration failed');
-    throw failure;
+
+    return undefined;
   }
 }
 
@@ -138,12 +131,11 @@ function toWebAuthnCredential(row: PasskeyRow): WebAuthnCredential {
 }
 
 // Checks a sign-in answer against the stored passkey: signature, challenge, site, Face ID / Touch ID, counter.
-// Any failure is the same `failure`.
+// Undefined when it does not hold, whatever the reason (logged here).
 export async function verifySignedAnswer(
   response: AuthenticationResponse,
   expectedChallenge: string,
   passkey: PasskeyRow,
-  failure: HttpError,
 ) {
   try {
     const verification = await verifyAuthenticationResponse({
@@ -155,11 +147,10 @@ export async function verifySignedAnswer(
       requireUserVerification: true,
     });
 
-    if (!verification.verified) throw failure;
-
-    return verification.authenticationInfo;
+    return verification.verified ? verification.authenticationInfo : undefined;
   } catch (error: unknown) {
     log.warn({ err: error, passkeyId: passkey.id }, 'passkey sign-in failed');
-    throw failure;
+
+    return undefined;
   }
 }

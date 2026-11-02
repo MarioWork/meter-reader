@@ -47,7 +47,7 @@ export const signInRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   app.post(
-    '/login/verify',
+    '/login/passkey',
     {
       config: PUBLIC_CEREMONY_CONFIG,
       schema: {

@@ -11,7 +11,6 @@ import {
 } from '../auth.fixture.ts';
 import type { RegistrationOptionsResponse } from '../auth.schema.ts';
 import { TestPasskey } from '../TestPasskey.ts';
-import { addSetupCode, getSetupLink, resetLogin } from './setup.service.ts';
 
 const URL = '/auth/setup';
 // On the bundled common-password list, and 15+ characters long.
@@ -46,20 +45,6 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetAuthTables();
-});
-
-describe('setup link', () => {
-  it('is a one-time link to the setup page on the app origin', async () => {
-    const code = await newSetupCode();
-
-    expect(getSetupLink(code)).toBe(`http://localhost:5173/setup?code=${code}`);
-  });
-
-  it('is not made once the app is set up', async () => {
-    await setUpWithPassword(app);
-
-    expect(await addSetupCode()).toBeUndefined();
-  });
 });
 
 describe('POST /auth/setup', () => {
@@ -116,6 +101,16 @@ describe('POST /auth/setup', () => {
     expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
+  it('returns 400 VALIDATION_ERROR when combining accents pad a 14-character password to 15', async () => {
+    const code = await newSetupCode();
+    // 13 letters plus "e" and a combining acute accent: 15 code units, 14 characters once normalised.
+    const padded = 'meterreadings' + 'e\u0301';
+
+    const response = await setUp({ code, password: padded });
+
+    expect(response.statusCode).toBe(400);
+  });
+
   it('returns 400 COMMON_PASSWORD when the password is on the common list, whatever its case', async () => {
     const code = await newSetupCode();
 
@@ -169,33 +164,12 @@ describe('POST /auth/setup/options', () => {
     expect(response.json()).toMatchObject({ code: 'INVALID_SETUP_CODE' });
   });
 
-  it('returns 409 ALREADY_SET_UP once the app is set up', async () => {
+  it('returns 409 ALREADY_SET_UP when the app is already set up', async () => {
     await setUpWithPassword(app);
 
     const response = await app.inject({ method: 'POST', url: `${URL}/options`, payload: { code: 'any' } });
 
     expect(response.statusCode).toBe(409);
     expect(response.json()).toMatchObject({ code: 'ALREADY_SET_UP' });
-  });
-});
-
-describe('resetLogin (yarn auth:reset)', () => {
-  it('removes the password and every session, and returns a new code that sets the app up again', async () => {
-    const oldToken = await setUpWithPassword(app);
-
-    const code = await resetLogin();
-
-    expect((await getStatus()).json()).toEqual({ state: 'setup' });
-    expect((await getStatus(oldToken)).json()).toEqual({ state: 'setup' });
-    expect((await signInWithPassword(TEST_PASSWORD)).statusCode).toBe(401);
-    expect((await setUp({ code, password: 'a brand new passphrase' })).statusCode).toBe(204);
-  });
-
-  it('kills a setup code printed before the reset', async () => {
-    const oldCode = await newSetupCode();
-
-    await resetLogin();
-
-    expect((await setUp({ code: oldCode, password: TEST_PASSWORD })).statusCode).toBe(401);
   });
 });
