@@ -18,14 +18,21 @@ const MOMENT_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
 });
 // A calendar day read as the start of that day in UTC, so formatting in UTC shows the same day.
 const START_OF_DAY_UTC = 'T00:00:00.000Z';
+// YYYY-MM-DD, the shape a date input gives and the API takes.
+export const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function pad(value: number): string {
   return String(value).padStart(PAD_LENGTH, '0');
 }
 
+// The local calendar day of a moment, as a date input wants it.
+export function toIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + MONTH_OFFSET)}-${pad(date.getDate())}`;
+}
+
 // Today in the user's own time zone, as a date input wants it.
 export function todayAsIsoDate(now = new Date()): string {
-  return `${now.getFullYear()}-${pad(now.getMonth() + MONTH_OFFSET)}-${pad(now.getDate())}`;
+  return toIsoDate(now);
 }
 
 // "2026-10-31" → "31 Oct 2026".

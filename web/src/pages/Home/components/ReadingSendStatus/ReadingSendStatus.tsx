@@ -3,26 +3,25 @@ import { ReadingStatusUtil } from '@app-types/utility';
 import type { VariantProps } from 'class-variance-authority';
 import { Badge, type badgeVariants } from '@components/ui/badge';
 import { formatTimestamp } from '@utils/dateUtils';
+import { READING_STATUS_LABELS } from '../../readingStatusLabels';
 
 type Props = {
   reading: ReadingApiModel;
 };
 
-type StatusChip = {
-  label: string;
-  variant: VariantProps<typeof badgeVariants>['variant'];
-};
+type StatusChipVariant = VariantProps<typeof badgeVariants>['variant'];
 
 // Always text as well as colour, never colour alone.
-const STATUS_CHIPS: Record<ReadingStatusUtil, StatusChip> = {
-  [ReadingStatusUtil.NOT_SENT]: { label: 'Not sent', variant: 'outline' },
-  [ReadingStatusUtil.SENT]: { label: 'Sent', variant: 'success' },
-  [ReadingStatusUtil.FAILED]: { label: 'Failed', variant: 'error' },
+const STATUS_CHIP_VARIANTS: Record<ReadingStatusUtil, StatusChipVariant> = {
+  [ReadingStatusUtil.NOT_SENT]: 'outline',
+  [ReadingStatusUtil.SENT]: 'success',
+  [ReadingStatusUtil.FAILED]: 'error',
 };
 
 // Whether the reading's email went out, as a chip, and when it did.
 function ReadingSendStatus({ reading }: Props) {
-  const { label, variant } = STATUS_CHIPS[reading.status];
+  const label = READING_STATUS_LABELS[reading.status];
+  const variant = STATUS_CHIP_VARIANTS[reading.status];
 
   return (
     <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">

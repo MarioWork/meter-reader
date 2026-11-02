@@ -1,11 +1,9 @@
 import { string } from 'yup';
-import { todayAsIsoDate } from './dateUtils';
+import { ISO_DATE_PATTERN, todayAsIsoDate } from './dateUtils';
 
 // The API's limits: digits only, at most 15 of them, leading zeros kept.
 export const READING_DIGITS_MAX_LENGTH = 15;
 const DIGITS_ONLY = /^\d+$/;
-// YYYY-MM-DD, the shape a date input gives and the API takes.
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LEADING_ZEROS = /^0+/;
 const PICK_A_DAY_MESSAGE = 'Pick the day you read the meter';
 
@@ -19,7 +17,7 @@ export const readingDigitsSchema = string()
 // Not after today, in the user's own time zone. YYYY-MM-DD strings sort as the days do.
 export const readingDateSchema = string()
   .required(PICK_A_DAY_MESSAGE)
-  .matches(ISO_DATE, PICK_A_DAY_MESSAGE)
+  .matches(ISO_DATE_PATTERN, PICK_A_DAY_MESSAGE)
   .test('not-in-future', 'Pick today or a day before it', (date) => date <= todayAsIsoDate());
 
 function withoutLeadingZeros(digits: string): string {
