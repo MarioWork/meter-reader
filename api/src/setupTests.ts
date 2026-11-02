@@ -2,9 +2,14 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
-import { TEMPLATE_DATABASE, TEST_DATABASE_PREFIX, createDatabase, withDatabase } from './testDatabases.ts';
+import {
+  TEMPLATE_DATABASE,
+  TEST_DATABASE_PREFIX,
+  TEST_ENV_FILE,
+  createDatabase,
+  withDatabase,
+} from './testDatabases.ts';
 
-const TEST_ENV_FILE = '.env.test';
 const DATABASE_SUFFIX_BYTES = 6;
 
 process.loadEnvFile(TEST_ENV_FILE);
