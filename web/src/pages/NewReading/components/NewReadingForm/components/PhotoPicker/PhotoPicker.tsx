@@ -29,7 +29,7 @@ function PhotoPicker({ previewUrl, isShrinking, isFindingDigits, errorMessage, o
         <img
           src={previewUrl}
           alt="The meter, as it will be saved"
-          className="max-h-48 self-start rounded-sm border border-gray-300"
+          className="max-h-48 self-start rounded-sm border border-input"
         />
       )}
       <div className="flex flex-wrap gap-2">
@@ -56,7 +56,7 @@ function PhotoPicker({ previewUrl, isShrinking, isFindingDigits, errorMessage, o
       </div>
       {isShrinking && <p role="status">Shrinking the photo…</p>}
       {errorMessage && (
-        <p id={ERROR_ID} role="alert" className="text-red-700">
+        <p id={ERROR_ID} role="alert" className="text-destructive">
           {errorMessage}
         </p>
       )}

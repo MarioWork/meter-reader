@@ -19,7 +19,7 @@ const PHOTO_DESCRIPTION = 'The meter showing';
 function ReadingPhotoViewer({ reading }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (reading.photoId === null) return <span className="text-gray-600">{NO_PHOTO_LABEL}</span>;
+  if (reading.photoId === null) return <span className="text-muted-foreground">{NO_PHOTO_LABEL}</span>;
 
   const photoUrl = getPhotoUrl(reading.photoId);
   const description = `${reading.digits} on ${formatIsoDate(reading.date)}`;
@@ -31,7 +31,7 @@ function ReadingPhotoViewer({ reading }: Props) {
         type="button"
         aria-label={`${SHOW_PHOTO_LABEL} ${description}`}
         onClick={() => setIsOpen(true)}
-        className="block rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="block rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <img
           src={photoUrl}
@@ -39,7 +39,7 @@ function ReadingPhotoViewer({ reading }: Props) {
           width={PREVIEW_SIZE_PX}
           height={PREVIEW_SIZE_PX}
           loading="lazy"
-          className="size-12 rounded-sm border border-gray-300 object-cover"
+          className="size-12 rounded-sm border border-input object-cover"
         />
       </button>
       <PhotoDialog

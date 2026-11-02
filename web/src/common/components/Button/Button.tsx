@@ -11,13 +11,13 @@ type Props = {
 
 const BASE_CLASSES = `
   min-h-6 self-start rounded-sm px-3 py-1
-  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700
+  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring
   disabled:opacity-60
 `;
 
 const VARIANT_CLASSES: Record<NonNullable<Props['variant']>, string> = {
-  primary: `${BASE_CLASSES} bg-blue-700 text-white`,
-  secondary: `${BASE_CLASSES} border border-blue-700 bg-white text-blue-700`,
+  primary: `${BASE_CLASSES} bg-primary text-primary-foreground`,
+  secondary: `${BASE_CLASSES} border border-primary bg-background text-primary`,
 };
 
 // The app's one button: at least 24×24 px (WCAG 2.2 target size) and a visible keyboard focus ring.

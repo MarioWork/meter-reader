@@ -40,7 +40,7 @@ function SendReadingModal() {
         onAttachingPhotoChange={setIsAttachingPhoto}
       />
       {!isMailConnected && (
-        <p className="text-amber-900">
+        <p className="text-warning">
           {MAIL_NOT_CONNECTED_TEXT} <code className="font-mono">{MAIL_NOT_CONNECTED_COMMAND}</code>{' '}
           {MAIL_NOT_CONNECTED_END}
         </p>

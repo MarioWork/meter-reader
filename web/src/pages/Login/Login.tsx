@@ -6,9 +6,9 @@ function Login() {
     <main className="mx-auto flex max-w-md flex-col gap-6 p-6">
       <h1 className="text-2xl font-bold">Sign in</h1>
       <PasswordSignInForm />
-      <p className="text-gray-600">or</p>
+      <p className="text-muted-foreground">or</p>
       <PasskeySignInButton />
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted-foreground">
         Locked out? Run <code>yarn auth:reset</code> on the server and open the new setup link it prints.
       </p>
     </main>
