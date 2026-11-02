@@ -1,4 +1,5 @@
 import { buildApp, type App } from '../../app.ts';
+import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
 
 let app: App;
 
@@ -29,8 +30,11 @@ describe('GET /ready', () => {
 });
 
 describe('GET /<unknown route>', () => {
-  it('returns 404 with the NOT_FOUND envelope when no route matches', async () => {
-    const response = await app.inject({ method: 'GET', url: '/nope' });
+  it('returns 404 with the NOT_FOUND envelope when no route matches and the caller is signed in', async () => {
+    await resetAuthTables();
+    const token = await setUpWithPassword(app);
+
+    const response = await app.inject({ method: 'GET', url: '/nope', ...withSession(token) });
 
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ code: 'NOT_FOUND', message: 'Route GET /nope not found' });

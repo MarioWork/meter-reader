@@ -20,3 +20,30 @@ export class ServiceUnavailableError extends HttpError {
     super(message, { code: options.code, statusCode: 503, cause: options.cause });
   }
 }
+
+// Not signed in, or a sign-in or setup attempt that failed. `code` tells the web app which one.
+export class UnauthorizedError extends HttpError {
+  constructor(message: string, code = 'UNAUTHORIZED') {
+    super(message, { code, statusCode: 401 });
+  }
+}
+
+// This request is not allowed whoever sends it (a write from another site).
+export class ForbiddenError extends HttpError {
+  constructor(message: string, code = 'FORBIDDEN') {
+    super(message, { code, statusCode: 403 });
+  }
+}
+
+// The request clashes with the state of the app (setting up an app that is already set up).
+export class ConflictError extends HttpError {
+  constructor(message: string, code = 'CONFLICT') {
+    super(message, { code, statusCode: 409 });
+  }
+}
+
+export class BadRequestError extends HttpError {
+  constructor(message: string, code = 'BAD_REQUEST') {
+    super(message, { code, statusCode: 400 });
+  }
+}

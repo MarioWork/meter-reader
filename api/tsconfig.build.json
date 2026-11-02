@@ -7,5 +7,12 @@
     "types": ["node"]
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/setupTests.ts", "src/testDatabases.ts", "src/testGlobalSetup.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/setupTests.ts",
+    "src/testDatabases.ts",
+    "src/testGlobalSetup.ts",
+    "src/**/*.fixture.ts",
+    "src/modules/auth/TestPasskey.ts"
+  ]
 }

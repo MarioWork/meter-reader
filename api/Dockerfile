@@ -37,11 +37,13 @@ COPY --chown=node:node prisma/migrations ./prisma/migrations
 USER node
 CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
-# Runtime image (the default target): production dependencies and dist/.
+# Runtime image (the default target): production dependencies, dist/ and assets/.
 FROM base AS runtime
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/package.json ./
+# Data files the code reads at start-up (the common-password list).
+COPY --chown=node:node assets ./assets
 USER node
 EXPOSE 3000
 CMD ["node", "dist/server.js"]
