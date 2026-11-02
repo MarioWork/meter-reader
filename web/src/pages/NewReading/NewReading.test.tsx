@@ -2,14 +2,21 @@ import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { renderRoutes, screen, userEvent, within } from '@test-utils';
+import { deferred, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
 import { todayAsIsoDate } from '@utils/dateUtils';
+import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
 import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
 
 // jsdom has no canvas to shrink with: the shrink runs for real in the e2e test. Here it hands back a small JPEG.
 vi.mock('./components/NewReadingForm/photoShrinkUtils', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   shrinkPhoto: vi.fn(),
+}));
+
+// Tesseract needs a canvas and WebAssembly: real OCR runs in the e2e test. Here the digits found are handed back.
+vi.mock('./components/NewReadingForm/photoDigitsUtils', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  readDigitsFromPhoto: vi.fn(),
 }));
 
 const CAMERA_PHOTO = new File(['a big photo straight from the camera'], 'IMG_0042.HEIC', { type: 'image/heic' });
@@ -19,6 +26,9 @@ const SHRUNK_PHOTO = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], 'meter
 const LOWER_THAN_LAST = '00500';
 const HIGHER_THAN_LAST = '00600';
 const WARNING = /lower than your last reading/;
+const READING_IN_PHOTO = '00612';
+const READING_PHOTO_STATUS = 'Reading the number from the photo…';
+const NOTHING_FOUND_STATUS = 'No number found in the photo. Type it in.';
 
 async function renderNewReading() {
   renderRoutes(routes, { initialEntries: [READING_ROUTES_PATHS.NEW] });
@@ -35,6 +45,7 @@ async function save() {
 
 beforeEach(() => {
   vi.mocked(shrinkPhoto).mockResolvedValue(SHRUNK_PHOTO);
+  vi.mocked(readDigitsFromPhoto).mockResolvedValue('');
 });
 
 function newestHistoryRow() {
@@ -186,4 +197,49 @@ it('says why a file cannot be used and still saves the reading without it', asyn
   await save();
   await screen.findByRole('heading', { name: 'History' });
   expect(newestHistoryRow()).toHaveTextContent('No photo');
+});
+
+it('reads the number from the picked photo into the reading field, saying so while it works', async () => {
+  const digitsFound = deferred<string>();
+  vi.mocked(readDigitsFromPhoto).mockReturnValueOnce(digitsFound.promise);
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+
+  expect(await screen.findByText(READING_PHOTO_STATUS)).toHaveRole('status');
+  expect(readDigitsFromPhoto).toHaveBeenCalledWith(SHRUNK_PHOTO);
+  digitsFound.resolve(READING_IN_PHOTO);
+  await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
+  expect(screen.queryByText(READING_PHOTO_STATUS)).not.toBeInTheDocument();
+});
+
+it('lets the user fix the number read from the photo', async () => {
+  vi.mocked(readDigitsFromPhoto).mockResolvedValueOnce('00812');
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await waitFor(() => expect(readingField()).toHaveValue('00812'));
+  await userEvent.clear(readingField());
+  await userEvent.type(readingField(), READING_IN_PHOTO);
+
+  expect(readingField()).toHaveValue(READING_IN_PHOTO);
+});
+
+it('leaves the reading field empty for typing when the photo shows no number', async () => {
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+
+  expect(await screen.findByText(NOTHING_FOUND_STATUS)).toBeVisible();
+  expect(readingField()).toHaveValue('');
+});
+
+it('leaves the reading field empty for typing when reading the photo fails', async () => {
+  vi.mocked(readDigitsFromPhoto).mockRejectedValueOnce(new Error('The OCR engine did not load'));
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+
+  expect(await screen.findByText(NOTHING_FOUND_STATUS)).toBeVisible();
+  expect(readingField()).toHaveValue('');
 });

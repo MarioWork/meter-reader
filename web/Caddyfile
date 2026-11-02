@@ -12,11 +12,11 @@ tls internal
 encode zstd gzip
 
 # Security headers for the app (helmet only covers the API's own answers).
-#  - CSP: only this site's own scripts, no inline ones; data:/blob: images are photo previews; nothing may frame
-#    the app.
+#  - CSP: only this site's own scripts, no inline ones; 'wasm-unsafe-eval' lets the photo OCR (Tesseract) compile
+#    its WebAssembly, and nothing else; data:/blob: images are photo previews; nothing may frame the app.
 #  - Permissions-Policy: the camera (meter photos) for this site only.
 header {
-	Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	Referrer-Policy "same-origin"
 	X-Content-Type-Options "nosniff"
 	Permissions-Policy "camera=(self), microphone=(), geolocation=()"

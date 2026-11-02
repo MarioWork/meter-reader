@@ -1,11 +1,13 @@
 import { expect, test } from '../fixtures/app.fixture';
-import { makeCameraPhoto, readPhotoSize } from '../fixtures/photo.fixture';
+import { makeCameraPhoto, makeMeterPhoto, readPhotoSize } from '../fixtures/photo.fixture';
 import { NewReadingPage } from '../pages/NewReadingPage.page';
 
 // A 12-megapixel phone camera, 4:3.
 const CAMERA_WIDTH = 4032;
 const CAMERA_HEIGHT = 3024;
 const PHOTO_MAX_BYTES = 3_000_000;
+// Real Tesseract, served by the app: the first photo loads its WebAssembly and language data, which takes a while.
+const OCR_TIMEOUT_MS = 60_000;
 
 test('a reading typed in by hand tops the history with its leading zeros', async ({ page }) => {
   const newReadingPage = new NewReadingPage(page);
@@ -33,4 +35,16 @@ test('a camera photo is shrunk to a JPEG of at most 2000 px and saved with its r
   expect(await readPhotoSize(page, uploaded)).toEqual({ width: 2000, height: 1500, isJpeg: true });
   const newest = page.getByRole('table', { name: 'History' }).getByRole('row').nth(1);
   await expect(newest.getByRole('button', { name: 'Show the photo of 00600 on 31 Oct 2026' })).toBeVisible();
+});
+
+test('the number in a meter photo is read into the reading field, where it can still be changed', async ({ page }) => {
+  test.setTimeout(OCR_TIMEOUT_MS * 2);
+  const newReadingPage = new NewReadingPage(page);
+  await newReadingPage.goto();
+  const meterPhoto = await makeMeterPhoto(page, '00612');
+
+  const digitsRead = await newReadingPage.readPhoto(meterPhoto, OCR_TIMEOUT_MS);
+
+  expect(digitsRead).toBe('00612');
+  await expect(newReadingPage.readingField).toBeEditable();
 });

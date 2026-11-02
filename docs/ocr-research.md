@@ -48,3 +48,25 @@ Send the photo to a vision-capable model and ask it for the meter reading.
 
 1. Start with **Tesseract.js**. Test it on 5–10 real photos of the meter.
 2. If it misreads too often, switch to **Option 2** behind a small backend.
+
+## What the app does (issue #5)
+
+Tesseract.js runs on the phone once a photo is picked: the shrunk photo is turned grayscale, then pure black and
+white at its own threshold (Otsu's method), and read with only the digits 0–9 allowed. The longest run of digits
+fills the Reading field; the user checks it and can change it. No crop step yet.
+
+Tesseract's worker, core and English data are served by the app (`web/tesseractAssetsPlugin.ts`) and precached
+by the service worker, so it works offline. That adds about 15 MB to the first install.
+
+## Measuring the hit rate
+
+1. Put 5–10 real meter photos in one folder, JPEG or PNG (export iPhone HEIC photos as JPEG). Name each one after
+   the reading it shows, every digit kept: `00529.jpg`, or `00529-night.jpg` for a second photo of it.
+2. Run, inside `web/`:
+
+   ```bash
+   OCR_PHOTOS_DIR=/path/to/photos yarn ocr-hit-rate
+   ```
+
+3. It prints `HIT` or `MISS` per photo (with what was read) and the hit rate. Each photo goes through the real New
+   reading page in Chromium, so the shrink and black-and-white steps are the ones the phone runs.
