@@ -3,10 +3,13 @@ import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { ReadingApiModel } from '@app-types/models';
 import { ReadingStatusUtil } from '@app-types/utility';
 import { buttonVariants } from '@components/ui/button';
+import { cn } from '@utils/classNameUtils';
 import { formatIsoDate } from '@utils/dateUtils';
 
 type Props = {
   reading: ReadingApiModel;
+  // The last reading's link is the page's main action; a history card's is a quieter outline button.
+  isProminent?: boolean;
 };
 
 type SendLinkLabels = {
@@ -22,8 +25,9 @@ const SEND_LINK_LABELS: Record<ReadingStatusUtil, SendLinkLabels | null> = {
   [ReadingStatusUtil.SENT]: null,
 };
 
-// Opens the email preview over the history. A link, as it goes somewhere; the history keeps its page behind it.
-function SendReadingLink({ reading }: Props) {
+// Opens the email preview over the history. A link, as it goes somewhere; the history keeps what it has loaded
+// behind it.
+function SendReadingLink({ reading, isProminent = false }: Props) {
   const { search } = useLocation();
   const labels = SEND_LINK_LABELS[reading.status];
 
@@ -31,7 +35,7 @@ function SendReadingLink({ reading }: Props) {
 
   return (
     <Link
-      className={buttonVariants({ variant: 'link' })}
+      className={cn('w-full', isProminent ? buttonVariants({ size: 'lg' }) : buttonVariants({ variant: 'outline' }))}
       to={{ pathname: READING_ROUTES_PATHS.send(String(reading.id)), search }}
       aria-label={`${labels.ariaPrefix} the reading of ${formatIsoDate(reading.date)}`}
     >

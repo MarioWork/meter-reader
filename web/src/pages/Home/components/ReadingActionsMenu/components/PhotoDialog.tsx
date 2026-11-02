@@ -7,14 +7,17 @@ type Props = {
   title: string;
   photoUrl: string;
   photoDescription: string;
+  // Where focus goes once the dialog has closed.
+  returnFocusRef: React.RefObject<HTMLElement | null>;
   onClose: () => void;
 };
 
 const CLOSE_LABEL = 'Close';
 
-// The full photo in a native modal <dialog>: the browser keeps keyboard focus inside it, Escape closes it, and focus
-// goes back to the preview that opened it.
-function PhotoDialog({ isOpen, title, photoUrl, photoDescription, onClose }: Props) {
+// The full photo in a native modal <dialog>: the browser keeps keyboard focus inside it, and Escape closes it. Focus
+// then goes to `returnFocusRef`: the browser would hand it back to the menu item that opened the dialog, which the
+// menu has removed by then.
+function PhotoDialog({ isOpen, title, photoUrl, photoDescription, returnFocusRef, onClose }: Props) {
   const dialogRef = useModalDialog(isOpen);
   const titleId = useId();
 
@@ -29,6 +32,7 @@ function PhotoDialog({ isOpen, title, photoUrl, photoDescription, onClose }: Pro
       ref={dialogRef}
       aria-labelledby={titleId}
       onCancel={handleCancel}
+      onClose={() => returnFocusRef.current?.focus()}
       className="m-auto max-w-[95vw] rounded-sm bg-popover p-4 text-popover-foreground shadow-lg backdrop:bg-scrim/70"
     >
       <h2 id={titleId} className="text-lg font-bold">

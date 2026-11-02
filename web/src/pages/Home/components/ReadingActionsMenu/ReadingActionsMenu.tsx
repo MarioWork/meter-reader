@@ -1,0 +1,76 @@
+import { EllipsisIcon } from 'lucide-react';
+import { useRef, useState } from 'react';
+import type { ReadingApiModel } from '@app-types/models';
+import { Button } from '@components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
+import { formatIsoDate } from '@utils/dateUtils';
+import { getPhotoUrl } from '@pages/Home/readingPhotoUtils';
+import DeleteReadingDialog from './components/DeleteReadingDialog';
+import PhotoDialog from './components/PhotoDialog';
+import ReadingMenuItems from './components/ReadingMenuItems';
+import { useDeleteReading } from './hooks/useDeleteReading';
+
+type Props = {
+  reading: ReadingApiModel;
+};
+
+const MENU_LABEL = 'More actions for the reading of';
+// The menu item's text, and the dialog's confirm button.
+const DELETE_LABEL = 'Delete';
+const PHOTO_DIALOG_TITLE = 'Photo of';
+const PHOTO_DESCRIPTION = 'The meter showing';
+
+// The "⋯" menu of a reading: View photo and Delete, which asks first. Each item opens its own dialog; closing it
+// gives focus back to the "⋯" button.
+function ReadingActionsMenu({ reading }: Props) {
+  const [isPhotoOpen, setIsPhotoOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const { isOpen, isDeleting, failureMessage, openDialog, handleOpenChange, deleteReading } = useDeleteReading(
+    reading.id,
+  );
+
+  const readingDate = formatIsoDate(reading.date);
+  const photoSubject = `${reading.digits} on ${readingDate}`;
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          ref={menuButtonRef}
+          render={<Button variant="ghost" size="icon-lg" aria-label={`${MENU_LABEL} ${readingDate}`} />}
+        >
+          <EllipsisIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto">
+          <ReadingMenuItems
+            hasPhoto={reading.photoId !== null}
+            deleteLabel={DELETE_LABEL}
+            onViewPhoto={() => setIsPhotoOpen(true)}
+            onDelete={openDialog}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {reading.photoId !== null && (
+        <PhotoDialog
+          isOpen={isPhotoOpen}
+          title={`${PHOTO_DIALOG_TITLE} ${photoSubject}`}
+          photoUrl={getPhotoUrl(reading.photoId)}
+          photoDescription={`${PHOTO_DESCRIPTION} ${photoSubject}`}
+          returnFocusRef={menuButtonRef}
+          onClose={() => setIsPhotoOpen(false)}
+        />
+      )}
+      <DeleteReadingDialog
+        reading={reading}
+        isOpen={isOpen}
+        isDeleting={isDeleting}
+        failureMessage={failureMessage}
+        deleteLabel={DELETE_LABEL}
+        onOpenChange={handleOpenChange}
+        onDelete={deleteReading}
+      />
+    </>
+  );
+}
+
+export default ReadingActionsMenu;

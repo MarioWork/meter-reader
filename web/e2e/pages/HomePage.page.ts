@@ -11,13 +11,32 @@ export class HomePage {
     this.page = page;
   }
 
-  get historyTable() {
-    return this.page.getByRole('table', { name: 'History' });
+  get main() {
+    return this.page.getByRole('main');
   }
 
-  get historyRows() {
-    // The header row is the first one.
-    return this.historyTable.getByRole('row');
+  get lastReadingCard() {
+    return this.page.getByRole('region', { name: 'Last reading' });
+  }
+
+  get earlierReadings() {
+    return this.page.getByRole('region', { name: 'Earlier readings' });
+  }
+
+  get earlierCards() {
+    return this.earlierReadings.getByRole('listitem');
+  }
+
+  get historyCount() {
+    return this.page.getByText(/^Showing \d+ of \d+ readings$/);
+  }
+
+  get loadMoreButton() {
+    return this.page.getByRole('button', { name: 'Load more' });
+  }
+
+  get newReadingLink() {
+    return this.page.getByRole('link', { name: 'New reading' });
   }
 
   get deleteDialog() {
@@ -48,27 +67,53 @@ export class HomePage {
     return this.sendDialog.getByRole('switch', { name: 'Attach photo' });
   }
 
+  get deleteMenuItem() {
+    return this.page.getByRole('menuitem', { name: 'Delete' });
+  }
+
   // A toast, named by its title, inside the polite live region screen readers announce.
   notification(title: string) {
     return this.page.getByRole('region', { name: 'Notifications' }).getByRole('dialog', { name: title });
+  }
+
+  photoDialog(title: string) {
+    return this.page.getByRole('dialog', { name: title });
   }
 
   sendLinkFor(readingDate: string) {
     return this.page.getByRole('link', { name: `Send the reading of ${readingDate}` });
   }
 
-  deleteButtonFor(readingDate: string) {
-    return this.page.getByRole('button', { name: `Delete the reading of ${readingDate}` });
+  menuButtonFor(readingDate: string) {
+    return this.page.getByRole('button', { name: `More actions for the reading of ${readingDate}` });
   }
 
   async goto() {
     await this.page.goto(BASE_ROUTES_PATHS.HOME);
   }
 
-  // Keyboard only: focus the row's Delete control and press Enter.
+  // Scrolls the end of the history into view, as a thumb would.
+  async scrollToEndOfHistory() {
+    await this.loadMoreButton.scrollIntoViewIfNeeded();
+  }
+
+  // Keyboard only: focus the reading's "⋯" button, open its menu with Enter, go to its last item (Delete) and press
+  // Enter.
   async openDeleteDialogWithKeyboard(readingDate: string) {
-    await this.deleteButtonFor(readingDate).focus();
+    await this.menuButtonFor(readingDate).focus();
     await this.page.keyboard.press('Enter');
+    await this.deleteMenuItem.waitFor();
+    await this.page.keyboard.press('End');
+    await this.page.keyboard.press('Enter');
+  }
+
+  async openPhoto(readingDate: string) {
+    await this.menuButtonFor(readingDate).click();
+    await this.page.getByRole('menuitem', { name: 'View photo' }).click();
+  }
+
+  async closePhoto(title: string) {
+    await this.photoDialog(title).getByRole('button', { name: 'Close' }).click();
   }
 
   async openSendPreview(readingDate: string) {
@@ -83,7 +128,7 @@ export class HomePage {
     await this.sendDialogCloseButton.click();
   }
 
-  // Keyboard only: focus the row's Send link and press Enter.
+  // Keyboard only: focus the reading's Send link and press Enter.
   async openSendPreviewWithKeyboard(readingDate: string) {
     await this.sendLinkFor(readingDate).focus();
     await this.page.keyboard.press('Enter');

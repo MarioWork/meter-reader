@@ -17,10 +17,10 @@ test('a reading is previewed and sent with its photo, and the history shows it s
 
   await expect(homePage.sendDialog).toBeHidden();
   await expect(homePage.notification('Reading sent')).toBeVisible();
-  await expect(homePage.historyRows.nth(1)).toContainText('Sent 2 Nov 2026');
+  await expect(homePage.lastReadingCard).toContainText('Sent 2 Nov 2026');
   await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeHidden();
-  // The Send link that opened the preview is gone, so focus goes to the history, never to the top of the page.
-  await expect(homePage.historyTable).toBeFocused();
+  // The Send link that opened the preview is gone, so focus goes to its card, never to the top of the page.
+  await expect(homePage.lastReadingCard).toBeFocused();
 });
 
 test('Escape closes the preview, sends nothing and gives focus back to the Send link', async ({ page }) => {
@@ -33,7 +33,7 @@ test('Escape closes the preview, sends nothing and gives focus back to the Send 
 
   await expect(homePage.sendDialog).toBeHidden();
   await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeFocused();
-  await expect(homePage.historyRows.nth(1)).toContainText('Not sent');
+  await expect(homePage.lastReadingCard).toContainText('Not sent');
 });
 
 test('Send is off while Hotmail is not connected', async ({ page, mockMailNotConnected }) => {
@@ -63,7 +63,7 @@ test.describe('on a phone', () => {
 
     await expect(homePage.sendDialog).toBeHidden();
     await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeFocused();
-    await expect(homePage.historyRows.nth(1)).toContainText('Not sent');
+    await expect(homePage.lastReadingCard).toContainText('Not sent');
   });
 
   test('Escape closes the sheet and gives focus back to the Send link', async ({ page }) => {

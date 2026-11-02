@@ -10,7 +10,6 @@ import {
   screen,
   userEvent,
   waitFor,
-  within,
 } from '@test-utils';
 import { todayAsIsoDate } from '@utils/dateUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
@@ -59,7 +58,7 @@ beforeEach(() => {
 });
 
 function newestHistoryRow() {
-  return within(screen.getByRole('table', { name: 'History' })).getAllByRole('row')[1];
+  return screen.getByRole('region', { name: 'Last reading' });
 }
 
 it('starts the date on today', async () => {
@@ -77,7 +76,7 @@ it('saves the reading with its leading zeros and the chosen date, then shows it 
   await save();
 
   await screen.findByRole('heading', { name: 'History' });
-  const newest = within(screen.getByRole('table', { name: 'History' })).getAllByRole('row')[1];
+  const newest = newestHistoryRow();
   expect(newest).toHaveTextContent('31 Oct 2026');
   expect(newest).toHaveTextContent(HIGHER_THAN_LAST);
   expect(await findNotification('Reading saved')).toBeVisible();
@@ -100,7 +99,7 @@ it('still saves a reading lower than the last one', async () => {
   await save();
 
   await screen.findByRole('heading', { name: 'History' });
-  expect(screen.getByRole('table', { name: 'History' })).toHaveTextContent(LOWER_THAN_LAST);
+  expect(screen.getByRole('main')).toHaveTextContent(LOWER_THAN_LAST);
 });
 
 it('does not warn when the reading is higher than the last one', async () => {
