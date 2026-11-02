@@ -1,23 +1,22 @@
 import { useLoaderData } from 'react-router';
 import type { LoaderDataUtil } from '@app-types/utility';
+import StandalonePage from '@components/StandalonePage';
 import SetupForm from './components/SetupForm';
 import { loader } from './setupLoader';
+
+const TITLE = 'Set up the login';
+const CHOOSE_HINT = 'Choose how you sign in: a password, a passkey (Face ID, Touch ID or a passkey manager), or both.';
+const MISSING_CODE_HINT = 'Open the setup link the server printed in its log. It looks like /setup?code=…';
 
 function Setup() {
   const { code } = useLoaderData<LoaderDataUtil<typeof loader>>();
 
+  if (!code) return <StandalonePage title={TITLE} description={MISSING_CODE_HINT} />;
+
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-6">
-      <h1 className="text-2xl font-bold">Set up the login</h1>
-      {code ? (
-        <>
-          <p>Choose how you sign in: a password, a passkey (Face ID, Touch ID or a passkey manager), or both.</p>
-          <SetupForm code={code} />
-        </>
-      ) : (
-        <p>Open the setup link the server printed in its log. It looks like /setup?code=…</p>
-      )}
-    </main>
+    <StandalonePage title={TITLE} description={CHOOSE_HINT}>
+      <SetupForm code={code} />
+    </StandalonePage>
   );
 }
 
