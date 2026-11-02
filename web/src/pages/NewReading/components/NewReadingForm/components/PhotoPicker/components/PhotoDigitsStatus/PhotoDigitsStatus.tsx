@@ -1,3 +1,5 @@
+import { Spinner } from '@components/ui/spinner';
+
 type Props = {
   isFindingDigits: boolean;
   hasFoundNothing: boolean;
@@ -15,9 +17,11 @@ function statusMessage({ isFindingDigits, hasFoundNothing }: Props): string {
 
 // Always in the page, so a screen reader hears each change of the message (a live region added with its text in
 // it is often missed). Empty, it is visually hidden but stays in the accessibility tree (display: none would not).
+// The spinner only shows the work going on; the message already says it, so it is hidden from screen readers.
 function PhotoDigitsStatus({ isFindingDigits, hasFoundNothing }: Props) {
   return (
-    <p role="status" className="text-sm text-muted-foreground empty:sr-only">
+    <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground empty:sr-only">
+      {isFindingDigits && <Spinner role={undefined} aria-hidden />}
       {statusMessage({ isFindingDigits, hasFoundNothing })}
     </p>
   );

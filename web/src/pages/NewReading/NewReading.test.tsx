@@ -164,6 +164,14 @@ it('marks the date and sends nothing when the day has not happened yet', async (
   expect(screen.getByRole('heading', { name: 'New reading' })).toBeVisible();
 });
 
+it('puts the cursor in the reading field when the user skips the photo', async () => {
+  await renderNewReading();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Skip photo, type it' }));
+
+  expect(readingField()).toHaveFocus();
+});
+
 it('offers the camera and the files on the device for the photo', async () => {
   await renderNewReading();
 

@@ -1,4 +1,6 @@
+import { TriangleAlertIcon } from 'lucide-react';
 import type { ReadingApiModel } from '@app-types/models';
+import { Alert, AlertDescription, AlertTitle } from '@components/ui/alert';
 import { formatIsoDate } from '@utils/dateUtils';
 
 type Props = {
@@ -6,13 +8,18 @@ type Props = {
   lastReading: ReadingApiModel;
 };
 
-// A warning, not an error: the reading can still be saved. role="status" reads it out politely as it appears.
+// A warning, not an error: the reading can still be saved. role="status" reads it out politely as it appears,
+// where the Alert's own role="alert" would interrupt the typing.
 function LowerReadingWarning({ id, lastReading }: Props) {
   return (
-    <p id={id} role="status" className="rounded-sm border border-warning bg-warning/10 px-3 py-2 text-foreground">
-      This is lower than your last reading ({lastReading.digits} on {formatIsoDate(lastReading.date)}). A meter only
-      counts up, so check the digits. You can still save it.
-    </p>
+    <Alert id={id} variant="warning" role="status">
+      <TriangleAlertIcon aria-hidden />
+      <AlertTitle>Check the digits</AlertTitle>
+      <AlertDescription>
+        This is lower than your last reading ({lastReading.digits} on {formatIsoDate(lastReading.date)}). A meter only
+        counts up. You can still save it.
+      </AlertDescription>
+    </Alert>
   );
 }
 
