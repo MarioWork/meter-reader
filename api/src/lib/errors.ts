@@ -16,3 +16,10 @@ export class AppError extends Error {
     this.isOperational = options.isOperational ?? true;
   }
 }
+
+// A bug: something the code promised itself did not hold. Never shown to the client (the handler answers 500).
+export class InternalError extends AppError {
+  constructor(message: string) {
+    super(message, { code: 'INTERNAL_ERROR', isOperational: false });
+  }
+}

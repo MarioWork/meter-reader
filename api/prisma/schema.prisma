@@ -1,5 +1,4 @@
 // The database: PostgreSQL. Models are PascalCase, tables and columns snake_case through @@map / @map.
-// No models yet: the first feature adds them, with its own migration.
 
 generator client {
   provider               = "prisma-client"
@@ -12,4 +11,98 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// How a session was opened.
+enum SignInMethod {
+  PASSWORD
+  PASSKEY
+}
+
+// What a passkey challenge was handed out for: making the first passkey at setup, or signing in.
+enum AuthChallengePurpose {
+  SETUP
+  SIGN_IN
+}
+
+// The one account (ADR 0002). The row appears when setup finishes; yarn auth:reset empties its password and removes
+// its passkeys, and the next setup fills it again.
+model Account {
+  id             Int      @id @default(autoincrement())
+  // The random WebAuthn user handle (base64url) every passkey of this account carries. Never the row id.
+  webauthnUserId String   @map("webauthn_user_id")
+  // An argon2id hash in PHC form ($argon2id$v=19$m=...,t=...,p=...$salt$hash). Never the password itself. Null when
+  // the account signs in with passkeys only.
+  passwordHash   String?  @map("password_hash")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  passkeys Passkey[]
+
+  @@map("accounts")
+}
+
+// One passkey. Only its public key lives here; the private key never leaves the user's device or passkey manager.
+model Passkey {
+  id           Int       @id @default(autoincrement())
+  // The credential id the authenticator chose (base64url).
+  credentialId String    @unique(map: "passkeys_credential_id_uidx") @map("credential_id")
+  accountId    Int       @map("account_id")
+  publicKey    Bytes     @map("public_key")
+  // The signature counter the authenticator reported last; a lower one later means a cloned key.
+  counter      Int
+  // How the browser can reach it ("internal", "hybrid", "usb"...).
+  transports   String[]
+  // Backed up by a passkey manager (iCloud Keychain, Bitwarden...), so it survives losing one device.
+  isSynced     Boolean   @map("is_synced")
+  lastUsedAt   DateTime? @map("last_used_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId], map: "passkeys_account_id_idx")
+  @@map("passkeys")
+}
+
+// One signed-in browser. The cookie holds a random token; only its SHA-256 is stored, so a leaked database copy
+// cannot be turned back into a working cookie.
+model Session {
+  id           Int          @id @default(autoincrement())
+  tokenHash    String       @unique(map: "sessions_token_hash_uidx") @map("token_hash")
+  signInMethod SignInMethod @map("sign_in_method")
+  // When the user signed in: the absolute lifetime is measured from here.
+  signedInAt   DateTime     @map("signed_in_at") @db.Timestamptz(3)
+  // Moved forward at most once an hour while the session is used; the idle timeout is measured from here.
+  lastSeenAt   DateTime     @map("last_seen_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([lastSeenAt], map: "sessions_last_seen_at_idx")
+  @@map("sessions")
+}
+
+// A random value handed to the browser for one passkey ceremony. Used once, then deleted; it expires in minutes.
+model AuthChallenge {
+  id             Int                  @id @default(autoincrement())
+  challenge      String               @unique(map: "auth_challenges_challenge_uidx")
+  purpose        AuthChallengePurpose
+  // SETUP only: the WebAuthn user handle the new passkey is made for, kept until the account row exists.
+  webauthnUserId String?              @map("webauthn_user_id")
+  expiresAt      DateTime             @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([expiresAt], map: "auth_challenges_expires_at_idx")
+  @@map("auth_challenges")
+}
+
+// The one-time code in the setup link the server prints. Only its SHA-256 is kept, and only until setup finishes.
+model SetupCode {
+  id        Int      @id @default(autoincrement())
+  codeHash  String   @unique(map: "setup_codes_code_hash_uidx") @map("code_hash")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("setup_codes")
 }

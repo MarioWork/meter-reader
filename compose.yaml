@@ -54,6 +54,8 @@ services:
       DATABASE_URL: *database-url
       # Caddy is the one proxy in front: read the real device address from X-Forwarded-For (for rate limits).
       TRUST_PROXY_HOPS: 1
+      # Where the app is opened: the setup link points here, and passkeys belong to this host name.
+      APP_ORIGIN: *app-address
     depends_on:
       migrate:
         condition: service_completed_successfully

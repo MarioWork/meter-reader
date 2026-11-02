@@ -23,9 +23,11 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "postgres:start": "brew services run postgresql@18",
-    "postgres:stop": "brew services stop postgresql@18"
+    "postgres:stop": "brew services stop postgresql@18",
+    "auth:reset": "node --env-file=.env src/cli/resetAuth.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11",
     "@fastify/cors": "^11",
     "@fastify/helmet": "^13",
     "@fastify/rate-limit": "^11",
@@ -35,6 +37,7 @@
     "@fastify/type-provider-zod": "^1.0",
     "@prisma/adapter-pg": "^7",
     "@prisma/client": "^7",
+    "@simplewebauthn/server": "^14",
     "fastify": "^5.12",
     "fastify-plugin": "^6",
     "pg": "^8",

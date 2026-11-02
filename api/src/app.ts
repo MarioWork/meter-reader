@@ -15,13 +15,16 @@ import { randomUUID } from 'node:crypto';
 import { env } from './config/env.ts';
 import { errorHandler, notFoundHandler } from './lib/errorHandler.ts';
 import { logger } from './lib/logger.ts';
+import { authRoutes } from './modules/auth/auth.route.ts';
 import { healthRoutes } from './modules/health/health.route.ts';
+import { authPlugin } from './plugins/auth.plugin.ts';
 import { prismaPlugin } from './plugins/prisma.plugin.ts';
 
 const BODY_LIMIT_BYTES = 1_048_576;
 const RATE_LIMIT_MAX = 600;
 const RATE_LIMIT_WINDOW = '1 minute';
 const DOCS_ROUTE_PREFIX = '/docs';
+const AUTH_ROUTE_PREFIX = '/auth';
 const REQUEST_LOG_MESSAGE = 'request';
 // A request no route matched (a 404) has no pattern to log.
 const UNMATCHED_ROUTE = '(no route)';
@@ -53,7 +56,7 @@ export async function buildApp() {
     request.log.info({ method: request.method, route, statusCode: reply.statusCode, durationMs }, REQUEST_LOG_MESSAGE);
   });
 
-  // Infrastructure in a fixed order: sensible → cors → helmet → rate-limit → swagger → db → routes.
+  // Infrastructure in a fixed order: sensible → cors → helmet → rate-limit → swagger → db → auth → routes.
   await app.register(sensible);
   const hasCorsOrigins = env.CORS_ORIGINS.length > 0;
   if (hasCorsOrigins) {
@@ -69,8 +72,11 @@ export async function buildApp() {
     await app.register(swaggerUi, { routePrefix: DOCS_ROUTE_PREFIX });
   }
   await app.register(prismaPlugin);
+  // Locks every route that does not say `config: { isPublic: true }` (ADR 0002).
+  await app.register(authPlugin);
 
   await app.register(healthRoutes);
+  await app.register(authRoutes, { prefix: AUTH_ROUTE_PREFIX });
 
   return app;
 }
