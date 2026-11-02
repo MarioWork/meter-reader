@@ -1,7 +1,7 @@
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import Button from '@components/Button';
-import FormAlert from '@components/FormAlert';
+import { Alert, AlertTitle } from '@components/ui/alert';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
 import { LoginIntents, SIGN_IN_FAILED_MESSAGE } from '../../loginUtils';
@@ -20,7 +20,11 @@ function PasskeySignInButton() {
       <Button variant="secondary" isDisabled={isSigningIn} onClick={signIn}>
         Sign in with a passkey
       </Button>
-      {failureMessage && <FormAlert message={failureMessage} />}
+      {failureMessage && (
+        <Alert variant="destructive">
+          <AlertTitle>{failureMessage}</AlertTitle>
+        </Alert>
+      )}
     </div>
   );
 }
