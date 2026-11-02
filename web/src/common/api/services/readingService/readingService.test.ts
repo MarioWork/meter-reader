@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw/http';
+import { ReadingStatusUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import readingService from './readingService';
 
@@ -20,11 +21,11 @@ describe('getReadings', () => {
     expect(receivedQuery.get('size')).toBe('1');
   });
 
-  it('returns the page the API sent, newest reading first', async () => {
+  it('returns the page the API sent', async () => {
     const response = await readingService.getReadings({ pagination: { page: '1', size: '10' } });
 
     expect(response.data).toHaveLength(10);
-    expect(response.data[0]?.date > (response.data[1]?.date ?? '')).toBe(true);
+    expect(response.totalResultNumber).toBe(14);
   });
 });
 
@@ -37,7 +38,7 @@ describe('addReading', () => {
       http.post(`${API}/readings`, async ({ request }) => {
         receivedBody = await request.json();
         return HttpResponse.json(
-          { ...reading, id: 30, status: 'notSent', createdAt: '2026-10-31T09:00:00.000Z' },
+          { ...reading, id: 30, status: ReadingStatusUtil.NOT_SENT, createdAt: '2026-10-31T09:00:00.000Z' },
           { status: 201 },
         );
       }),

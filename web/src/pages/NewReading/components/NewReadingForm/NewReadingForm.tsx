@@ -24,7 +24,10 @@ const WARNING_ID = 'reading-lower-warning';
 
 // Only digits that would pass are compared: half-typed or invalid input gets its error, not a warning.
 function isLowerThanLast(digits: string, lastReading?: ReadingApiModel): boolean {
-  if (!lastReading || !readingDigitsSchema.isValidSync(digits)) return false;
+  const hasLastReading = lastReading !== undefined;
+  const isValidReading = readingDigitsSchema.isValidSync(digits);
+
+  if (!hasLastReading || !isValidReading) return false;
 
   return isReadingLower(digits.trim(), lastReading.digits);
 }

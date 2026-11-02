@@ -63,6 +63,7 @@ describe('POST /readings', () => {
     const response = await addReading({ digits: '00123', date: '2026-10-31', status: 'sent' });
 
     expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
   it('returns 401 and saves nothing when the browser is not signed in', async () => {
@@ -78,7 +79,7 @@ describe('POST /readings', () => {
 });
 
 describe('GET /readings', () => {
-  it('lists the history newest first, by date and then by when it was saved', async () => {
+  it('lists the history newest first, by date then by save order, when several readings exist', async () => {
     await addReading({ digits: '00100', date: '2026-09-01' });
     await addReading({ digits: '00300', date: '2026-10-31' });
     await addReading({ digits: '00200', date: '2026-10-01' });
@@ -108,6 +109,7 @@ describe('GET /readings', () => {
     const response = await getReadings('?size=1000');
 
     expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
   it('returns 401 when the browser is not signed in', async () => {
