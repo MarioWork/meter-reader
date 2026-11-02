@@ -14,10 +14,10 @@ function statusMessage({ isFindingDigits, hasFoundNothing }: Props): string {
 }
 
 // Always in the page, so a screen reader hears each change of the message (a live region added with its text in
-// it is often missed).
+// it is often missed). Empty, it is visually hidden but stays in the accessibility tree (display: none would not).
 function PhotoDigitsStatus({ isFindingDigits, hasFoundNothing }: Props) {
   return (
-    <p role="status" className="text-sm text-gray-600 empty:hidden">
+    <p role="status" className="text-sm text-gray-600 empty:sr-only">
       {statusMessage({ isFindingDigits, hasFoundNothing })}
     </p>
   );
