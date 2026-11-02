@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures/app.fixture';
 import { makeCameraPhoto, makeMeterPhoto, OCR_TIMEOUT_MS, readPhotoSize } from '../fixtures/photo.fixture';
+import { HomePage } from '../pages/HomePage.page';
 import { NewReadingPage } from '../pages/NewReadingPage.page';
 
 // A 12-megapixel phone camera, 4:3.
@@ -13,7 +14,7 @@ test('a reading typed in by hand tops the history with its leading zeros', async
 
   await newReadingPage.save('00600', '2026-10-31');
 
-  const newest = page.getByRole('table', { name: 'History' }).getByRole('row').nth(1);
+  const newest = new HomePage(page).lastReadingCard;
   await expect(newest).toContainText('31 Oct 2026');
   await expect(newest).toContainText('00600');
   await expect(newest).toContainText('Not sent');
@@ -34,8 +35,9 @@ test('a camera photo is shrunk to a JPEG of at most 2000 px and saved with its r
   const uploaded = (await upload).postDataBuffer() ?? Buffer.alloc(0);
   expect(uploaded.length).toBeLessThan(PHOTO_MAX_BYTES);
   expect(await readPhotoSize(page, uploaded)).toEqual({ width: 2000, height: 1500, isJpeg: true });
-  const newest = page.getByRole('table', { name: 'History' }).getByRole('row').nth(1);
-  await expect(newest.getByRole('button', { name: 'Show the photo of 00600 on 31 Oct 2026' })).toBeVisible();
+  const homePage = new HomePage(page);
+  await homePage.openPhoto('31 Oct 2026');
+  await expect(homePage.photoDialog('Photo of 00600 on 31 Oct 2026').getByRole('img')).toBeVisible();
 });
 
 test('the number in a meter photo is read into the reading field, where it can still be changed', async ({ page }) => {

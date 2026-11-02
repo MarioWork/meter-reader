@@ -1,35 +1,86 @@
-import { redirect, type LoaderFunctionArgs } from 'react-router';
+import axios from 'axios';
+import type { LoaderFunctionArgs } from 'react-router';
 import readingService from '@services/readingService/readingService';
-import { ApiUrlParamsUtil, DEFAULT_FIRST_PAGE, PAGE_SIZE } from '@app-types/utility';
-import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
+import type { ReadingApiModel } from '@app-types/models';
+import { HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
+import { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from '@app-types/utility';
 
-// The same search with only the page changed to the last one.
-function lastPageSearch(searchParams: URLSearchParams, totalResultNumber: number): string {
-  const lastPage = Math.ceil(totalResultNumber / Number(PAGE_SIZE));
-  const lastPageParams = new URLSearchParams(searchParams);
+const FIRST_PAGE = Number(DEFAULT_FIRST_PAGE);
 
-  lastPageParams.set(ApiUrlParamsUtil.page, String(lastPage));
+// How many pages of the history the url asks for: `?pages=3` shows the first three. Anything that is not a whole
+// number of at least one shows the first page.
+function requestedPageCount(searchParams: URLSearchParams): number {
+  const pageCount = Number(searchParams.get(HOME_SEARCH_PARAMS.SHOWN_PAGES));
+  const isWholePageCount = Number.isInteger(pageCount) && pageCount >= FIRST_PAGE;
 
-  return lastPageParams.toString();
+  if (!isWholePageCount) return FIRST_PAGE;
+
+  return pageCount;
 }
 
-// The page of the history the url asks for, newest first. An empty `?page=` counts as no page. A page past the end
-// (its last reading was just deleted) moves to the last page that still has readings.
+// The pages after the first, up to `lastPage`.
+function laterPageNumbers(lastPage: number): number[] {
+  return Array.from({ length: lastPage - FIRST_PAGE }, (_, index) => FIRST_PAGE + 1 + index);
+}
+
+function getReadingsPage(page: number) {
+  const fields = { pagination: { page: String(page), size: PAGE_SIZE } };
+
+  return readingService.getReadings(fields);
+}
+
+type LaterPages = {
+  readings: ReadingApiModel[];
+  loadedPageCount: number;
+  hasFailed: boolean;
+};
+
+type ReadingsPage = Awaited<ReturnType<typeof getReadingsPage>>;
+
+function isRejected(result: PromiseSettledResult<ReadingsPage>): result is PromiseRejectedResult {
+  return result.status === 'rejected';
+}
+
+function isFulfilled(result: PromiseSettledResult<ReadingsPage>): result is PromiseFulfilledResult<ReadingsPage> {
+  return result.status === 'fulfilled';
+}
+
+// The later pages that loaded, in order, up to the first that did not. A failed request leaves the pages before it
+// on screen and lets the user try again; anything else is a bug and still lands on the error page.
+function keepLoadedPages(results: PromiseSettledResult<ReadingsPage>[]): LaterPages {
+  const failure = results.find(isRejected);
+
+  if (failure && !axios.isAxiosError(failure.reason)) throw failure.reason;
+
+  const failedIndex = failure ? results.indexOf(failure) : results.length;
+  const loadedPages = results.slice(0, failedIndex).filter(isFulfilled);
+
+  return {
+    readings: loadedPages.flatMap((page) => page.value.data),
+    loadedPageCount: loadedPages.length,
+    hasFailed: failure !== undefined,
+  };
+}
+
+// The history, newest first, from the first page up to the page the url asks for, so "Load more" and any write
+// (send, delete) see the same readings once the loader runs again. A page past the end shows the whole history.
 export async function loader({ request }: LoaderFunctionArgs) {
   const searchParams = new URL(request.url).searchParams;
 
-  const fields = {
-    pagination: { page: searchParams.get(ApiUrlParamsUtil.page) || DEFAULT_FIRST_PAGE, size: PAGE_SIZE },
+  const firstPageFields = { pagination: DEFAULT_PAGINATION };
+  const firstPage = await readingService.getReadings(firstPageFields);
+
+  const pageCount = Math.max(FIRST_PAGE, Math.ceil(firstPage.totalResultNumber / Number(PAGE_SIZE)));
+  const lastPageToLoad = Math.min(requestedPageCount(searchParams), pageCount);
+
+  const laterPageRequests = laterPageNumbers(lastPageToLoad).map(getReadingsPage);
+  const laterPageResults = await Promise.allSettled(laterPageRequests);
+  const laterPages = keepLoadedPages(laterPageResults);
+
+  return {
+    readings: [...firstPage.data, ...laterPages.readings],
+    totalResultNumber: firstPage.totalResultNumber,
+    loadedPageCount: FIRST_PAGE + laterPages.loadedPageCount,
+    hasLoadMoreFailed: laterPages.hasFailed,
   };
-
-  const readingsResponse = await readingService.getReadings(fields);
-
-  const isPageEmpty = readingsResponse.data.length === 0;
-  const hasReadings = readingsResponse.totalResultNumber > 0;
-
-  if (isPageEmpty && hasReadings) {
-    return redirect(`${BASE_ROUTES_PATHS.HOME}?${lastPageSearch(searchParams, readingsResponse.totalResultNumber)}`);
-  }
-
-  return { readingsResponse };
 }

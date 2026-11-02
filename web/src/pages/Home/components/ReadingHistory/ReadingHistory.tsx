@@ -1,34 +1,25 @@
 import type { ReadingApiModel } from '@app-types/models';
-import ReadingHistoryHeader from './components/ReadingHistoryHeader';
-import ReadingHistoryRow from './components/ReadingHistoryRow';
+import LastReadingCard from '../LastReadingCard';
+import EarlierReadings from './components/EarlierReadings';
 import { useHistoryFocus } from './hooks/useHistoryFocus';
 
 type Props = {
-  readings: ReadingApiModel[];
+  lastReading: ReadingApiModel;
+  earlierReadings: ReadingApiModel[];
 };
 
-// The history, newest first, as the API ordered it.
-function ReadingHistory({ readings }: Props) {
-  const { tableRef } = useHistoryFocus(readings);
-
-  if (readings.length === 0) return <p className="text-muted-foreground">No readings yet. Save your first one.</p>;
+// The history, newest first, as the API ordered it: the newest reading on its own card at the top, then every
+// earlier one as a card of its own.
+function ReadingHistory({ lastReading, earlierReadings }: Props) {
+  const { lastReadingRef, earlierReadingsRef } = useHistoryFocus([lastReading, ...earlierReadings]);
+  const hasEarlierReadings = earlierReadings.length > 0;
 
   return (
-    <table
-      ref={tableRef}
-      tabIndex={-1}
-      className="w-full border-collapse bg-card text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-    >
-      <caption className="sr-only">History</caption>
-      <thead>
-        <ReadingHistoryHeader />
-      </thead>
-      <tbody>
-        {readings.map((reading) => (
-          <ReadingHistoryRow key={reading.id} reading={reading} />
-        ))}
-      </tbody>
-    </table>
+    <>
+      {/* Keyed by the reading: once the newest is deleted, the next one gets a fresh card, its dialogs closed. */}
+      <LastReadingCard key={lastReading.id} ref={lastReadingRef} reading={lastReading} />
+      {hasEarlierReadings && <EarlierReadings ref={earlierReadingsRef} readings={earlierReadings} />}
+    </>
   );
 }
 
