@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { axiosActions } from '@api/axiosActions';
-import type { ReadingApiModel } from '@app-types/models';
+import type { ReadingApiModel, ReadingId } from '@app-types/models';
 import {
   ApiUrlParamsUtil,
   HttpVerbsUtil,
@@ -31,4 +31,7 @@ export default {
 
   addReading: async (fields: CreateReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
     axiosActions<ReadingApiModel>({ url: BASE_READINGS_URL, method: HttpVerbsUtil.POST, data: fields }),
+
+  deleteReading: async (id: ReadingId): Promise<JSONResponseUtil> =>
+    axiosActions({ url: `${BASE_READINGS_URL}/${id}`, method: HttpVerbsUtil.DELETE }),
 };

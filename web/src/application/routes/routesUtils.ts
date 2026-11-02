@@ -16,6 +16,7 @@ export const AUTH_SEARCH_PARAMS = {
 
 export const READING_ROUTES_PATHS = {
   NEW: '/readings/new',
+  delete: (readingId?: string) => (readingId ? `/readings/${readingId}/delete` : '/readings/:readingId/delete'),
 };
 
 export const ITEM_ROUTES_PATHS = {

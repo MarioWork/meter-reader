@@ -38,9 +38,21 @@ export function deferred<T>(): Deferred<T> {
 
 type RenderRoutesOptions = RenderOptions & { initialEntries?: string[] };
 
+// React Router empties an object-form `lazy` ({ action: ... }) in place once it has loaded it, and that object is
+// shared with the route table. A second router (the next test) would then find no action at all, so each router
+// gets its own copy of every `lazy` object.
+function withFreshLazyObjects(routes: RouteObject[]): RouteObject[] {
+  return routes.map((route) => {
+    const lazy = typeof route.lazy === 'object' ? { ...route.lazy } : route.lazy;
+    const children = route.children && withFreshLazyObjects(route.children);
+
+    return { ...route, lazy, children } as RouteObject;
+  });
+}
+
 // Real route objects, so a page's loader and action run as they do in the app.
 export function renderRoutes(routes: RouteObject[], { initialEntries = ['/'], ...options }: RenderRoutesOptions = {}) {
-  const router = createMemoryRouter(routes, { initialEntries });
+  const router = createMemoryRouter(withFreshLazyObjects(routes), { initialEntries });
 
   return render(<RouterProvider router={router} />, options);
 }

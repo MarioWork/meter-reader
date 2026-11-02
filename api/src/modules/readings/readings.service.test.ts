@@ -1,8 +1,9 @@
 import { readingsRepository } from './readings.repository.ts';
-import { addReading, getReadings } from './readings.service.ts';
+import { NotFoundError } from '../../lib/httpErrors.ts';
+import { addReading, deleteReading, getReadings } from './readings.service.ts';
 
 vi.mock('./readings.repository.ts', () => ({
-  readingsRepository: { create: vi.fn(), findPage: vi.fn() },
+  readingsRepository: { create: vi.fn(), findPage: vi.fn(), deleteById: vi.fn() },
 }));
 
 const SAVED_ROW = {
@@ -44,5 +45,24 @@ describe('getReadings', () => {
 
     expect(readingsRepository.findPage).toHaveBeenCalledWith({ skip: 20, take: 10 });
     expect(page).toMatchObject({ totalResultNumber: 21, currentPage: 3, data: [{ id: 7, status: 'failed' }] });
+  });
+});
+
+describe('deleteReading', () => {
+  it('deletes the reading by its id when the reading exists', async () => {
+    vi.mocked(readingsRepository.deleteById).mockResolvedValueOnce(SAVED_ROW);
+
+    await deleteReading(7);
+
+    expect(readingsRepository.deleteById).toHaveBeenCalledWith(7);
+  });
+
+  it('throws NotFoundError when the reading does not exist', async () => {
+    vi.mocked(readingsRepository.deleteById).mockResolvedValueOnce(null);
+
+    const deleting = deleteReading(7);
+
+    await expect(deleting).rejects.toBeInstanceOf(NotFoundError);
+    await expect(deleting).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

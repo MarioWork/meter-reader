@@ -3,6 +3,9 @@ type Props = {
   type?: 'button' | 'submit';
   variant?: 'primary' | 'secondary';
   isDisabled?: boolean;
+  // A fuller name for screen readers when the visible text alone is ambiguous (a "Delete" on every row). It must
+  // start with the visible text (WCAG 2.5.3, label in name).
+  ariaLabel?: string;
   onClick?: () => void;
 };
 
@@ -18,9 +21,15 @@ const VARIANT_CLASSES: Record<NonNullable<Props['variant']>, string> = {
 };
 
 // The app's one button: at least 24×24 px (WCAG 2.2 target size) and a visible keyboard focus ring.
-function Button({ children, type = 'button', variant = 'primary', isDisabled = false, onClick }: Props) {
+function Button({ children, type = 'button', variant = 'primary', isDisabled = false, ariaLabel, onClick }: Props) {
   return (
-    <button type={type} disabled={isDisabled} onClick={onClick} className={VARIANT_CLASSES[variant]}>
+    <button
+      type={type}
+      disabled={isDisabled}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={VARIANT_CLASSES[variant]}
+    >
       {children}
     </button>
   );

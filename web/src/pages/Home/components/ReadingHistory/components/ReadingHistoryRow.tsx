@@ -1,6 +1,7 @@
 import type { ReadingApiModel } from '@app-types/models';
 import { ReadingStatusUtil } from '@app-types/utility';
 import { formatIsoDate } from '@utils/dateUtils';
+import DeleteReadingButton from './DeleteReadingButton';
 import { HISTORY_CELL_CLASSES } from './historyCellClasses';
 
 type Props = {
@@ -20,6 +21,9 @@ function ReadingHistoryRow({ reading }: Props) {
       <td className={HISTORY_CELL_CLASSES}>{formatIsoDate(reading.date)}</td>
       <td className={`${HISTORY_CELL_CLASSES} font-mono tabular-nums`}>{reading.digits}</td>
       <td className={HISTORY_CELL_CLASSES}>{STATUS_LABELS[reading.status]}</td>
+      <td className={HISTORY_CELL_CLASSES}>
+        <DeleteReadingButton reading={reading} />
+      </td>
     </tr>
   );
 }

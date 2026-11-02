@@ -9,3 +9,5 @@ export interface ReadingApiModel {
   status: ReadingStatusUtil;
   createdAt: string;
 }
+
+export type ReadingId = ReadingApiModel['id'];

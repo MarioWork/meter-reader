@@ -10,6 +10,9 @@ function ReadingHistoryHeader() {
           {columnName}
         </th>
       ))}
+      <th scope="col" className={HISTORY_CELL_CLASSES}>
+        <span className="sr-only">Actions</span>
+      </th>
     </tr>
   );
 }

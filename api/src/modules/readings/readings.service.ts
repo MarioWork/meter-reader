@@ -1,3 +1,4 @@
+import { NotFoundError } from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { readingsRepository, type ReadingRow } from './readings.repository.ts';
@@ -10,6 +11,8 @@ import type {
 } from './readings.schema.ts';
 
 const log = logger.child({ module: 'readings' });
+
+const ENTITY = 'Reading';
 
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
@@ -52,4 +55,20 @@ export async function getReadings(query: ListReadingsQuery): Promise<ReadingList
   const { rows, total } = await readingsRepository.findPage(toSkipTake(query));
 
   return { data: rows.map(toResponse), totalResultNumber: total, currentPage: query.page };
+}
+
+// The seam for photos (issue #4): a reading has no stored files yet, so there is nothing to remove. Once a reading
+// keeps its photo, this deletes that file from the uploads folder.
+async function removeReadingFiles(row: ReadingRow): Promise<void> {
+  log.debug({ readingId: row.id }, 'reading has no stored files to remove');
+}
+
+export async function deleteReading(id: number): Promise<void> {
+  const row = await readingsRepository.deleteById(id);
+
+  if (!row) throw new NotFoundError(ENTITY, id);
+
+  await removeReadingFiles(row);
+
+  log.info({ readingId: id }, 'reading deleted');
 }

@@ -14,6 +14,16 @@ function getReadings(query = '') {
   return app.inject({ method: 'GET', url: `/readings${query}`, ...withSession(token) });
 }
 
+function deleteReading(id: number | string) {
+  return app.inject({ method: 'DELETE', url: `/readings/${id}`, ...withSession(token) });
+}
+
+async function addReadingId(digits: string): Promise<number> {
+  const response = await addReading({ digits, date: '2026-10-31' });
+
+  return response.json<{ id: number }>().id;
+}
+
 beforeAll(async () => {
   app = await buildApp();
 });
@@ -116,5 +126,44 @@ describe('GET /readings', () => {
     const response = await app.inject({ method: 'GET', url: '/readings' });
 
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('DELETE /readings/:id', () => {
+  it('removes the reading from the history and answers 204 when the reading exists', async () => {
+    const keptId = await addReadingId('00100');
+    const deletedId = await addReadingId('00200');
+
+    const response = await deleteReading(deletedId);
+
+    expect(response.statusCode).toBe(204);
+    expect(response.body).toBe('');
+    expect(await prisma.reading.findMany({ select: { id: true } })).toEqual([{ id: keptId }]);
+  });
+
+  it('returns 404 NOT_FOUND when the reading does not exist', async () => {
+    const deletedId = await addReadingId('00100');
+    await deleteReading(deletedId);
+
+    const response = await deleteReading(deletedId);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
+    const response = await deleteReading('abc');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 401 and keeps the reading when the browser is not signed in', async () => {
+    const readingId = await addReadingId('00100');
+
+    const response = await app.inject({ method: 'DELETE', url: `/readings/${readingId}` });
+
+    expect(response.statusCode).toBe(401);
+    expect(await prisma.reading.count()).toBe(1);
   });
 });
