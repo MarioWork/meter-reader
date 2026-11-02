@@ -5,9 +5,9 @@ import { ReadingParamsSchema, SendReadingSchema, type SendReading } from '@servi
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { JSONResponseUtil } from '@app-types/utility';
 import { parseFormData } from '@utils/formDataUtils';
-import { toastActionResult } from '@utils/toastUtils';
+import { toastOnSuccess } from '@utils/toastUtils';
 
-const SEND_TOAST_MESSAGES = { success: 'Reading sent', failure: 'Reading not sent' };
+const SENT_MESSAGE = 'Reading sent';
 
 async function sendReading({ request, params }: ActionFunctionArgs): Promise<JSONResponseUtil | Response> {
   const fields = parseFormData<SendReading>(await request.formData());
@@ -30,6 +30,6 @@ async function sendReading({ request, params }: ActionFunctionArgs): Promise<JSO
 
 // Sent, the preview closes onto the same page of the history, where the reading now shows as sent. Not sent, the
 // preview stays open with the server's reason; the API has marked the reading failed, and the history behind says so.
-// Either way a toast says how it went.
+// A toast confirms a send.
 export const sendReadingAction = async (args: ActionFunctionArgs): Promise<JSONResponseUtil | Response> =>
-  toastActionResult(await sendReading(args), SEND_TOAST_MESSAGES);
+  toastOnSuccess(await sendReading(args), SENT_MESSAGE);
