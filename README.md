@@ -251,17 +251,17 @@ The sections below describe the web starter. They apply inside `web/`.
 
 ## Stack
 
-| Area     | Tool                                                 |
-| -------- | ---------------------------------------------------- |
-| UI       | React 19 with the React Compiler, Tailwind CSS 4     |
-| Build    | Vite 8                                               |
-| Routing  | React Router 8, data mode (loaders and actions)      |
-| Data     | axios                                                |
-| Forms    | react-hook-form + yup                                |
-| Mocks    | MSW 3 (`msw/vite` plugin, `@msw/playwright` for E2E) |
-| Tests    | Vitest 5 + Testing Library, Playwright for E2E       |
-| Lint     | ESLint (flat, type-aware) + custom rules, Prettier   |
-| Packages | Yarn 4, release committed in `.yarn/releases`        |
+| Area     | Tool                                                                   |
+| -------- | ---------------------------------------------------------------------- |
+| UI       | React 19 with the React Compiler, Tailwind CSS 4, shadcn/ui on Base UI |
+| Build    | Vite 8                                                                 |
+| Routing  | React Router 8, data mode (loaders and actions)                        |
+| Data     | axios                                                                  |
+| Forms    | react-hook-form + yup                                                  |
+| Mocks    | MSW 3 (`msw/vite` plugin, `@msw/playwright` for E2E)                   |
+| Tests    | Vitest 5 + Testing Library, Playwright for E2E                         |
+| Lint     | ESLint (flat, type-aware) + custom rules, Prettier                     |
+| Packages | Yarn 4, release committed in `.yarn/releases`                          |
 
 ## Folder structure
 
@@ -297,6 +297,13 @@ Readings show the full path:
 5. **Action** (`pages/NewReading/newReadingActions.ts`) checks the payload against the same schema, then calls the service. The router reloads the loader afterwards.
 
 A yup rule used by both the form and the service lives once in `common/utils/` (see `readingUtils.ts`).
+
+## Theme and shadcn/ui
+
+- `src/index.css` holds the light (`:root`) and dark (`.dark`) tokens, from the meterpallet palette. Style with them (`bg-background`, `text-muted-foreground`, `text-primary`, ...), not Tailwind's own colours, so both themes work. `src/themeContrast.test.ts` fails when a light or dark pair drops below WCAG 2.2 AA.
+- The theme follows the device's light or dark setting. `useTheme()` (`@hooks/useTheme`) reads and changes the user's choice (Light / Dark / System), which is kept in `localStorage`.
+- `public/theme-init.js` applies the stored choice before the first paint. It mirrors `src/common/utils/themeUtils.ts`: change both together.
+- Add a shadcn component with `yarn shadcn add <name>` (from `web/`). It lands in `src/common/components/ui/`. Join classes with `cn()` from `@utils/classNameUtils`.
 
 ## Adding a feature
 
