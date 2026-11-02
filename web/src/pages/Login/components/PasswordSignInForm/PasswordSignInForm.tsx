@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import { Button } from '@components/ui/button';
-import { Alert, AlertTitle } from '@components/ui/alert';
+import ErrorAlert from '@components/ErrorAlert';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@components/ui/field';
 import { Input } from '@components/ui/input';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
@@ -59,11 +59,7 @@ function PasswordSignInForm() {
           <FieldError id={PASSWORD_ERROR_ID}>{passwordError}</FieldError>
         </Field>
       </FieldGroup>
-      {failureMessage && (
-        <Alert variant="destructive">
-          <AlertTitle>{failureMessage}</AlertTitle>
-        </Alert>
-      )}
+      {failureMessage && <ErrorAlert message={failureMessage} />}
       <Button type="submit" disabled={isSigningIn}>
         Sign in
       </Button>

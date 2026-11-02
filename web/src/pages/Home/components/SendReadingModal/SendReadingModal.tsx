@@ -1,4 +1,4 @@
-import { Alert, AlertTitle } from '@components/ui/alert';
+import ErrorAlert from '@components/ErrorAlert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,11 +47,7 @@ function SendReadingModal() {
             {MAIL_NOT_CONNECTED_END}
           </p>
         )}
-        {failureMessage && (
-          <Alert variant="destructive">
-            <AlertTitle>{failureMessage}</AlertTitle>
-          </Alert>
-        )}
+        {failureMessage && <ErrorAlert message={failureMessage} />}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
           <AlertDialogAction disabled={isSending || !isMailConnected} onClick={sendReading}>
