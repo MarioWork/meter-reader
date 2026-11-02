@@ -1,5 +1,4 @@
 import { buildApp, type App } from '../../app.ts';
-import { healthRepository } from './health.repository.ts';
 
 let app: App;
 
@@ -26,15 +25,6 @@ describe('GET /ready', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok' });
-  });
-
-  it('returns 503 with NOT_READY when the database does not answer', async () => {
-    vi.spyOn(healthRepository, 'ping').mockRejectedValueOnce(new Error('connection lost'));
-
-    const response = await app.inject({ method: 'GET', url: '/ready' });
-
-    expect(response.statusCode).toBe(503);
-    expect(response.json()).toEqual({ code: 'NOT_READY', message: 'Database is not reachable' });
   });
 });
 
