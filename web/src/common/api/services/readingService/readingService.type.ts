@@ -4,6 +4,8 @@ import { readingDateSchema, readingDigitsSchema } from '@utils/readingUtils';
 export const CreateReadingSchema = object({
   digits: readingDigitsSchema,
   date: readingDateSchema,
+  // Set by the action once the photo is uploaded; a reading can be saved without one.
+  photoId: number().integer().positive().optional(),
 });
 
 export type CreateReading = InferType<typeof CreateReadingSchema>;

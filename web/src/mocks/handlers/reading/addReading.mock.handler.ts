@@ -13,8 +13,13 @@ export default (baseUrl: string) => [
   http.post(`${baseUrl}/readings`, async ({ request }): Promise<HttpResponse<ReadingApiModel>> => {
     await delay(MOCK_DELAY);
 
-    const reading = (await request.json()) as CreateReading;
-    const saved = addMockReading({ ...reading, status: ReadingStatusUtil.NOT_SENT, createdAt: MOCK_SAVED_AT });
+    const { photoId, ...reading } = (await request.json()) as CreateReading;
+    const saved = addMockReading({
+      ...reading,
+      status: ReadingStatusUtil.NOT_SENT,
+      createdAt: MOCK_SAVED_AT,
+      photoId: photoId ?? null,
+    });
 
     return HttpResponse.json(saved, { status: 201 });
   }),

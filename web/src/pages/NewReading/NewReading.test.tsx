@@ -4,6 +4,16 @@ import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { renderRoutes, screen, userEvent, within } from '@test-utils';
 import { todayAsIsoDate } from '@utils/dateUtils';
+import { PhotoShrinkError, shrinkPhoto } from '@utils/photoUtils';
+
+// jsdom has no canvas to shrink with: the shrink runs for real in the e2e test. Here it hands back a small JPEG.
+vi.mock('@utils/photoUtils', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  shrinkPhoto: vi.fn(),
+}));
+
+const CAMERA_PHOTO = new File(['a big photo straight from the camera'], 'IMG_0042.HEIC', { type: 'image/heic' });
+const SHRUNK_PHOTO = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], 'meter.jpg', { type: 'image/jpeg' });
 
 // The newest reading in the mock history is 00529, read on 1 Oct 2026.
 const LOWER_THAN_LAST = '00500';
@@ -21,6 +31,14 @@ function readingField() {
 
 async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Save reading' }));
+}
+
+beforeEach(() => {
+  vi.mocked(shrinkPhoto).mockResolvedValue(SHRUNK_PHOTO);
+});
+
+function newestHistoryRow() {
+  return within(screen.getByRole('table', { name: 'History' })).getAllByRole('row')[1];
 }
 
 it('starts the date on today', async () => {
@@ -120,4 +138,53 @@ it('marks the date and sends nothing when the day has not happened yet', async (
 
   expect(screen.getByLabelText('Date')).toHaveAccessibleDescription('Pick today or a day before it');
   expect(screen.getByRole('heading', { name: 'New reading' })).toBeVisible();
+});
+
+it('offers the camera and the files on the device for the photo', async () => {
+  await renderNewReading();
+
+  expect(screen.getByLabelText('Take a photo')).toHaveAttribute('capture', 'environment');
+  expect(screen.getByLabelText('Take a photo')).toHaveAttribute('accept', 'image/*');
+  expect(screen.getByLabelText('Choose a photo')).not.toHaveAttribute('capture');
+  expect(screen.getByLabelText('Choose a photo')).toHaveAttribute('accept', 'image/*');
+});
+
+it('shrinks the picked photo and shows it before the save', async () => {
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+
+  expect(await screen.findByRole('img', { name: 'The meter, as it will be saved' })).toHaveAttribute(
+    'src',
+    expect.stringMatching(/^data:image\/jpeg;base64,/),
+  );
+  expect(shrinkPhoto).toHaveBeenCalledWith(CAMERA_PHOTO);
+});
+
+it('saves the reading without a photo once the photo is removed', async () => {
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Choose a photo'), CAMERA_PHOTO);
+  await userEvent.click(await screen.findByRole('button', { name: 'Remove photo' }));
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  await save();
+
+  await screen.findByRole('heading', { name: 'History' });
+  expect(newestHistoryRow()).toHaveTextContent('No photo');
+});
+
+it('says why a file cannot be used and still saves the reading without it', async () => {
+  vi.mocked(shrinkPhoto).mockRejectedValueOnce(new PhotoShrinkError('This file is not a photo the app can read.'));
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Choose a photo'), CAMERA_PHOTO);
+
+  expect(screen.getByLabelText('Choose a photo')).toHaveAccessibleDescription(
+    'This file is not a photo the app can read.',
+  );
+  expect(screen.getByLabelText('Choose a photo')).toBeInvalid();
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  await save();
+  await screen.findByRole('heading', { name: 'History' });
+  expect(newestHistoryRow()).toHaveTextContent('No photo');
 });

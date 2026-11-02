@@ -44,6 +44,8 @@ COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/package.json ./
 # Data files the code reads at start-up (the common-password list).
 COPY --chown=node:node assets ./assets
+# Where the photos go (UPLOADS_DIR); compose.yaml mounts ./data/uploads over it.
+RUN mkdir -p data/uploads && chown node:node data/uploads
 USER node
 EXPOSE 3000
 CMD ["node", "dist/server.js"]

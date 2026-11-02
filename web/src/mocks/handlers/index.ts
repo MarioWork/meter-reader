@@ -1,5 +1,6 @@
 import { authMockHandlers } from './auth';
 import { itemMockHandlers } from './item';
+import { photoMockHandlers } from './photo';
 import { readingMockHandlers } from './reading';
 import { mailMockHandlers } from './mail';
 
@@ -9,6 +10,7 @@ const MOCK_DELAY = 200;
 export const getHandlers = (baseUrl: string) => [
   ...authMockHandlers(baseUrl),
   ...readingMockHandlers(baseUrl),
+  ...photoMockHandlers(baseUrl),
   ...itemMockHandlers(baseUrl),
   ...mailMockHandlers(baseUrl),
 ];

@@ -1,4 +1,4 @@
-# Home server deployment. Everything worth backing up lives in ./data (the Postgres files, later ./data/uploads).
+# Home server deployment. Everything worth backing up lives in ./data (the Postgres files and ./data/uploads).
 # The database password comes from a .env file next to this one: POSTGRES_PASSWORD=<letters and digits> (README,
 # .env.example).
 # The web container (Caddy) is the only thing on the LAN: it serves the app over HTTPS on port 8443 and proxies /api
@@ -58,6 +58,11 @@ services:
       APP_ORIGIN: *app-address
       # The Microsoft Entra app the server sends mail through (README, "Connecting Hotmail"). Empty until registered.
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      # The photos, on the volume below, so they outlive the container.
+      UPLOADS_DIR: /app/data/uploads
+    volumes:
+      # Owned by uid 1000 (the image's `node` user), or the api refuses to start (README).
+      - ./data/uploads:/app/data/uploads
     depends_on:
       migrate:
         condition: service_completed_successfully

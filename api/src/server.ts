@@ -2,6 +2,7 @@
 import { buildApp } from './app.ts';
 import { env } from './config/env.ts';
 import { logger } from './lib/logger.ts';
+import { assertUploadsWritable } from './lib/uploads.ts';
 import { addSetupCode, getSetupLink } from './modules/auth/setup/setup.service.ts';
 import { refreshMailToken } from './modules/mail/mail.service.ts';
 
@@ -20,6 +21,9 @@ process.on('uncaughtException', (error) => {
   logger.fatal({ err: error }, 'uncaught exception');
   process.exit(1);
 });
+
+// A photo that cannot be written should stop the start, not fail later in front of the user.
+await assertUploadsWritable();
 
 const app = await buildApp();
 

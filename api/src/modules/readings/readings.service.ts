@@ -39,11 +39,12 @@ function toResponse(row: ReadingRow): ReadingResponse {
     date: toIsoDate(row.date),
     status: STATUS_MAP[row.status],
     createdAt: row.createdAt.toISOString(),
+    photoId: row.photo?.id ?? null,
   };
 }
 
-export async function addReading({ digits, date }: CreateReading): Promise<ReadingResponse> {
-  const row = await readingsRepository.create({ digits, date: toDate(date) });
+export async function addReading({ digits, date, photoId }: CreateReading): Promise<ReadingResponse> {
+  const row = await readingsRepository.create({ digits, date: toDate(date), photoId });
 
   // The id only: the digits are the user's data.
   log.info({ readingId: row.id }, 'reading saved');

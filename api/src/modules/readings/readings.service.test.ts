@@ -12,6 +12,7 @@ const SAVED_ROW = {
   date: new Date('2026-10-31T00:00:00.000Z'),
   status: 'NOT_SENT' as const,
   createdAt: new Date('2026-11-01T08:15:00.000Z'),
+  photo: null,
 };
 
 describe('addReading', () => {
@@ -23,6 +24,7 @@ describe('addReading', () => {
     expect(readingsRepository.create).toHaveBeenCalledWith({
       digits: '00123',
       date: new Date('2026-10-31T00:00:00.000Z'),
+      photoId: undefined,
     });
     expect(reading).toEqual({
       id: 7,
@@ -30,7 +32,17 @@ describe('addReading', () => {
       date: '2026-10-31',
       status: 'notSent',
       createdAt: '2026-11-01T08:15:00.000Z',
+      photoId: null,
     });
+  });
+
+  it('passes the photo id on and answers it when the reading has a photo', async () => {
+    vi.mocked(readingsRepository.create).mockResolvedValueOnce({ ...SAVED_ROW, photo: { id: 4 } });
+
+    const reading = await addReading({ digits: '00123', date: '2026-10-31', photoId: 4 });
+
+    expect(readingsRepository.create).toHaveBeenCalledWith(expect.objectContaining({ photoId: 4 }));
+    expect(reading.photoId).toBe(4);
   });
 });
 

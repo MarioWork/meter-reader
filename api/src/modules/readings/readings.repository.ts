@@ -10,19 +10,25 @@ const READING_SELECT = {
   date: true,
   status: true,
   createdAt: true,
+  photo: { select: { id: true } },
 } as const satisfies Prisma.ReadingSelect;
 
 // Newest first: the latest day on top, and on the same day the one saved last.
 const NEWEST_FIRST = [{ date: 'desc' }, { id: 'desc' }] as const satisfies Prisma.ReadingOrderByWithRelationInput[];
 
-export type NewReading = { digits: string; date: Date };
+export type NewReading = { digits: string; date: Date; photoId?: number };
 
 export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELECT }>;
 
 export type ReadingPage = { rows: ReadingRow[]; total: number };
 
 export const readingsRepository = {
-  create: (data: NewReading): Promise<ReadingRow> => prisma.reading.create({ data, select: READING_SELECT }),
+  // A photo is linked only while it belongs to no reading: an unknown or taken photo fails the whole save (P2025).
+  create: ({ digits, date, photoId }: NewReading): Promise<ReadingRow> => {
+    const photo = photoId === undefined ? undefined : { connect: { id: photoId, reading: { is: null } } };
+
+    return prisma.reading.create({ data: { digits, date, photo }, select: READING_SELECT });
+  },
 
   // The page and the total in one transaction, so the total matches the page.
   findPage: async ({ skip, take }: SkipTake): Promise<ReadingPage> => {

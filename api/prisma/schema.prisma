@@ -125,6 +125,8 @@ model Reading {
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  photo Photo?
+
   // The history reads newest first: by date, then by the order it was saved.
   @@index([date(sort: Desc), id(sort: Desc)], map: "readings_date_id_idx")
   @@map("readings")
@@ -144,4 +146,21 @@ model MailConnection {
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("mail_connections")
+}
+
+// The photo a reading was taken from: a JPEG the phone already shrank (longest side 2000 px, under 3 MB), kept as a
+// file in UPLOADS_DIR. It is uploaded first and linked when its reading is saved; until then readingId is null.
+model Photo {
+  id        Int      @id @default(autoincrement())
+  // The file's name in UPLOADS_DIR, chosen by the server (a random UUID), never by the client.
+  fileName  String   @unique(map: "photos_file_name_uidx") @map("file_name")
+  sizeBytes Int      @map("size_bytes")
+  readingId Int?     @unique(map: "photos_reading_id_uidx") @map("reading_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Deleting a reading deletes its photo row; the file itself is removed by the code that deletes the reading.
+  reading Reading? @relation(fields: [readingId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
 }
