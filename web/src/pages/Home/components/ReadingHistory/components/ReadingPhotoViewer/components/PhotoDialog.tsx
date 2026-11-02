@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import { useModalDialog } from '@hooks/useModalDialog';
 
 type Props = {

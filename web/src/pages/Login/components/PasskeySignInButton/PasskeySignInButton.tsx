@@ -1,6 +1,6 @@
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import { Alert, AlertTitle } from '@components/ui/alert';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
@@ -17,7 +17,7 @@ function PasskeySignInButton() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button variant="secondary" isDisabled={isSigningIn} onClick={signIn}>
+      <Button variant="outline" disabled={isSigningIn} onClick={signIn}>
         Sign in with a passkey
       </Button>
       {failureMessage && (

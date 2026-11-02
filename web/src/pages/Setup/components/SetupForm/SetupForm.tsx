@@ -2,7 +2,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import { Alert, AlertTitle } from '@components/ui/alert';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@components/ui/field';
 import { Input } from '@components/ui/input';
@@ -75,7 +75,7 @@ function SetupForm({ code }: Props) {
           <AlertTitle>{failureMessage}</AlertTitle>
         </Alert>
       )}
-      <Button type="submit" isDisabled={isSaving}>
+      <Button type="submit" disabled={isSaving}>
         Finish setup
       </Button>
     </form>

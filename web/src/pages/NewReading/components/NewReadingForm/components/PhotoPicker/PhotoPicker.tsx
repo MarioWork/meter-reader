@@ -1,4 +1,4 @@
-import Button from '@components/Button';
+import { Button } from '@components/ui/button';
 import PhotoInput from './components/PhotoInput';
 
 type Props = {
@@ -49,7 +49,7 @@ function PhotoPicker({ previewUrl, isShrinking, isFindingDigits, errorMessage, o
           onPick={onPick}
         />
         {previewUrl && (
-          <Button variant="secondary" isDisabled={isBusy} onClick={onRemove}>
+          <Button variant="outline" disabled={isBusy} onClick={onRemove}>
             Remove photo
           </Button>
         )}

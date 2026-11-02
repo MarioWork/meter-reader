@@ -1,8 +1,8 @@
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { ReadingApiModel } from '@app-types/models';
 import { ReadingStatusUtil } from '@app-types/utility';
-import TextLink from '@components/TextLink';
+import { buttonVariants } from '@components/ui/button';
 import { formatIsoDate } from '@utils/dateUtils';
 
 type Props = {
@@ -30,12 +30,13 @@ function SendReadingLink({ reading }: Props) {
   if (!labels) return null;
 
   return (
-    <TextLink
+    <Link
+      className={buttonVariants({ variant: 'link' })}
       to={{ pathname: READING_ROUTES_PATHS.send(String(reading.id)), search }}
-      ariaLabel={`${labels.ariaPrefix} the reading of ${formatIsoDate(reading.date)}`}
+      aria-label={`${labels.ariaPrefix} the reading of ${formatIsoDate(reading.date)}`}
     >
       {labels.text}
-    </TextLink>
+    </Link>
   );
 }
 
