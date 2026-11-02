@@ -13,7 +13,6 @@ import { SAVE_FAILED_MESSAGE } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
 import ReadingDateField from './components/ReadingDateField';
 import ReadingDigitsField from './components/ReadingDigitsField';
-import PhotoDigitsStatus from './components/PhotoDigitsStatus';
 import PhotoPicker from './components/PhotoPicker';
 import { useReadingPhoto } from './hooks/useReadingPhoto';
 import { getInitialValues, newReadingFormSchema, toPayload, type NewReadingFormValues } from './newReadingFormUtils';
@@ -41,7 +40,7 @@ function NewReadingForm({ lastReading }: Props) {
   // The React Compiler would memoize that spread, so the inputs would stop reaching the form state.
   'use no memo';
 
-  const { register, handleSubmit, formState, control, getValues, setValue } = useForm<NewReadingFormValues>({
+  const { register, handleSubmit, formState, control, getValues, setValue, setFocus } = useForm<NewReadingFormValues>({
     defaultValues: getInitialValues(),
     resolver: yupResolver(newReadingFormSchema),
   });
@@ -68,27 +67,28 @@ function NewReadingForm({ lastReading }: Props) {
   const failureMessage = useFetcherFailure(fetcher, SAVE_FAILED_MESSAGE);
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
+    <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-6">
       <FieldGroup>
+        <PhotoPicker
+          previewUrl={previewUrl}
+          isShrinking={isShrinking}
+          isFindingDigits={isFindingDigits}
+          hasFoundNothing={hasFoundNothing}
+          errorMessage={errorMessage}
+          onPick={(picked) => void pickPhoto(picked)}
+          onRemove={removePhoto}
+          onSkip={() => setFocus('digits')}
+        />
         <ReadingDigitsField
           error={formState.errors.digits?.message}
           warningId={isLower ? WARNING_ID : undefined}
           registration={register('digits')}
         />
         {isLower && lastReading && <LowerReadingWarning id={WARNING_ID} lastReading={lastReading} />}
-        <PhotoDigitsStatus isFindingDigits={isFindingDigits} hasFoundNothing={hasFoundNothing} />
         <ReadingDateField error={formState.errors.date?.message} registration={register('date')} />
-        <PhotoPicker
-          previewUrl={previewUrl}
-          isShrinking={isShrinking}
-          isFindingDigits={isFindingDigits}
-          errorMessage={errorMessage}
-          onPick={(picked) => void pickPhoto(picked)}
-          onRemove={removePhoto}
-        />
       </FieldGroup>
       {failureMessage && <ErrorAlert message={failureMessage} />}
-      <Button type="submit" disabled={!canSave}>
+      <Button type="submit" size="lg" disabled={!canSave} className="w-full">
         Save reading
       </Button>
     </form>
