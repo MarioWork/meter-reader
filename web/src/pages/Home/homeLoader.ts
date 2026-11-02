@@ -4,6 +4,8 @@ import readingService from '@services/readingService/readingService';
 import type { ReadingApiModel } from '@app-types/models';
 import { HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
 import { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from '@app-types/utility';
+import { readHistoryFilters } from './historyFilterUtils';
+import type { HistoryFilterValues } from './types';
 
 const FIRST_PAGE = Number(DEFAULT_FIRST_PAGE);
 
@@ -23,8 +25,9 @@ function laterPageNumbers(lastPage: number): number[] {
   return Array.from({ length: lastPage - FIRST_PAGE }, (_, index) => FIRST_PAGE + 1 + index);
 }
 
-function getReadingsPage(page: number) {
-  const fields = { pagination: { page: String(page), size: PAGE_SIZE } };
+// One page of the history, narrowed by the filters.
+function getReadingsPage(page: number, filters: HistoryFilterValues) {
+  const fields = { pagination: { page: String(page), size: PAGE_SIZE }, ...filters };
 
   return readingService.getReadings(fields);
 }
@@ -64,16 +67,18 @@ function keepLoadedPages(results: PromiseSettledResult<ReadingsPage>[]): LaterPa
 
 // The history, newest first, from the first page up to the page the url asks for, so "Load more" and any write
 // (send, delete) see the same readings once the loader runs again. A page past the end shows the whole history.
+// Every page is narrowed by the filters in the url.
 export async function loader({ request }: LoaderFunctionArgs) {
   const searchParams = new URL(request.url).searchParams;
+  const filters = readHistoryFilters(searchParams);
 
-  const firstPageFields = { pagination: DEFAULT_PAGINATION };
+  const firstPageFields = { pagination: DEFAULT_PAGINATION, ...filters };
   const firstPage = await readingService.getReadings(firstPageFields);
 
   const pageCount = Math.max(FIRST_PAGE, Math.ceil(firstPage.totalResultNumber / Number(PAGE_SIZE)));
   const lastPageToLoad = Math.min(requestedPageCount(searchParams), pageCount);
 
-  const laterPageRequests = laterPageNumbers(lastPageToLoad).map(getReadingsPage);
+  const laterPageRequests = laterPageNumbers(lastPageToLoad).map((page) => getReadingsPage(page, filters));
   const laterPageResults = await Promise.allSettled(laterPageRequests);
   const laterPages = keepLoadedPages(laterPageResults);
 

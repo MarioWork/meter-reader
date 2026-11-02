@@ -17,6 +17,11 @@ export const AUTH_SEARCH_PARAMS = {
 export const HOME_SEARCH_PARAMS = {
   // How many pages of the history are shown: ?pages=3 shows the first three. Not the API's `page`, which is one page.
   SHOWN_PAGES: 'pages',
+  // The history's filters, named as the API names them: a day range (both ends inclusive, YYYY-MM-DD) and the
+  // statuses to show, comma-separated.
+  DATE_FROM: 'from',
+  DATE_TO: 'to',
+  STATUSES: 'status',
 };
 
 export const READING_ROUTES_PATHS = {

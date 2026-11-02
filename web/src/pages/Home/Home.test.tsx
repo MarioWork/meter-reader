@@ -13,8 +13,10 @@ const DELETE_DIALOG = 'Delete this reading?';
 const SERVER_ERROR = 500;
 
 async function renderHome(path = BASE_ROUTES_PATHS.HOME) {
-  renderRoutes(routes, { initialEntries: [path] });
+  const { router } = renderRoutes(routes, { initialEntries: [path] });
   await screen.findByRole('heading', { name: 'History' });
+
+  return router;
 }
 
 function lastReadingCard() {
@@ -523,5 +525,199 @@ describe('sending a reading', () => {
     const sent = earlierCardFor('1 Aug 2026')!;
     expect(sent).toHaveTextContent(/Sent 1 Aug 2026/);
     expect(within(sent).queryByRole('link', { name: /Send|Try again/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('filtering the history', () => {
+  const THIS_MONTH = `${BASE_ROUTES_PATHS.HOME}?from=2026-10-01&to=2026-10-15`;
+  const LAST_THREE_MONTHS = 'from=2026-08-01&to=2026-10-15';
+
+  beforeEach(() => {
+    // 15 October 2026: "This month" is 1–15 Oct, which holds the mock history's newest reading only.
+    vi.setSystemTime(new Date(2026, 9, 15, 12));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Keeps the query of every history request, then lets the mock API answer it as usual.
+  function recordHistoryRequests() {
+    const received: URLSearchParams[] = [];
+
+    server.use(
+      http.get(`${TEST_BASE_API_URL}/readings`, ({ request }) => {
+        received.push(new URL(request.url).searchParams);
+      }),
+    );
+
+    return received;
+  }
+
+  function matchingCards() {
+    return within(screen.getByRole('region', { name: 'Matching readings' })).getAllByRole('listitem');
+  }
+
+  function activeFilters() {
+    return within(screen.getByRole('list', { name: 'Active filters' })).getAllByRole('button');
+  }
+
+  function filterSheet() {
+    return screen.getByRole('dialog', { name: 'Filter readings' });
+  }
+
+  async function openFilterSheet() {
+    await userEvent.click(screen.getByRole('button', { name: 'Filter' }));
+
+    return screen.findByRole('dialog', { name: 'Filter readings' });
+  }
+
+  async function showReadings() {
+    await userEvent.click(within(filterSheet()).getByRole('button', { name: 'Show readings' }));
+  }
+
+  it("puts a preset's days in the url and asks the API for them", async () => {
+    const received = recordHistoryRequests();
+    const router = await renderHome();
+
+    const sheet = await openFilterSheet();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'This month' }));
+    await showReadings();
+
+    await waitFor(() => expect(matchingCards()).toHaveLength(1));
+    const searchParams = new URLSearchParams(router.state.location.search);
+    expect(searchParams.get('from')).toBe('2026-10-01');
+    expect(searchParams.get('to')).toBe('2026-10-15');
+    expect(received.at(-1)?.get('from')).toBe('2026-10-01');
+    expect(received.at(-1)?.get('to')).toBe('2026-10-15');
+    expect(matchingCards()[0]).toHaveTextContent('00529');
+    expect(screen.getByRole('button', { name: 'Remove filter: This month' })).toBeVisible();
+    expect(screen.queryByRole('dialog', { name: 'Filter readings' })).not.toBeInTheDocument();
+  });
+
+  it('hides the last reading card while a filter is on', async () => {
+    await renderHome(THIS_MONTH);
+
+    expect(screen.queryByRole('region', { name: 'Last reading' })).not.toBeInTheDocument();
+    expect(matchingCards()).toHaveLength(1);
+  });
+
+  it('asks the API for the statuses in the url, and shows each as a chip', async () => {
+    const received = recordHistoryRequests();
+    await renderHome(`${BASE_ROUTES_PATHS.HOME}?status=failed,notSent`);
+
+    expect(received.at(-1)?.get('status')).toBe('notSent,failed');
+    expect(activeFilters().map((chip) => chip.textContent)).toEqual(['Not sent', 'Failed']);
+    expect(matchingCards()).toHaveLength(3);
+  });
+
+  it('picks statuses in the sheet, starting from the ones in the url', async () => {
+    const router = await renderHome(`${BASE_ROUTES_PATHS.HOME}?status=sent`);
+
+    const sheet = await openFilterSheet();
+    expect(within(sheet).getByRole('button', { name: 'Sent', pressed: true })).toBeVisible();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Failed' }));
+    await showReadings();
+
+    await waitFor(() => expect(new URLSearchParams(router.state.location.search).get('status')).toBe('sent,failed'));
+    expect(matchingCards()).toHaveLength(10);
+  });
+
+  it('leaves the filters as they were when the sheet is closed', async () => {
+    const router = await renderHome(`${BASE_ROUTES_PATHS.HOME}?status=sent`);
+
+    const sheet = await openFilterSheet();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Failed' }));
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Filter readings' })).not.toBeInTheDocument());
+    expect(router.state.location.search).toBe('?status=sent');
+    expect(screen.getByRole('button', { name: 'Filter' })).toHaveFocus();
+  });
+
+  it('removes one filter with its chip and keeps the others', async () => {
+    const router = await renderHome(`${BASE_ROUTES_PATHS.HOME}?${LAST_THREE_MONTHS}&status=sent`);
+    expect(matchingCards()).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove filter: Sent' }));
+
+    await waitFor(() => expect(matchingCards()).toHaveLength(3));
+    expect(router.state.location.search).toBe(`?${LAST_THREE_MONTHS}`);
+    expect(activeFilters().map((chip) => chip.textContent)).toEqual(['Last 3 months']);
+    expect(screen.getByRole('button', { name: 'Filter' })).toHaveFocus();
+  });
+
+  it('shows the whole history again once the last chip is removed', async () => {
+    await renderHome(THIS_MONTH);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove filter: This month' }));
+
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('00529'));
+    expect(earlierCards()).toHaveLength(9);
+    expect(screen.queryByRole('list', { name: 'Active filters' })).not.toBeInTheDocument();
+  });
+
+  it('says when nothing matches, and Clear filters shows the whole history', async () => {
+    const router = await renderHome(`${THIS_MONTH}&status=failed`);
+
+    expect(screen.getByRole('heading', { name: 'No readings match these filters' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('00529'));
+    expect(router.state.location.search).toBe('');
+    expect(screen.getByRole('button', { name: 'Filter' })).toHaveFocus();
+  });
+
+  it('filters by custom days, and refuses a range that ends before it starts', async () => {
+    const router = await renderHome();
+
+    const sheet = await openFilterSheet();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Custom' }));
+    await userEvent.type(within(sheet).getByLabelText('From'), '2026-03-01');
+    await userEvent.type(within(sheet).getByLabelText('To'), '2026-01-01');
+    await showReadings();
+
+    const toField = within(sheet).getByLabelText('To');
+    expect(within(sheet).getByRole('alert')).toHaveTextContent('Pick a To day on or after the From day');
+    expect(toField).toHaveAccessibleDescription('Pick a To day on or after the From day');
+    expect(toField).toHaveFocus();
+    expect(router.state.location.search).toBe('');
+
+    await userEvent.clear(toField);
+    await userEvent.type(toField, '2026-05-01');
+    await showReadings();
+
+    await waitFor(() => expect(matchingCards()).toHaveLength(3));
+    expect(screen.getByRole('button', { name: 'Remove filter: 1 Mar 2026 – 1 May 2026' })).toBeVisible();
+  });
+
+  it('starts again from the first page when the filters change, and Load more keeps them', async () => {
+    const received = recordHistoryRequests();
+    await renderHome(`${BASE_ROUTES_PATHS.HOME}?pages=2`);
+    await waitFor(() => expect(earlierCards()).toHaveLength(13));
+
+    const sheet = await openFilterSheet();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Sent' }));
+    await showReadings();
+
+    // Eleven sent readings: the first page of ten, then the eleventh with Load more.
+    await waitFor(() => expect(matchingCards()).toHaveLength(10));
+    await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    await waitFor(() => expect(matchingCards()).toHaveLength(11));
+    expect(received.at(-1)?.get('page')).toBe('2');
+    expect(received.at(-1)?.get('status')).toBe('sent');
+  });
+
+  it('keeps the filtered readings and says so when the next page fails', async () => {
+    failSecondPage();
+    await renderHome(`${BASE_ROUTES_PATHS.HOME}?status=sent`);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The older readings could not be loaded');
+    expect(matchingCards()).toHaveLength(10);
+    expect(activeFilters().map((chip) => chip.textContent)).toEqual(['Sent']);
   });
 });

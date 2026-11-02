@@ -3,15 +3,15 @@ import type { ReadingApiModel } from '@app-types/models';
 import ReadingHistoryCard from './ReadingHistoryCard';
 
 type Props = {
+  title: string;
   readings: ReadingApiModel[];
   // Focused after a send or a delete here took focus away (useHistoryFocus).
   ref: React.Ref<HTMLElement>;
 };
 
-const TITLE = 'Earlier readings';
-
-// Every reading before the last one, newest first, one card each.
-function EarlierReadings({ readings, ref }: Props) {
+// A titled list of readings, newest first, one card each: the earlier readings below the last one, or every reading
+// the filters match.
+function ReadingCardList({ title, readings, ref }: Props) {
   const titleId = useId();
 
   return (
@@ -22,7 +22,7 @@ function EarlierReadings({ readings, ref }: Props) {
       className="flex flex-col gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <h2 id={titleId} className="text-lg font-semibold">
-        {TITLE}
+        {title}
       </h2>
       <ul className="flex flex-col gap-3">
         {readings.map((reading) => (
@@ -35,4 +35,4 @@ function EarlierReadings({ readings, ref }: Props) {
   );
 }
 
-export default EarlierReadings;
+export default ReadingCardList;

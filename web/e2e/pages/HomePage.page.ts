@@ -3,6 +3,7 @@ import { BASE_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
 const DELETE_DIALOG_NAME = 'Delete this reading?';
 const SEND_DIALOG_NAME = 'Send this reading?';
+const FILTER_SHEET_NAME = 'Filter readings';
 
 export class HomePage {
   private readonly page: Page;
@@ -25,6 +26,26 @@ export class HomePage {
 
   get earlierCards() {
     return this.earlierReadings.getByRole('listitem');
+  }
+
+  get matchingCards() {
+    return this.page.getByRole('region', { name: 'Matching readings' }).getByRole('listitem');
+  }
+
+  get filterButton() {
+    return this.page.getByRole('button', { name: 'Filter' });
+  }
+
+  get filterSheet() {
+    return this.page.getByRole('dialog', { name: FILTER_SHEET_NAME });
+  }
+
+  get noMatchesHeading() {
+    return this.page.getByRole('heading', { name: 'No readings match these filters' });
+  }
+
+  get activeFilters() {
+    return this.page.getByRole('list', { name: 'Active filters' }).getByRole('button');
   }
 
   get historyCount() {
@@ -90,6 +111,33 @@ export class HomePage {
 
   async goto() {
     await this.page.goto(BASE_ROUTES_PATHS.HOME);
+  }
+
+  // Opens the filter sheet, presses each choice (a date preset, a status) and applies them.
+  async filterBy(choices: string[]) {
+    await this.filterButton.click();
+
+    for (const choice of choices) {
+      await this.filterSheet.getByRole('button', { name: choice, exact: true }).click();
+    }
+
+    await this.filterSheet.getByRole('button', { name: 'Show readings' }).click();
+  }
+
+  async removeFilter(label: string) {
+    await this.page.getByRole('button', { name: `Remove filter: ${label}` }).click();
+  }
+
+  async clearFilters() {
+    await this.page.getByRole('button', { name: 'Clear filters' }).click();
+  }
+
+  async goBack() {
+    await this.page.goBack();
+  }
+
+  async reload() {
+    await this.page.reload();
   }
 
   // Scrolls the end of the history into view, as a thumb would.
