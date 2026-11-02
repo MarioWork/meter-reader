@@ -106,3 +106,26 @@ model SetupCode {
 
   @@map("setup_codes")
 }
+
+// Whether a reading's email went out (docs/GLOSSARY.md: Send, Sent, Failed). Every reading starts not sent.
+enum ReadingStatus {
+  NOT_SENT
+  SENT
+  FAILED
+}
+
+// One reading of the meter, kept exactly as read: text, never a number, so leading zeros survive.
+model Reading {
+  id        Int           @id @default(autoincrement())
+  // Digits only, leading zeros kept ("00123").
+  digits    String
+  // The day the meter showed these digits. A calendar day, no time and no time zone.
+  date      DateTime      @db.Date
+  status    ReadingStatus @default(NOT_SENT)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // The history reads newest first: by date, then by the order it was saved.
+  @@index([date(sort: Desc), id(sort: Desc)], map: "readings_date_id_idx")
+  @@map("readings")
+}
