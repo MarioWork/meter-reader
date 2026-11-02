@@ -32,5 +32,5 @@ test('a camera photo is shrunk to a JPEG of at most 2000 px and saved with its r
   expect(uploaded.length).toBeLessThan(PHOTO_MAX_BYTES);
   expect(await readPhotoSize(page, uploaded)).toEqual({ width: 2000, height: 1500, isJpeg: true });
   const newest = page.getByRole('table', { name: 'History' }).getByRole('row').nth(1);
-  await expect(newest.getByRole('link', { name: /^Meter showing 00600 on 31 Oct 2026/ })).toBeVisible();
+  await expect(newest.getByRole('button', { name: 'Show the photo of 00600 on 31 Oct 2026' })).toBeVisible();
 });

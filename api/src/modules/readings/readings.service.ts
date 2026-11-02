@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../lib/httpErrors.ts';
+import { ConflictError, NotFoundError } from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { removeUpload } from '../../lib/uploads.ts';
@@ -14,6 +14,7 @@ import type {
 const log = logger.child({ module: 'readings' });
 
 const ENTITY = 'Reading';
+const PHOTO_NOT_AVAILABLE_MESSAGE = 'This photo does not exist or already belongs to another reading';
 
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
@@ -46,6 +47,8 @@ function toResponse(row: ReadingRow): ReadingResponse {
 
 export async function addReading({ digits, date, photoId }: CreateReading): Promise<ReadingResponse> {
   const row = await readingsRepository.create({ digits, date: toDate(date), photoId });
+
+  if (!row) throw new ConflictError(PHOTO_NOT_AVAILABLE_MESSAGE, 'PHOTO_NOT_AVAILABLE');
 
   // The id only: the digits are the user's data.
   log.info({ readingId: row.id }, 'reading saved');

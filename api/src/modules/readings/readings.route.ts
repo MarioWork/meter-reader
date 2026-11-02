@@ -34,7 +34,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: TAGS,
         summary: 'Save a reading typed in by hand',
         body: CreateReadingSchema,
-        response: { 201: ReadingResponseSchema, 400: ErrorResponseSchema },
+        response: { 201: ReadingResponseSchema, 400: ErrorResponseSchema, 409: ErrorResponseSchema },
       },
     },
     async (request, reply) => {

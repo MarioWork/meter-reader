@@ -51,7 +51,7 @@ function PhotoPicker({ previewUrl, isShrinking, errorMessage, onPick, onRemove }
       </div>
       {isShrinking && <p role="status">Shrinking the photo…</p>}
       {errorMessage && (
-        <p id={ERROR_ID} className="text-red-700">
+        <p id={ERROR_ID} role="alert" className="text-red-700">
           {errorMessage}
         </p>
       )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PhotoShrinkError, readAsDataUrl, shrinkPhoto } from '@utils/photoUtils';
+import { PhotoShrinkError, readAsDataUrl, shrinkPhoto } from '../photoShrinkUtils';
 
 type PickedPhoto = { file: File; previewUrl: string };
 

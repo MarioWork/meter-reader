@@ -31,13 +31,30 @@ it('lists the history newest first with the date, the reading and its status', a
   expect(screen.getByRole('table', { name: 'History' })).not.toHaveFocus();
 });
 
-it("shows each reading's photo as a preview that opens the full photo", async () => {
-  await renderHome();
+describe("a reading's photo", () => {
+  const SHOW_NEWEST_PHOTO = 'Show the photo of 00529 on 1 Oct 2026';
+  const NEWEST_PHOTO_DIALOG = 'Photo of 00529 on 1 Oct 2026';
 
-  const photoLink = within(historyRows()[0]).getByRole('link', { name: /^Meter showing 00529 on 1 Oct 2026/ });
-  expect(photoLink).toHaveAttribute('href', `${TEST_BASE_API_URL}/photos/14`);
-  expect(photoLink).toHaveAttribute('target', '_blank');
-  expect(within(photoLink).getByRole('img')).toHaveAttribute('src', `${TEST_BASE_API_URL}/photos/14`);
+  it('shows the full photo inside the app when its preview is tapped', async () => {
+    await renderHome();
+
+    await userEvent.click(within(historyRows()[0]).getByRole('button', { name: SHOW_NEWEST_PHOTO }));
+
+    const dialog = screen.getByRole('dialog', { name: NEWEST_PHOTO_DIALOG });
+    expect(within(dialog).getByRole('img', { name: 'The meter showing 00529 on 1 Oct 2026' })).toHaveAttribute(
+      'src',
+      `${TEST_BASE_API_URL}/photos/14`,
+    );
+  });
+
+  it('closes the full photo with Close', async () => {
+    await renderHome();
+    await userEvent.click(within(historyRows()[0]).getByRole('button', { name: SHOW_NEWEST_PHOTO }));
+
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 
 it('says when a reading was saved without a photo', async () => {
@@ -46,7 +63,7 @@ it('says when a reading was saved without a photo', async () => {
   // The mock history's 1 Jun 2026 reading has no photo.
   const withoutPhoto = historyRows().find((row) => row.textContent?.includes('1 Jun 2026'));
   expect(withoutPhoto).toHaveTextContent('No photo');
-  expect(within(withoutPhoto!).queryByRole('link')).not.toBeInTheDocument();
+  expect(within(withoutPhoto!).queryByRole('button', { name: /^Show the photo/ })).not.toBeInTheDocument();
 });
 
 it('shows the older readings on the next page', async () => {
