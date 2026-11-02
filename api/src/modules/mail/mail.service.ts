@@ -3,6 +3,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { env } from '../../config/env.ts';
 import { getErrorLogFields } from '../../lib/databaseErrors.ts';
 import { AppError } from '../../lib/errors.ts';
+import { ConflictError } from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import {
   TEMPORARILY_UNAVAILABLE,
@@ -14,8 +15,10 @@ import {
   type DeviceCode,
   type MicrosoftTokens,
 } from './mail.microsoftIdentity.ts';
+import { buildSendMailRequest, postSendMail } from './mail.microsoftGraph.ts';
 import { mailRepository, type MailConnection } from './mail.repository.ts';
 import type { MailState, MailStatusResponse } from './mail.schema.ts';
+import type { OutgoingMail } from './mail.type.ts';
 
 const SECOND_MS = 1000;
 // RFC 8628 §3.5: on slow_down, wait this much longer between polls from then on.
@@ -28,6 +31,9 @@ const KEEP_WAITING_ERRORS: Record<string, number> = {
   [TEMPORARILY_UNAVAILABLE]: 0,
 };
 const EXPIRED_TOKEN_ERROR = 'expired_token';
+// A send refreshes the access token first when it runs out within this long: never send with one about to lapse.
+const TOKEN_FRESHNESS_MARGIN_MS = 5 * 60 * SECOND_MS;
+const MAIL_NOT_CONNECTED_MESSAGE = 'Hotmail is not connected. Run yarn mail:connect on the server, then try again';
 
 const CONNECTED: MailState = 'connected';
 const NOT_CONNECTED: MailState = 'notConnected';
@@ -142,6 +148,18 @@ async function refreshConnection(connection: MailConnection, signal?: AbortSigna
   log.debug('Hotmail token refreshed');
 }
 
+// The refresh under way, if any. Microsoft hands out a new refresh token each time, so two refreshes at once (the
+// timer and a send, or two sends) would race to save theirs: whoever comes second waits for the first instead.
+let runningRefresh: Promise<void> | undefined;
+
+function refreshOnce(connection: MailConnection, signal?: AbortSignal): Promise<void> {
+  runningRefresh ??= refreshConnection(connection, signal).finally(() => {
+    runningRefresh = undefined;
+  });
+
+  return runningRefresh;
+}
+
 // The server's own refresh, on a timer (server.ts): trades the refresh token for new tokens and saves them, so it
 // never lapses between readings, and notices a revoked one. Never throws: a failure is logged and the next round
 // tries again.
@@ -151,8 +169,51 @@ export async function refreshMailToken(signal?: AbortSignal): Promise<void> {
 
     if (!connection) return;
 
-    await refreshConnection(connection, signal);
+    await refreshOnce(connection, signal);
   } catch (error: unknown) {
     log.warn(getErrorLogFields(error), 'Hotmail token refresh failed; trying again on the next round');
   }
+}
+
+function mailNotConnected(): ConflictError {
+  return new ConflictError(MAIL_NOT_CONNECTED_MESSAGE, 'MAIL_NOT_CONNECTED');
+}
+
+function isTokenFresh(connection: MailConnection): boolean {
+  return connection.accessTokenExpiresAt.getTime() - Date.now() > TOKEN_FRESHNESS_MARGIN_MS;
+}
+
+// Before a send: refuses with MAIL_NOT_CONNECTED, so nothing is tried, while Hotmail is not connected.
+export async function assertMailConnected(): Promise<void> {
+  const { state } = await getMailStatus();
+
+  if (state !== CONNECTED) throw mailNotConnected();
+}
+
+// An access token good for the next few minutes: the stored one, or a new one when it is about to run out. A refusal
+// removes the connection, so the user hears that Hotmail is no longer connected.
+async function getAccessToken(): Promise<string> {
+  const connection = env.MICROSOFT_CLIENT_ID ? await mailRepository.findConnection() : undefined;
+
+  if (!connection) throw mailNotConnected();
+
+  if (isTokenFresh(connection)) return connection.accessToken;
+
+  await refreshOnce(connection);
+
+  const refreshed = await mailRepository.findConnection();
+
+  if (!refreshed) throw mailNotConnected();
+
+  return refreshed.accessToken;
+}
+
+// Sends one mail from the user's Hotmail (ADR 0001). Resolves once Microsoft has accepted it; throws an AppError
+// saying why when it did not: MAIL_TOO_LARGE before anything is asked, MAIL_NOT_CONNECTED, or Microsoft's refusal.
+export async function sendMail(mail: OutgoingMail): Promise<void> {
+  const request = buildSendMailRequest(mail);
+  const accessToken = await getAccessToken();
+
+  await postSendMail(accessToken, request);
+  log.info('mail sent');
 }

@@ -14,12 +14,19 @@ import {
   errorAnswer,
   failNetwork,
   hangForever,
-  microsoftIdentityServer,
+  microsoftServer,
   outageAnswer,
   tokensAnswer,
 } from './mail.microsoftIdentity.mock.ts';
+import {
+  answerSendMail,
+  expiredTokenAnswer,
+  failGraphNetwork,
+  graphErrorAnswer,
+  throttledAnswer,
+} from './mail.microsoftGraph.mock.ts';
 import { mailRepository, type MailConnection } from './mail.repository.ts';
-import { connectMail, getMailStatus, refreshMailToken } from './mail.service.ts';
+import { connectMail, getMailStatus, refreshMailToken, sendMail } from './mail.service.ts';
 
 // Everything the mail module logs, kept so a test can prove no token is in it; and an env a test can change.
 const { logCalls, testEnv } = vi.hoisted(() => ({
@@ -62,6 +69,11 @@ const MINUTE_MS = 60 * SECOND_MS;
 const MAIL_SCOPES = 'https://graph.microsoft.com/Mail.Send offline_access';
 const STORED_REFRESH_TOKEN = 'stored-refresh-token';
 const STORED_ACCESS_TOKEN = 'stored-access-token';
+const PROVIDER_EMAIL = 'readings@water-provider.example';
+// The phone's cap on a photo: 4,000,000 bytes once base64 adds a third, so with the rest of the mail it is over the
+// 4,000,000-byte request limit.
+const LARGEST_PHOTO_BYTES = 3_000_000;
+const READING_MAIL = { to: PROVIDER_EMAIL, subject: 'test', body: 'Date: 31 October 2026\nReading: 00123' };
 
 function storedConnection(accessTokenExpiresAt: Date): MailConnection {
   return { refreshToken: STORED_REFRESH_TOKEN, accessToken: STORED_ACCESS_TOKEN, accessTokenExpiresAt };
@@ -71,12 +83,25 @@ function minutesFromNow(minutes: number): Date {
   return new Date(Date.now() + minutes * MINUTE_MS);
 }
 
+// The repository as a tiny in-memory store: a refresh's saved tokens are what the next read finds.
+function storeConnection(connection: MailConnection): void {
+  let stored: MailConnection | undefined = connection;
+
+  vi.mocked(mailRepository.findConnection).mockImplementation(async () => stored);
+  vi.mocked(mailRepository.updateConnection).mockImplementation(async (_previousRefreshToken, refreshed) => {
+    stored = refreshed;
+  });
+  vi.mocked(mailRepository.deleteConnection).mockImplementation(async () => {
+    stored = undefined;
+  });
+}
+
 function loggedText(): string {
   return inspect(logCalls, { depth: null });
 }
 
 beforeAll(() => {
-  microsoftIdentityServer.listen({ onUnhandledFrame: 'error' });
+  microsoftServer.listen({ onUnhandledFrame: 'error' });
 });
 
 beforeEach(() => {
@@ -84,12 +109,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  microsoftIdentityServer.resetHandlers();
+  microsoftServer.resetHandlers();
   logCalls.length = 0;
 });
 
 afterAll(() => {
-  microsoftIdentityServer.close();
+  microsoftServer.close();
 });
 
 describe('connectMail', () => {
@@ -321,5 +346,177 @@ describe('getMailStatus', () => {
     vi.mocked(mailRepository.hasConnection).mockResolvedValueOnce(true);
 
     expect(await getMailStatus()).toEqual({ state: 'notConnected' });
+  });
+});
+
+describe('sendMail', () => {
+  it('sends the mail through Graph with the stored token when the token is still fresh', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    const received = answerSendMail();
+
+    await sendMail(READING_MAIL);
+
+    expect(received).toEqual([
+      {
+        authorization: `Bearer ${STORED_ACCESS_TOKEN}`,
+        body: {
+          message: {
+            subject: 'test',
+            body: { contentType: 'Text', content: 'Date: 31 October 2026\nReading: 00123' },
+            toRecipients: [{ emailAddress: { address: PROVIDER_EMAIL } }],
+            attachments: [],
+          },
+          saveToSentItems: true,
+        },
+      },
+    ]);
+  });
+
+  it('refreshes the token first, then sends with the new one, when the stored token runs out within minutes', async () => {
+    storeConnection(storedConnection(minutesFromNow(2)));
+    const tokenForms = answerToken(tokensAnswer());
+    const received = answerSendMail();
+
+    await sendMail(READING_MAIL);
+
+    expect(tokenForms).toHaveLength(1);
+    expect(received[0]?.authorization).toBe(`Bearer ${TEST_ACCESS_TOKEN}`);
+    expect(mailRepository.updateConnection).toHaveBeenCalledWith(
+      STORED_REFRESH_TOKEN,
+      expect.objectContaining({ accessToken: TEST_ACCESS_TOKEN }),
+    );
+  });
+
+  it('refreshes once, not once per mail, when two mails go out at the same time with a stale token', async () => {
+    storeConnection(storedConnection(minutesFromNow(-5)));
+    const tokenForms = answerToken(tokensAnswer());
+    const received = answerSendMail();
+
+    await Promise.all([sendMail(READING_MAIL), sendMail(READING_MAIL)]);
+
+    expect(tokenForms).toHaveLength(1);
+    expect(received.map((request) => request.authorization)).toEqual([
+      `Bearer ${TEST_ACCESS_TOKEN}`,
+      `Bearer ${TEST_ACCESS_TOKEN}`,
+    ]);
+  });
+
+  it('shares the refresh the timer already started instead of starting a second one', async () => {
+    storeConnection(storedConnection(minutesFromNow(-5)));
+    const tokenForms = answerToken(tokensAnswer());
+    answerSendMail();
+
+    await Promise.all([refreshMailToken(), sendMail(READING_MAIL)]);
+
+    expect(tokenForms).toHaveLength(1);
+  });
+
+  it('throws MAIL_NOT_CONNECTED, asking Microsoft nothing, when Hotmail is not connected', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(undefined);
+    const received = answerSendMail();
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
+    expect(received).toEqual([]);
+  });
+
+  it('throws MAIL_NOT_CONNECTED and sends nothing when Microsoft refuses the refresh token', async () => {
+    storeConnection(storedConnection(minutesFromNow(-5)));
+    answerToken(errorAnswer('invalid_grant'));
+    const received = answerSendMail();
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
+    expect(received).toEqual([]);
+    expect(mailRepository.deleteConnection).toHaveBeenCalledWith(STORED_REFRESH_TOKEN);
+  });
+
+  it('throws MICROSOFT_UNREACHABLE and sends nothing when the stale token cannot be refreshed', async () => {
+    storeConnection(storedConnection(minutesFromNow(-5)));
+    answerToken(outageAnswer());
+    const received = answerSendMail();
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MICROSOFT_UNREACHABLE' });
+    expect(received).toEqual([]);
+  });
+
+  it('attaches the photo as a base64 file when the mail has one', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    const received = answerSendMail();
+    const contents = Buffer.from('a tiny jpeg');
+
+    await sendMail({
+      ...READING_MAIL,
+      attachment: { name: 'meter-2026-10-31.jpg', contentType: 'image/jpeg', contents },
+    });
+
+    expect(received[0]?.body).toMatchObject({
+      message: {
+        attachments: [
+          {
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: 'meter-2026-10-31.jpg',
+            contentType: 'image/jpeg',
+            contentBytes: contents.toString('base64'),
+          },
+        ],
+      },
+    });
+  });
+
+  it('throws MAIL_TOO_LARGE, asking Microsoft nothing, when the encoded mail is over Graph limit', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    const received = answerSendMail();
+    const contents = Buffer.alloc(LARGEST_PHOTO_BYTES);
+
+    const sending = sendMail({
+      ...READING_MAIL,
+      attachment: { name: 'meter.jpg', contentType: 'image/jpeg', contents },
+    });
+
+    await expect(sending).rejects.toMatchObject({ code: 'MAIL_TOO_LARGE' });
+    expect(received).toEqual([]);
+  });
+
+  it("throws MAIL_REFUSED naming Graph's code, never Graph's message, when Graph refuses the mail", async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    answerSendMail(graphErrorAnswer('ErrorInvalidRecipients'));
+
+    const sending = sendMail(READING_MAIL);
+
+    await expect(sending).rejects.toMatchObject({ code: 'MAIL_REFUSED' });
+    await expect(sending).rejects.toThrow('ErrorInvalidRecipients');
+    await expect(sending).rejects.not.toThrow(PROVIDER_EMAIL);
+  });
+
+  it('throws MAIL_REFUSED when Graph does not take the token', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    answerSendMail(expiredTokenAnswer());
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_REFUSED' });
+  });
+
+  it('throws MAIL_SERVICE_BUSY when Graph is throttling', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    answerSendMail(throttledAnswer());
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_SERVICE_BUSY' });
+  });
+
+  it('throws MICROSOFT_UNREACHABLE when Graph cannot be reached', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    failGraphNetwork();
+
+    await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MICROSOFT_UNREACHABLE' });
+  });
+
+  it('never logs the token, the address or the body when a mail is sent', async () => {
+    storeConnection(storedConnection(minutesFromNow(-5)));
+    answerToken(tokensAnswer());
+    answerSendMail();
+
+    await sendMail(READING_MAIL);
+
+    expect(loggedText()).not.toContain(TEST_ACCESS_TOKEN);
+    expect(loggedText()).not.toContain(PROVIDER_EMAIL);
+    expect(loggedText()).not.toContain('00123');
   });
 });

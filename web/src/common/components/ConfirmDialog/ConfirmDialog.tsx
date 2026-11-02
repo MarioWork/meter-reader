@@ -9,6 +9,8 @@ type Props = {
   children: React.ReactNode;
   confirmLabel: string;
   isConfirming?: boolean;
+  // The question can be read, but not said yes to yet (the message inside says why).
+  isConfirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -16,7 +18,16 @@ type Props = {
 // A yes/no question before something that cannot be undone. A native modal <dialog>: the browser keeps keyboard
 // focus inside it (the page behind is inert), Escape cancels, and focus goes back to the control that opened it.
 // Cancel comes first, so it takes the focus when the dialog opens: Enter alone never confirms.
-function ConfirmDialog({ isOpen, title, children, confirmLabel, isConfirming = false, onConfirm, onCancel }: Props) {
+function ConfirmDialog({
+  isOpen,
+  title,
+  children,
+  confirmLabel,
+  isConfirming = false,
+  isConfirmDisabled = false,
+  onConfirm,
+  onCancel,
+}: Props) {
   const dialogRef = useModalDialog(isOpen);
   const titleId = useId();
   const messageId = useId();
@@ -47,7 +58,7 @@ function ConfirmDialog({ isOpen, title, children, confirmLabel, isConfirming = f
         <Button variant="secondary" isDisabled={isConfirming} onClick={onCancel}>
           Cancel
         </Button>
-        <Button isDisabled={isConfirming} onClick={onConfirm}>
+        <Button isDisabled={isConfirming || isConfirmDisabled} onClick={onConfirm}>
           {confirmLabel}
         </Button>
       </div>

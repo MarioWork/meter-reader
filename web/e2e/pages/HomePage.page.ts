@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { BASE_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
 const DELETE_DIALOG_NAME = 'Delete this reading?';
+const SEND_DIALOG_NAME = 'Send this reading?';
 
 export class HomePage {
   private readonly page: Page;
@@ -31,6 +32,22 @@ export class HomePage {
     return this.deleteDialog.getByRole('button', { name: 'Delete' });
   }
 
+  get sendDialog() {
+    return this.page.getByRole('dialog', { name: SEND_DIALOG_NAME });
+  }
+
+  get sendDialogSendButton() {
+    return this.sendDialog.getByRole('button', { name: 'Send' });
+  }
+
+  get attachPhotoCheckbox() {
+    return this.sendDialog.getByRole('checkbox', { name: 'Attach photo' });
+  }
+
+  sendLinkFor(readingDate: string) {
+    return this.page.getByRole('link', { name: `Send the reading of ${readingDate}` });
+  }
+
   deleteButtonFor(readingDate: string) {
     return this.page.getByRole('button', { name: `Delete the reading of ${readingDate}` });
   }
@@ -42,6 +59,20 @@ export class HomePage {
   // Keyboard only: focus the row's Delete control and press Enter.
   async openDeleteDialogWithKeyboard(readingDate: string) {
     await this.deleteButtonFor(readingDate).focus();
+    await this.page.keyboard.press('Enter');
+  }
+
+  async openSendPreview(readingDate: string) {
+    await this.sendLinkFor(readingDate).click();
+  }
+
+  async sendFromPreview() {
+    await this.sendDialogSendButton.click();
+  }
+
+  // Keyboard only: focus the row's Send link and press Enter.
+  async openSendPreviewWithKeyboard(readingDate: string) {
+    await this.sendLinkFor(readingDate).focus();
     await this.page.keyboard.press('Enter');
   }
 

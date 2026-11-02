@@ -19,6 +19,7 @@ export default (baseUrl: string) => [
       status: ReadingStatusUtil.NOT_SENT,
       createdAt: MOCK_SAVED_AT,
       photoId: photoId ?? null,
+      sentAt: null,
     });
 
     return HttpResponse.json(saved, { status: 201 });

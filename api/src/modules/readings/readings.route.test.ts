@@ -5,6 +5,12 @@ import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
 import { prisma } from '../../lib/prisma.ts';
 import { uploadPath } from '../../lib/uploads.ts';
 import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
+import { answerSendMail, graphErrorAnswer, type ReceivedSendMail } from '../mail/mail.microsoftGraph.mock.ts';
+import { microsoftServer } from '../mail/mail.microsoftIdentity.mock.ts';
+
+const HOUR_MS = 3_600_000;
+const PROVIDER_EMAIL = 'readings@water-provider.example';
+const STORED_ACCESS_TOKEN = 'stored-access-token';
 
 let app: App;
 let token: string;
@@ -39,19 +45,58 @@ async function addReadingId(digits: string): Promise<number> {
   return response.json<{ id: number }>().id;
 }
 
+async function addReadingWithPhotoId(): Promise<number> {
+  const photoId = await addPhoto();
+  const response = await addReading({ digits: '00123', date: '2026-10-31', photoId });
+
+  return response.json<{ id: number }>().id;
+}
+
+function getReadingEmail(id: number | string) {
+  return app.inject({ method: 'GET', url: `/readings/${id}/email`, ...withSession(token) });
+}
+
+function sendReading(id: number | string, payload: InjectOptions['payload'] = { attachPhoto: false }) {
+  return app.inject({ method: 'POST', url: `/readings/${id}/send`, payload, ...withSession(token) });
+}
+
+// Hotmail connected, with an access token good for the next hour: a send asks Microsoft for nothing but sendMail.
+async function connectHotmail(): Promise<void> {
+  await prisma.mailConnection.create({
+    data: {
+      refreshToken: 'stored-refresh-token',
+      accessToken: STORED_ACCESS_TOKEN,
+      accessTokenExpiresAt: new Date(Date.now() + HOUR_MS),
+    },
+  });
+}
+
+function attachmentsOf(received: ReceivedSendMail | undefined): unknown {
+  const body = received?.body as { message?: { attachments?: unknown } } | undefined;
+
+  return body?.message?.attachments;
+}
+
 beforeAll(async () => {
+  microsoftServer.listen({ onUnhandledFrame: 'error' });
   app = await buildApp();
 });
 
 afterAll(async () => {
   await app.close();
+  microsoftServer.close();
 });
 
 beforeEach(async () => {
   await prisma.photo.deleteMany();
   await prisma.reading.deleteMany();
+  await prisma.mailConnection.deleteMany();
   await resetAuthTables();
   token = await setUpWithPassword(app);
+});
+
+afterEach(() => {
+  microsoftServer.resetHandlers();
 });
 
 describe('POST /readings', () => {
@@ -65,9 +110,16 @@ describe('POST /readings', () => {
       'digits',
       'id',
       'photoId',
+      'sentAt',
       'status',
     ]);
-    expect(response.json()).toMatchObject({ digits: '00123', date: '2026-10-31', status: 'notSent', photoId: null });
+    expect(response.json()).toMatchObject({
+      digits: '00123',
+      date: '2026-10-31',
+      status: 'notSent',
+      photoId: null,
+      sentAt: null,
+    });
   });
 
   it('links the photo to the reading when the photo id is given', async () => {
@@ -247,5 +299,189 @@ describe('DELETE /readings/:id', () => {
 
     expect(response.statusCode).toBe(401);
     expect(await prisma.reading.count()).toBe(1);
+  });
+});
+
+describe('GET /readings/:id/email', () => {
+  it('answers the address, the subject and the body, with the photo to attach, when the reading has a photo', async () => {
+    const photoId = await addPhoto();
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31', photoId })).json<{ id: number }>().id;
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      to: PROVIDER_EMAIL,
+      subject: 'test',
+      body: 'Date: 31 October 2026\nReading: 00123',
+      attachment: { photoId, name: 'meter-2026-10-31.jpg' },
+    });
+  });
+
+  it('answers no attachment when the reading has no photo', async () => {
+    const readingId = await addReadingId('000045');
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ body: 'Date: 31 October 2026\nReading: 000045', attachment: null });
+  });
+
+  it('returns 404 NOT_FOUND when the reading does not exist', async () => {
+    const response = await getReadingEmail(999_999);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const readingId = await addReadingId('00100');
+
+    const response = await app.inject({ method: 'GET', url: `/readings/${readingId}/email` });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('POST /readings/:id/send', () => {
+  it('sends the email without the photo and marks the reading sent with the time when it was sent', async () => {
+    await connectHotmail();
+    const readingId = await addReadingWithPhotoId();
+    const received = answerSendMail();
+    const startedAt = Date.now();
+
+    const response = await sendReading(readingId, { attachPhoto: false });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ id: readingId, status: 'sent' });
+    const sentAt = Date.parse(response.json<{ sentAt: string }>().sentAt);
+    expect(sentAt).toBeGreaterThanOrEqual(startedAt);
+    expect(received).toHaveLength(1);
+    expect(received[0]?.authorization).toBe(`Bearer ${STORED_ACCESS_TOKEN}`);
+    expect(received[0]?.body).toMatchObject({
+      message: {
+        subject: 'test',
+        body: { content: 'Date: 31 October 2026\nReading: 00123' },
+        toRecipients: [{ emailAddress: { address: PROVIDER_EMAIL } }],
+      },
+    });
+    expect(attachmentsOf(received[0])).toEqual([]);
+  });
+
+  it("attaches the photo's file when the photo is asked for", async () => {
+    await connectHotmail();
+    const readingId = await addReadingWithPhotoId();
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId, { attachPhoto: true });
+
+    expect(response.statusCode).toBe(200);
+    const jpeg = fakeJpeg({ width: 2000, height: 1500 });
+    expect(attachmentsOf(received[0])).toEqual([
+      {
+        '@odata.type': '#microsoft.graph.fileAttachment',
+        name: 'meter-2026-10-31.jpg',
+        contentType: 'image/jpeg',
+        contentBytes: jpeg.toString('base64'),
+      },
+    ]);
+  });
+
+  it("marks the reading failed and answers Microsoft's reason when Microsoft refuses the email", async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    answerSendMail(graphErrorAnswer('ErrorInvalidRecipients'));
+
+    const response = await sendReading(readingId);
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toMatchObject({ code: 'MAIL_REFUSED' });
+    expect(response.json<{ message: string }>().message).toContain('ErrorInvalidRecipients');
+    expect(response.body).not.toContain(PROVIDER_EMAIL);
+    const reading = await prisma.reading.findUniqueOrThrow({ where: { id: readingId } });
+    expect(reading).toMatchObject({ status: 'FAILED', sentAt: null });
+  });
+
+  it('sends a failed reading again and marks it sent when the user tries again', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail(graphErrorAnswer('ErrorMessageSubmissionBlocked'), { status: 202 });
+    await sendReading(readingId);
+
+    const response = await sendReading(readingId);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ status: 'sent' });
+    expect(received).toHaveLength(2);
+  });
+
+  it('returns 409 MAIL_NOT_CONNECTED, sends nothing and keeps the reading not sent when Hotmail is not connected', async () => {
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId);
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
+    expect(received).toEqual([]);
+    const reading = await prisma.reading.findUniqueOrThrow({ where: { id: readingId } });
+    expect(reading.status).toBe('NOT_SENT');
+  });
+
+  it('returns 409 READING_ALREADY_SENT and sends nothing more when the reading was sent already', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail();
+    await sendReading(readingId);
+
+    const response = await sendReading(readingId);
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'READING_ALREADY_SENT' });
+    expect(received).toHaveLength(1);
+  });
+
+  it('returns 400 NO_PHOTO_TO_ATTACH and sends nothing when the photo is asked for a reading without one', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId, { attachPhoto: true });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'NO_PHOTO_TO_ATTACH' });
+    expect(received).toEqual([]);
+  });
+
+  it('returns 404 NOT_FOUND when the reading does not exist', async () => {
+    await connectHotmail();
+
+    const response = await sendReading(999_999);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the body does not say whether to attach the photo', async () => {
+    const readingId = await addReadingId('00123');
+
+    const response = await sendReading(readingId, {});
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 401 and sends nothing when the browser is not signed in', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/readings/${readingId}/send`,
+      payload: { attachPhoto: false },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(received).toEqual([]);
   });
 });

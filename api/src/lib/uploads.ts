@@ -1,7 +1,7 @@
 // The files the app keeps on disk (the photos), in UPLOADS_DIR. Domain-free: callers decide what a file is for.
 import { randomUUID } from 'node:crypto';
 import type { ReadStream } from 'node:fs';
-import { access, constants, mkdir, open, rename, rm, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { env } from '../config/env.ts';
 import { AppError } from './errors.ts';
@@ -63,6 +63,17 @@ export async function openUpload(fileName: string): Promise<OpenUpload | undefin
     const { size } = await file.stat();
 
     return { stream: file.createReadStream(), sizeBytes: size };
+  } catch (error: unknown) {
+    if (isFileMissing(error)) return undefined;
+
+    throw error;
+  }
+}
+
+// The stored file's contents, or undefined when it is not on disk.
+export async function readUpload(fileName: string): Promise<Buffer | undefined> {
+  try {
+    return await readFile(uploadPath(fileName));
   } catch (error: unknown) {
     if (isFileMissing(error)) return undefined;
 

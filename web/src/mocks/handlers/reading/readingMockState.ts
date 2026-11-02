@@ -29,6 +29,23 @@ export function addMockReading(reading: Omit<ReadingApiModel, 'id'>): ReadingApi
   return saved;
 }
 
+export function findMockReading(id: ReadingId): ReadingApiModel | undefined {
+  return readings.find((reading) => reading.id === id);
+}
+
+// The reading with the changes made, or undefined when there was no such reading.
+export function updateMockReading(id: ReadingId, changes: Partial<ReadingApiModel>): ReadingApiModel | undefined {
+  const reading = findMockReading(id);
+
+  if (!reading) return undefined;
+
+  const updated = { ...reading, ...changes };
+
+  readings = readings.map((current) => (current.id === id ? updated : current));
+
+  return updated;
+}
+
 // False when there was no such reading.
 export function deleteMockReading(id: ReadingId): boolean {
   const remaining = readings.filter((reading) => reading.id !== id);

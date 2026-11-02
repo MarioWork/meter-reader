@@ -4,11 +4,13 @@ import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
 import {
   CreateReadingSchema,
   ListReadingsQuerySchema,
+  ReadingEmailResponseSchema,
   ReadingListResponseSchema,
   ReadingParamsSchema,
   ReadingResponseSchema,
+  SendReadingSchema,
 } from './readings.schema.ts';
-import { addReading, deleteReading, getReadings } from './readings.service.ts';
+import { addReading, deleteReading, getReadingEmail, getReadings, sendReading } from './readings.service.ts';
 
 const TAGS = ['readings'];
 
@@ -59,5 +61,39 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
 
       return reply.code(204).send();
     },
+  );
+
+  app.get(
+    '/:id/email',
+    {
+      schema: {
+        tags: TAGS,
+        summary: "Preview the reading's email: exactly what sending it would send",
+        params: ReadingParamsSchema,
+        response: { 200: ReadingEmailResponseSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema },
+      },
+    },
+    async (request) => getReadingEmail(request.params.id),
+  );
+
+  app.post(
+    '/:id/send',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'Email the reading to the provider from Hotmail; marks it sent, or failed with the reason',
+        params: ReadingParamsSchema,
+        body: SendReadingSchema,
+        response: {
+          200: ReadingResponseSchema,
+          400: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          409: ErrorResponseSchema,
+          413: ErrorResponseSchema,
+          502: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request) => sendReading(request.params.id, request.body),
   );
 };

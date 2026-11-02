@@ -1,19 +1,13 @@
 import type { ReadingApiModel } from '@app-types/models';
-import { ReadingStatusUtil } from '@app-types/utility';
 import { formatIsoDate } from '@utils/dateUtils';
 import DeleteReadingButton from './DeleteReadingButton';
 import { HISTORY_CELL_CLASSES } from './historyCellClasses';
 import ReadingPhotoViewer from './ReadingPhotoViewer';
+import ReadingSendStatus from './ReadingSendStatus';
+import SendReadingLink from './SendReadingLink';
 
 type Props = {
   reading: ReadingApiModel;
-};
-
-// Always text, never colour alone.
-const STATUS_LABELS: Record<ReadingStatusUtil, string> = {
-  [ReadingStatusUtil.NOT_SENT]: 'Not sent',
-  [ReadingStatusUtil.SENT]: 'Sent',
-  [ReadingStatusUtil.FAILED]: 'Failed',
 };
 
 function ReadingHistoryRow({ reading }: Props) {
@@ -21,12 +15,17 @@ function ReadingHistoryRow({ reading }: Props) {
     <tr>
       <td className={HISTORY_CELL_CLASSES}>{formatIsoDate(reading.date)}</td>
       <td className={`${HISTORY_CELL_CLASSES} font-mono tabular-nums`}>{reading.digits}</td>
-      <td className={HISTORY_CELL_CLASSES}>{STATUS_LABELS[reading.status]}</td>
+      <td className={HISTORY_CELL_CLASSES}>
+        <ReadingSendStatus reading={reading} />
+      </td>
       <td className={HISTORY_CELL_CLASSES}>
         <ReadingPhotoViewer reading={reading} />
       </td>
       <td className={HISTORY_CELL_CLASSES}>
-        <DeleteReadingButton reading={reading} />
+        <div className="flex flex-wrap items-center gap-3">
+          <SendReadingLink reading={reading} />
+          <DeleteReadingButton reading={reading} />
+        </div>
       </td>
     </tr>
   );

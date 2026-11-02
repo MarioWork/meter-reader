@@ -22,7 +22,9 @@ export type MicrosoftAnswer = { status: number; body: Record<string, unknown> };
 // A form Microsoft received, as the fields it was sent.
 export type ReceivedForm = Record<string, string>;
 
-export const microsoftIdentityServer = setupServer();
+// One fake Microsoft per test file: the sign-in service here, Graph in mail.microsoftGraph.mock.ts. Two MSW servers
+// would fight over fetch, so both answer from this one.
+export const microsoftServer = setupServer();
 
 export function tokensAnswer(overrides: Record<string, unknown> = {}): MicrosoftAnswer {
   return {
@@ -67,7 +69,7 @@ function toFields(text: string): ReceivedForm {
 function answerInTurn(url: string, answers: MicrosoftAnswer[]): ReceivedForm[] {
   const received: ReceivedForm[] = [];
 
-  microsoftIdentityServer.use(
+  microsoftServer.use(
     http.post(url, async ({ request }) => {
       received.push(toFields(await request.text()));
       const answer = answers[Math.min(received.length, answers.length) - 1] ?? errorAnswer('server_error');
@@ -94,7 +96,7 @@ export function outageAnswer(): MicrosoftAnswer {
 
 // Microsoft takes the request and never answers.
 export function hangForever(url: string): void {
-  microsoftIdentityServer.use(
+  microsoftServer.use(
     http.post(url, async () => {
       await delay('infinite');
     }),
@@ -103,5 +105,5 @@ export function hangForever(url: string): void {
 
 // Microsoft cannot be reached at all (no network, DNS down).
 export function failNetwork(url: string): void {
-  microsoftIdentityServer.use(http.post(url, () => HttpResponse.error()));
+  microsoftServer.use(http.post(url, () => HttpResponse.error()));
 }

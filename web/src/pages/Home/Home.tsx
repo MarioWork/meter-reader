@@ -1,4 +1,4 @@
-import { useLoaderData } from 'react-router';
+import { Outlet, useLoaderData } from 'react-router';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { LoaderDataUtil } from '@app-types/utility';
 import TextLink from '@components/TextLink';
@@ -17,6 +17,8 @@ function Home() {
       </TextLink>
       <ReadingHistory readings={readingsResponse.data} />
       <HistoryPager currentPage={readingsResponse.currentPage} totalResultNumber={readingsResponse.totalResultNumber} />
+      {/* The send preview, a routed modal. */}
+      <Outlet />
     </main>
   );
 }

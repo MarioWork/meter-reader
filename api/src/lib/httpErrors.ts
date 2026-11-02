@@ -54,3 +54,17 @@ export class BadRequestError extends HttpError {
     super(message, { code, statusCode: 400 });
   }
 }
+
+// A service the app relies on (Microsoft) did not do what was asked. The message says why, in the user's words.
+export class BadGatewayError extends HttpError {
+  constructor(message: string, code = 'BAD_GATEWAY') {
+    super(message, { code, statusCode: 502 });
+  }
+}
+
+// What the request asks to send is too big for where it goes (a photo over Microsoft's limit).
+export class ContentTooLargeError extends HttpError {
+  constructor(message: string, code = 'CONTENT_TOO_LARGE') {
+    super(message, { code, statusCode: 413 });
+  }
+}
