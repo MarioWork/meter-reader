@@ -10,6 +10,9 @@ export const PhotoParamsSchema = z.object({ id: z.coerce.number().int().positive
 // The request body is the JPEG itself, not JSON: the content-type parser in photos.route.ts hands it over as bytes.
 export const AddPhotoBodySchema = z.instanceof(Buffer).meta({ description: 'The photo, a JPEG' });
 
+// GET /photos/:id answers the JPEG's bytes as a stream, which has no JSON shape to check: the schema only documents it.
+export const PhotoFileSchema = z.any().meta({ description: 'The photo, a JPEG' });
+
 export const PhotoResponseSchema = z
   .object({
     id: z.number().int(),

@@ -8,6 +8,10 @@ type Props = {
   onPick: (photo: File) => void;
 };
 
+// Any picture the device has; the app turns it into a JPEG itself.
+const ACCEPTED_FILES = 'image/*';
+const BACK_CAMERA = 'environment';
+
 const LABEL_CLASSES = `
   min-h-6 cursor-pointer rounded-sm border border-blue-700 bg-white px-3 py-1 text-blue-700
   has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-blue-700
@@ -31,8 +35,8 @@ function PhotoInput({ id, label, isCamera = false, isDisabled, describedById, on
       <input
         id={id}
         type="file"
-        accept="image/*"
-        capture={isCamera ? 'environment' : undefined}
+        accept={ACCEPTED_FILES}
+        capture={isCamera ? BACK_CAMERA : undefined}
         disabled={isDisabled}
         aria-invalid={describedById !== undefined}
         aria-describedby={describedById}

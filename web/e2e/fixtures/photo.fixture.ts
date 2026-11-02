@@ -5,11 +5,14 @@ export type PhotoSize = { width: number; height: number; isJpeg: boolean };
 
 const DATA_URL_PREFIX = /^data:image\/jpeg;base64,/;
 const CAMERA_QUALITY = 0.95;
+// Pixel values that change from byte to byte, so the JPEG stays big, as a real photo does.
+const NOISE_STEP = 7919;
+const BYTE_VALUES = 256;
 
 // A camera-sized JPEG drawn in the browser (noise, so it does not compress to nothing), as a phone would hand over.
 export async function makeCameraPhoto(page: Page, width: number, height: number): Promise<PhotoFile> {
   const dataUrl = await page.evaluate(
-    ({ width, height, quality }) => {
+    ({ width, height, quality, noiseStep, byteValues }) => {
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
@@ -18,12 +21,12 @@ export async function makeCameraPhoto(page: Page, width: number, height: number)
 
       if (!context || !pixels) throw new Error('No 2d canvas in this browser');
 
-      for (let i = 0; i < pixels.data.length; i += 1) pixels.data[i] = (i * 7919) % 256;
+      for (let i = 0; i < pixels.data.length; i += 1) pixels.data[i] = (i * noiseStep) % byteValues;
       context.putImageData(pixels, 0, 0);
 
       return canvas.toDataURL('image/jpeg', quality);
     },
-    { width, height, quality: CAMERA_QUALITY },
+    { width, height, quality: CAMERA_QUALITY, noiseStep: NOISE_STEP, byteValues: BYTE_VALUES },
   );
 
   return {

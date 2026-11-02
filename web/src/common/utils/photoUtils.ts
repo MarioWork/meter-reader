@@ -8,6 +8,8 @@ const PHOTO_FILE_NAME = 'meter.jpg';
 // that still comes out too big.
 const JPEG_QUALITIES = [0.85, 0.7, 0.55];
 const NOT_A_PHOTO_MESSAGE = 'This file is not a photo the app can read. Try another one.';
+const CANVAS_CONTEXT = '2d';
+const UNREADABLE_MESSAGE = 'The photo could not be read';
 const TOO_BIG_MESSAGE = 'This photo is too big to send, even shrunk. Try another one.';
 
 export type PhotoSize = { width: number; height: number };
@@ -37,7 +39,7 @@ async function drawShrunk(photo: Blob): Promise<HTMLCanvasElement> {
 
   canvas.width = size.width;
   canvas.height = size.height;
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, size.width, size.height);
+  canvas.getContext(CANVAS_CONTEXT)?.drawImage(bitmap, 0, 0, size.width, size.height);
   bitmap.close();
 
   return canvas;
@@ -64,7 +66,7 @@ export function readAsDataUrl(photo: Blob): Promise<string> {
     const reader = new FileReader();
 
     reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-    reader.onerror = () => reject(reader.error ?? new Error('The photo could not be read'));
+    reader.onerror = () => reject(reader.error ?? new Error(UNREADABLE_MESSAGE));
     reader.readAsDataURL(photo);
   });
 }
