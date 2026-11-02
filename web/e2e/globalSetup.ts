@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { BASE_ROUTES_PATHS, ITEM_ROUTES_PATHS, READING_ROUTES_PATHS } from '../src/application/routes/routesUtils';
+import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS } from '../src/application/routes/routesUtils';
 import { BASE_URL } from './playwright.config';
 
 const WARM_UP_TIMEOUT_MS = 90000;
@@ -9,7 +9,7 @@ export default async function globalSetup() {
   const browser = await chromium.launch();
   const page = await browser.newPage();
 
-  const routesToWarm = [BASE_ROUTES_PATHS.HOME, READING_ROUTES_PATHS.NEW, ITEM_ROUTES_PATHS.BASE];
+  const routesToWarm = [BASE_ROUTES_PATHS.HOME, READING_ROUTES_PATHS.NEW];
 
   for (const route of routesToWarm) {
     try {

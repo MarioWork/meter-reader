@@ -26,8 +26,4 @@ export const ROUTE_IDS = {
   SIGNED_IN_LAYOUT: 'signedInLayout',
 };
 
-export const ITEM_ROUTES_PATHS = {
-  BASE: '/items',
-};
-
 export const defaultRedirectRoute = BASE_ROUTES_PATHS.HOME;
