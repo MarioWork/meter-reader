@@ -3,6 +3,7 @@ import RouteError from '@pages/Error/RouteError';
 import { authMiddleware } from './authMiddleware';
 import { authRoutes } from './featureRoutes/authRoutes';
 import { itemRoutes } from './featureRoutes/itemRoutes';
+import { readingRoutes } from './featureRoutes/readingRoutes';
 import { BASE_ROUTES_PATHS, defaultRedirectRoute } from './routesUtils';
 
 const routes: RouteObject[] = [
@@ -31,6 +32,7 @@ const routes: RouteObject[] = [
             path: BASE_ROUTES_PATHS.HOME,
             lazy: () => import('@pages/Home/Home.route'),
           },
+          ...readingRoutes,
           ...itemRoutes,
         ],
       },

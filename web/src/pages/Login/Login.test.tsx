@@ -31,7 +31,7 @@ it('opens Home after a sign-in with the password', async () => {
   await userEvent.type(screen.getByLabelText('Password'), PASSWORD);
   await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-  expect(await screen.findByRole('heading', { name: 'Hello world' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
 });
 
 it("shows the API's message and keeps the page when the password is wrong", async () => {
@@ -84,7 +84,7 @@ it('opens Home after a sign-in with a passkey', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }));
 
-  expect(await screen.findByRole('heading', { name: 'Hello world' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
 });
 
 it('says the prompt closed when the passkey prompt is cancelled', async () => {
@@ -99,5 +99,5 @@ it('says the prompt closed when the passkey prompt is cancelled', async () => {
 it('opens Home straight away when the browser is already signed in', async () => {
   renderRoutes(routes, { initialEntries: [AUTH_ROUTES_PATHS.LOGIN] });
 
-  expect(await screen.findByRole('heading', { name: 'Hello world' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
 });

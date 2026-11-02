@@ -1,8 +1,11 @@
 import { BASE_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 import { expect, test } from '../fixtures/app.fixture';
 
-test('home shows the hello world heading', async ({ page }) => {
+test('home shows the history, newest reading first', async ({ page }) => {
   await page.goto(BASE_ROUTES_PATHS.HOME);
 
-  await expect(page.getByRole('heading', { name: 'Hello world' })).toBeVisible();
+  const rows = page.getByRole('table', { name: 'History' }).getByRole('row');
+  // A header row and the first page of ten readings.
+  await expect(rows).toHaveCount(11);
+  await expect(rows.nth(1)).toContainText('00529');
 });

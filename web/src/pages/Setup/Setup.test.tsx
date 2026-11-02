@@ -49,7 +49,7 @@ it('saves the password and opens Home', async () => {
   await userEvent.type(screen.getByLabelText(PASSWORD_LABEL), PASSWORD);
   await userEvent.click(screen.getByRole('button', { name: 'Finish setup' }));
 
-  expect(await screen.findByRole('heading', { name: 'Hello world' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
   expect(bodies).toEqual([{ code: MOCK_SETUP_CODE, password: PASSWORD }]);
 });
 
@@ -62,7 +62,7 @@ it('saves a password and a passkey together', async () => {
   await userEvent.click(screen.getByRole('checkbox', { name: 'Also add a passkey on this device' }));
   await userEvent.click(screen.getByRole('button', { name: 'Finish setup' }));
 
-  expect(await screen.findByRole('heading', { name: 'Hello world' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
   expect(bodies).toEqual([{ code: MOCK_SETUP_CODE, password: PASSWORD, passkey: PASSKEY_ANSWER }]);
 });
 
@@ -74,7 +74,7 @@ it('saves only a passkey when the password is left empty', async () => {
   await userEvent.click(screen.getByRole('checkbox', { name: 'Also add a passkey on this device' }));
   await userEvent.click(screen.getByRole('button', { name: 'Finish setup' }));
 
-  expect(await screen.findByRole('heading', { name: 'Hello world' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
   expect(bodies).toEqual([{ code: MOCK_SETUP_CODE, passkey: PASSKEY_ANSWER }]);
 });
 
