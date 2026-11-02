@@ -18,7 +18,7 @@ export const READING_ROUTES_PATHS = {
   NEW: '/readings/new',
   delete: (readingId?: string) => (readingId ? `/readings/${readingId}/delete` : '/readings/:readingId/delete'),
   // A routed modal over the history: the email preview, and the send.
-  send: (readingId?: string) => (readingId ? `/home/readings/${readingId}/send` : '/home/readings/:readingId/send'),
+  send: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/send`,
 };
 
 // Routes whose loader data other routes read with useRouteLoaderData.

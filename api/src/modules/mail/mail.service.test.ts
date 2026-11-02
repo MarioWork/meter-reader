@@ -18,6 +18,7 @@ import {
   outageAnswer,
   tokensAnswer,
 } from './mail.microsoftIdentity.mock.ts';
+import { SEND_MAIL_URL } from './mail.microsoftGraph.ts';
 import {
   acceptedAnswer,
   answerSendMail,
@@ -524,6 +525,17 @@ describe('sendMail', () => {
     answerSendMail(throttledAnswer());
 
     await expect(sendMail(READING_MAIL)).rejects.toMatchObject({ code: 'MAIL_SERVICE_BUSY' });
+  });
+
+  it('stops with MICROSOFT_UNREACHABLE when Graph never answers and the wait is cut short', async () => {
+    vi.mocked(mailRepository.findConnection).mockResolvedValue(storedConnection(minutesFromNow(30)));
+    hangForever(SEND_MAIL_URL);
+    const stop = new AbortController();
+
+    const sending = sendMail(READING_MAIL, stop.signal);
+    stop.abort();
+
+    await expect(sending).rejects.toMatchObject({ code: 'MICROSOFT_UNREACHABLE' });
   });
 
   it('throws MICROSOFT_UNREACHABLE when Graph cannot be reached', async () => {

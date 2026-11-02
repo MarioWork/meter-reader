@@ -205,8 +205,8 @@ async function findConnectionToSendWith(): Promise<MailConnection> {
   return connection;
 }
 
-async function refreshAccessToken(connection: MailConnection): Promise<string> {
-  await refreshOnce(connection);
+async function refreshAccessToken(connection: MailConnection, signal?: AbortSignal): Promise<string> {
+  await refreshOnce(connection, signal);
 
   const refreshed = await mailRepository.findConnection();
 
@@ -215,12 +215,12 @@ async function refreshAccessToken(connection: MailConnection): Promise<string> {
   return refreshed.accessToken;
 }
 
-async function getAccessToken(): Promise<string> {
+async function getAccessToken(signal?: AbortSignal): Promise<string> {
   const connection = await findConnectionToSendWith();
 
   if (isTokenFresh(connection)) return connection.accessToken;
 
-  return refreshAccessToken(connection);
+  return refreshAccessToken(connection, signal);
 }
 
 function isTokenRejected(error: unknown): boolean {
@@ -229,24 +229,24 @@ function isTokenRejected(error: unknown): boolean {
 
 // Graph turned down a token that looked fresh (revoked early, the password changed): one refresh, one more try. A
 // refusal of the refresh itself disconnects Hotmail, and the user hears so.
-async function postWithRefreshedToken(request: SendMailRequest): Promise<void> {
-  const accessToken = await refreshAccessToken(await findConnectionToSendWith());
+async function postWithRefreshedToken(request: SendMailRequest, signal?: AbortSignal): Promise<void> {
+  const accessToken = await refreshAccessToken(await findConnectionToSendWith(), signal);
 
-  await postSendMail(accessToken, request);
+  await postSendMail(accessToken, request, signal);
 }
 
 // Sends one mail from the user's Hotmail (ADR 0001). Resolves once Microsoft has accepted it; throws an AppError
 // saying why when it did not: MAIL_TOO_LARGE before anything is asked, MAIL_NOT_CONNECTED, or Microsoft's refusal.
-export async function sendMail(mail: OutgoingMail): Promise<void> {
+export async function sendMail(mail: OutgoingMail, signal?: AbortSignal): Promise<void> {
   const request = buildSendMailRequest(mail);
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(signal);
 
   try {
-    await postSendMail(accessToken, request);
+    await postSendMail(accessToken, request, signal);
   } catch (error: unknown) {
     if (!isTokenRejected(error)) throw error;
 
-    await postWithRefreshedToken(request);
+    await postWithRefreshedToken(request, signal);
   }
 
   log.info('mail sent');

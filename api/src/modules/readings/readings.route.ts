@@ -70,7 +70,12 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: TAGS,
         summary: "Preview the reading's email: exactly what sending it would send",
         params: ReadingParamsSchema,
-        response: { 200: ReadingEmailResponseSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema },
+        response: {
+          200: ReadingEmailResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+        },
       },
     },
     async (request) => getReadingEmail(request.params.id),
@@ -87,6 +92,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
         response: {
           200: ReadingResponseSchema,
           400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
           404: ErrorResponseSchema,
           409: ErrorResponseSchema,
           413: ErrorResponseSchema,

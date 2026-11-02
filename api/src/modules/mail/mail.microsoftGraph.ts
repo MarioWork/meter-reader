@@ -83,7 +83,8 @@ async function toSendFailure(response: Response): Promise<AppError> {
 }
 
 // Sends the mail. Resolves once Graph has accepted it; throws an AppError saying why when it did not.
-export async function postSendMail(accessToken: string, request: SendMailRequest): Promise<void> {
+export async function postSendMail(accessToken: string, request: SendMailRequest, signal?: AbortSignal): Promise<void> {
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   let response: Response;
 
   try {
@@ -91,7 +92,7 @@ export async function postSendMail(accessToken: string, request: SendMailRequest
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}`, 'content-type': JSON_CONTENT_TYPE },
       body: request.json,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
   } catch (error: unknown) {
     throw microsoftUnreachable(error);

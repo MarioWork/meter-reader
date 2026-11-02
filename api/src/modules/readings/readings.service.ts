@@ -1,4 +1,5 @@
 import { env } from '../../config/env.ts';
+import { getErrorLogFields } from '../../lib/databaseErrors.ts';
 import { AppError } from '../../lib/errors.ts';
 import {
   BadGatewayError,
@@ -202,7 +203,7 @@ async function saveFailure(id: number): Promise<void> {
   try {
     await readingsRepository.markFailed(id);
   } catch (error: unknown) {
-    log.error({ readingId: id, err: error }, 'failed send not saved on the reading');
+    log.error({ readingId: id, ...getErrorLogFields(error) }, 'failed send not saved on the reading');
   }
 }
 
@@ -212,7 +213,7 @@ async function saveSent(id: number): Promise<ReadingRow | null> {
   try {
     return await readingsRepository.markSent(id, new Date());
   } catch (error: unknown) {
-    log.error({ readingId: id, err: error }, 'reading sent, but not saved as sent');
+    log.error({ readingId: id, ...getErrorLogFields(error) }, 'reading sent, but not saved as sent');
 
     throw error;
   }
