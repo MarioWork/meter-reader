@@ -1,4 +1,4 @@
-import { number, object, type InferType } from 'yup';
+import { boolean, number, object, type InferType } from 'yup';
 import { readingDateSchema, readingDigitsSchema } from '@utils/readingUtils';
 
 export const CreateReadingSchema = object({
@@ -10,7 +10,14 @@ export const CreateReadingSchema = object({
 
 export type CreateReading = InferType<typeof CreateReadingSchema>;
 
-// The reading a delete names, as it arrives in the url: text, cast to the API's whole-number id.
-export const DeleteReadingParamsSchema = object({
+// The reading a delete or a send names, as it arrives in the url: text, cast to the API's whole-number id.
+export const ReadingParamsSchema = object({
   readingId: number().integer().positive().required(),
 });
+
+// Whether the reading's photo goes with its email. Always said, never assumed.
+export const SendReadingSchema = object({
+  attachPhoto: boolean().required(),
+});
+
+export type SendReading = InferType<typeof SendReadingSchema>;

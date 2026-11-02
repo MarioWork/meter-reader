@@ -1,13 +1,24 @@
 import { readingsRepository } from './readings.repository.ts';
+import { AppError } from '../../lib/errors.ts';
 import { NotFoundError } from '../../lib/httpErrors.ts';
-import { removeUpload } from '../../lib/uploads.ts';
-import { addReading, deleteReading, getReadings } from './readings.service.ts';
+import { readUpload, removeUpload } from '../../lib/uploads.ts';
+import { sendMail } from '../mail/mail.service.ts';
+import { addReading, deleteReading, getReadings, sendReading } from './readings.service.ts';
 
 vi.mock('./readings.repository.ts', () => ({
-  readingsRepository: { create: vi.fn(), findPage: vi.fn(), deleteById: vi.fn() },
+  readingsRepository: {
+    create: vi.fn(),
+    findPage: vi.fn(),
+    findById: vi.fn(),
+    markSent: vi.fn(),
+    markFailed: vi.fn(),
+    deleteById: vi.fn(),
+  },
 }));
 
-vi.mock('../../lib/uploads.ts', () => ({ removeUpload: vi.fn() }));
+vi.mock('../../lib/uploads.ts', () => ({ readUpload: vi.fn(), removeUpload: vi.fn() }));
+
+vi.mock('../mail/mail.service.ts', () => ({ assertMailConnected: vi.fn(), sendMail: vi.fn() }));
 
 const PHOTO = { id: 4, fileName: '5b0f3c1e-6f7a-4d2b-9a51-2c8e0d9b7f10.jpg' };
 
@@ -16,6 +27,7 @@ const SAVED_ROW = {
   digits: '00123',
   date: new Date('2026-10-31T00:00:00.000Z'),
   status: 'NOT_SENT' as const,
+  sentAt: null,
   createdAt: new Date('2026-11-01T08:15:00.000Z'),
   photo: null,
 };
@@ -38,6 +50,7 @@ describe('addReading', () => {
       status: 'notSent',
       createdAt: '2026-11-01T08:15:00.000Z',
       photoId: null,
+      sentAt: null,
     });
   });
 
@@ -107,5 +120,58 @@ describe('deleteReading', () => {
 
     await expect(deleting).rejects.toBeInstanceOf(NotFoundError);
     await expect(deleting).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+describe('sendReading', () => {
+  it('refuses a second send of the same reading with READING_BEING_SENT while the first is still going', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValue(SAVED_ROW);
+    vi.mocked(readingsRepository.markSent).mockResolvedValue({ ...SAVED_ROW, status: 'SENT', sentAt: new Date() });
+    let finishSending = () => {};
+    vi.mocked(sendMail).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSending = resolve;
+        }),
+    );
+
+    const first = sendReading(7, { attachPhoto: false });
+    const second = sendReading(7, { attachPhoto: false });
+
+    await expect(second).rejects.toMatchObject({ code: 'READING_BEING_SENT', statusCode: 409 });
+    await vi.waitFor(() => expect(sendMail).toHaveBeenCalled());
+    finishSending();
+    await expect(first).resolves.toMatchObject({ status: 'sent' });
+    expect(sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the reading failed with PHOTO_FILE_MISSING, sending nothing, when the photo file is gone', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce({ ...SAVED_ROW, photo: PHOTO });
+    vi.mocked(readUpload).mockResolvedValueOnce(undefined);
+
+    const sending = sendReading(7, { attachPhoto: true });
+
+    await expect(sending).rejects.toMatchObject({ code: 'PHOTO_FILE_MISSING', statusCode: 502 });
+    expect(sendMail).not.toHaveBeenCalled();
+    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
+  });
+
+  it('answers 413 MAIL_TOO_LARGE and marks the reading failed when the photo is over Microsoft limit', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce(SAVED_ROW);
+    vi.mocked(sendMail).mockRejectedValueOnce(new AppError('too large', { code: 'MAIL_TOO_LARGE' }));
+
+    const sending = sendReading(7, { attachPhoto: false });
+
+    await expect(sending).rejects.toMatchObject({ code: 'MAIL_TOO_LARGE', statusCode: 413 });
+    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
+  });
+
+  it('marks the reading failed and lets a bug through as it is when sending throws something unexpected', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce(SAVED_ROW);
+    const bug = new TypeError('cannot read properties of undefined');
+    vi.mocked(sendMail).mockRejectedValueOnce(bug);
+
+    await expect(sendReading(7, { attachPhoto: false })).rejects.toBe(bug);
+    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
   });
 });

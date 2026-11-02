@@ -21,7 +21,7 @@ The water company that receives the readings by email, at one fixed address.
 _Avoid_: Supplier, utility, company
 
 **Send**:
-Emailing one reading, with its photo, from the user's own mail account to the provider.
+Emailing one reading, with its photo unless the user leaves it out, from the user's own mail account to the provider.
 _Avoid_: Submit, upload, report
 
 **Not sent**:

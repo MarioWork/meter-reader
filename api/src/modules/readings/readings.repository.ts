@@ -1,4 +1,4 @@
-// The history: every reading, newest first, and removing one saved by mistake.
+// The history: every reading, newest first, removing one saved by mistake, and whether its email went out.
 import type { Prisma } from '../../generated/prisma/client.ts';
 import { PRISMA_RECORD_NOT_FOUND, getPrismaErrorCode } from '../../lib/databaseErrors.ts';
 import type { SkipTake } from '../../lib/pagination.ts';
@@ -9,8 +9,9 @@ const READING_SELECT = {
   digits: true,
   date: true,
   status: true,
+  sentAt: true,
   createdAt: true,
-  // The file name, so deleting a reading can remove its photo from the uploads folder too.
+  // The file name, so deleting a reading can remove its photo from the uploads folder too, and sending it can attach it.
   photo: { select: { id: true, fileName: true } },
 } as const satisfies Prisma.ReadingSelect;
 
@@ -22,6 +23,20 @@ export type NewReading = { digits: string; date: Date; photoId?: number };
 export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELECT }>;
 
 export type ReadingPage = { rows: ReadingRow[]; total: number };
+
+// What a send ends in: sent at a time, or failed (and so not sent at any time).
+type SendOutcome = { status: 'SENT'; sentAt: Date } | { status: 'FAILED'; sentAt: null };
+
+// The updated row, or null when the reading was deleted meanwhile.
+async function updateSendOutcome(id: number, outcome: SendOutcome): Promise<ReadingRow | null> {
+  try {
+    return await prisma.reading.update({ where: { id }, data: outcome, select: READING_SELECT });
+  } catch (error) {
+    if (getPrismaErrorCode(error) === PRISMA_RECORD_NOT_FOUND) return null;
+
+    throw error;
+  }
+}
 
 export const readingsRepository = {
   // The saved row, or null when the photo cannot be linked. A photo is linked only while it belongs to no reading:
@@ -47,6 +62,13 @@ export const readingsRepository = {
 
     return { rows, total };
   },
+
+  findById: (id: number): Promise<ReadingRow | null> =>
+    prisma.reading.findUnique({ where: { id }, select: READING_SELECT }),
+
+  markSent: (id: number, sentAt: Date): Promise<ReadingRow | null> => updateSendOutcome(id, { status: 'SENT', sentAt }),
+
+  markFailed: (id: number): Promise<ReadingRow | null> => updateSendOutcome(id, { status: 'FAILED', sentAt: null }),
 
   // The deleted row, or null when there was none. One statement, so two deletes at once cannot both find the row:
   // the second gets null, never a database error.

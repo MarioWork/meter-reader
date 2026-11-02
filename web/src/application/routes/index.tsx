@@ -4,7 +4,7 @@ import { authMiddleware } from './authMiddleware';
 import { authRoutes } from './featureRoutes/authRoutes';
 import { itemRoutes } from './featureRoutes/itemRoutes';
 import { readingRoutes } from './featureRoutes/readingRoutes';
-import { BASE_ROUTES_PATHS, defaultRedirectRoute } from './routesUtils';
+import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS, ROUTE_IDS, defaultRedirectRoute } from './routesUtils';
 
 const routes: RouteObject[] = [
   {
@@ -21,7 +21,9 @@ const routes: RouteObject[] = [
     children: [
       ...authRoutes,
       {
-        // Every app page needs a signed-in browser: this layout's loader sends anyone else to setup or login.
+        // Every app page needs a signed-in browser: this layout's loader sends anyone else to setup or login. Its mail
+        // status is read by the pages below too, by this id.
+        id: ROUTE_IDS.SIGNED_IN_LAYOUT,
         lazy: () => import('@application/layout/SignedInLayout/SignedInLayout.route'),
         children: [
           {
@@ -31,6 +33,13 @@ const routes: RouteObject[] = [
           {
             path: BASE_ROUTES_PATHS.HOME,
             lazy: () => import('@pages/Home/Home.route'),
+            children: [
+              {
+                // Over the history, which stays in place behind it.
+                path: READING_ROUTES_PATHS.send(),
+                lazy: () => import('@pages/Home/components/SendReadingModal/SendReadingModal.route'),
+              },
+            ],
           },
           ...readingRoutes,
           ...itemRoutes,

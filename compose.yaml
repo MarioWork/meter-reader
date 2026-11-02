@@ -58,6 +58,9 @@ services:
       APP_ORIGIN: *app-address
       # The Microsoft Entra app the server sends mail through (README, "Connecting Hotmail"). Empty until registered.
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      # Where every reading is emailed, and the subject (README, "Connecting Hotmail").
+      PROVIDER_EMAIL: ${PROVIDER_EMAIL:?set PROVIDER_EMAIL in .env}
+      MAIL_SUBJECT: ${MAIL_SUBJECT:-test}
       # The photos, on the volume below, so they outlive the container.
       UPLOADS_DIR: /app/data/uploads
     volumes:

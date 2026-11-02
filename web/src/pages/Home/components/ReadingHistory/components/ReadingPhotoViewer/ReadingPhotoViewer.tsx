@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReadingApiModel } from '@app-types/models';
 import { formatIsoDate } from '@utils/dateUtils';
-import { getPhotoUrl } from '../readingPhotoUtils';
+import { getPhotoUrl } from '@pages/Home/readingPhotoUtils';
 import PhotoDialog from './components/PhotoDialog';
 
 type Props = {

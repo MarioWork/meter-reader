@@ -3,6 +3,7 @@ import type { PhotoId } from './photoApiModel.type';
 
 // One reading of the meter. `digits` is text, never a number, so leading zeros survive ("00123"). `date` is the
 // calendar day it was read (YYYY-MM-DD). `photoId` is the photo it was read from, null when it was saved without one.
+// `sentAt` is when the mail service accepted its email (an ISO timestamp), null until it is sent.
 export interface ReadingApiModel {
   id: number;
   digits: string;
@@ -10,6 +11,7 @@ export interface ReadingApiModel {
   status: ReadingStatusUtil;
   createdAt: string;
   photoId: PhotoId | null;
+  sentAt: string | null;
 }
 
 export type ReadingId = ReadingApiModel['id'];

@@ -122,6 +122,8 @@ model Reading {
   // The day the meter showed these digits. A calendar day, no time and no time zone.
   date      DateTime      @db.Date
   status    ReadingStatus @default(NOT_SENT)
+  // When the mail service accepted its email; null until it is sent.
+  sentAt    DateTime?     @map("sent_at") @db.Timestamptz(3)
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 

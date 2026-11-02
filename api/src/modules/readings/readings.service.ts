@@ -1,14 +1,27 @@
-import { ConflictError, NotFoundError } from '../../lib/httpErrors.ts';
+import { env } from '../../config/env.ts';
+import { AppError } from '../../lib/errors.ts';
+import {
+  BadGatewayError,
+  BadRequestError,
+  ConflictError,
+  ContentTooLargeError,
+  HttpError,
+  NotFoundError,
+} from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
-import { removeUpload } from '../../lib/uploads.ts';
+import { readUpload, removeUpload } from '../../lib/uploads.ts';
+import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
+import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingRow } from './readings.repository.ts';
 import type {
   CreateReading,
   ListReadingsQuery,
+  ReadingEmailResponse,
   ReadingListResponse,
   ReadingResponse,
   ReadingStatus,
+  SendReading,
 } from './readings.schema.ts';
 
 const log = logger.child({ module: 'readings' });
@@ -18,6 +31,27 @@ const PHOTO_NOT_AVAILABLE_MESSAGE = 'This photo does not exist or already belong
 
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
+
+const JPEG_CONTENT_TYPE = 'image/jpeg';
+const ALREADY_SENT_MESSAGE = 'This reading was sent already';
+const BEING_SENT_MESSAGE = 'This reading is being sent already';
+const NO_PHOTO_MESSAGE = 'This reading has no photo to attach';
+const PHOTO_FILE_MISSING_MESSAGE = 'The photo is missing on the server. Send the reading without it';
+// The day in the email, spelled out so the provider cannot misread it: "31 October 2026". A calendar day, so UTC.
+const EMAIL_DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+// How a failed send answers, by the mail module's code. Anything else Microsoft did is a bad gateway.
+const SEND_FAILURE_ERRORS: Record<string, (message: string, code: string) => HttpError> = {
+  MAIL_TOO_LARGE: (message, code) => new ContentTooLargeError(message, code),
+};
+
+// The readings whose email is going out right now, so a double tap cannot send one twice. The api is one process,
+// so this set sees every send.
+const readingsBeingSent = new Set<number>();
 
 const STATUS_MAP: Record<ReadingRow['status'], ReadingStatus> = {
   NOT_SENT: 'notSent',
@@ -42,7 +76,25 @@ function toResponse(row: ReadingRow): ReadingResponse {
     status: STATUS_MAP[row.status],
     createdAt: row.createdAt.toISOString(),
     photoId: row.photo?.id ?? null,
+    sentAt: row.sentAt?.toISOString() ?? null,
   };
+}
+
+// The body is the date and the reading exactly as read (ADR 0001), leading zeros and all.
+function toEmailBody(row: ReadingRow): string {
+  return `Date: ${EMAIL_DATE_FORMAT.format(row.date)}\nReading: ${row.digits}`;
+}
+
+function toAttachmentName(row: ReadingRow): string {
+  return `meter-${toIsoDate(row.date)}.jpg`;
+}
+
+async function findReading(id: number): Promise<ReadingRow> {
+  const row = await readingsRepository.findById(id);
+
+  if (!row) throw new NotFoundError(ENTITY, id);
+
+  return row;
 }
 
 export async function addReading({ digits, date, photoId }: CreateReading): Promise<ReadingResponse> {
@@ -83,4 +135,93 @@ export async function deleteReading(id: number): Promise<void> {
   await removeReadingPhoto(row);
 
   log.info({ readingId: id }, 'reading deleted');
+}
+
+// Exactly what sending the reading emails, so the user sees it before it goes.
+export async function getReadingEmail(id: number): Promise<ReadingEmailResponse> {
+  const row = await findReading(id);
+  const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
+
+  return { to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT, body: toEmailBody(row), attachment };
+}
+
+async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
+  const contents = row.photo ? await readUpload(row.photo.fileName) : undefined;
+
+  if (!contents) throw new AppError(PHOTO_FILE_MISSING_MESSAGE, { code: 'PHOTO_FILE_MISSING' });
+
+  return { name: toAttachmentName(row), contentType: JPEG_CONTENT_TYPE, contents };
+}
+
+async function toOutgoingMail(row: ReadingRow, attachPhoto: boolean): Promise<OutgoingMail> {
+  const mail = { to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT, body: toEmailBody(row) };
+
+  if (!attachPhoto) return mail;
+
+  return { ...mail, attachment: await readPhotoAttachment(row) };
+}
+
+// What the user is told when the email did not go out: the mail module's own message, never more. A bug stays a
+// bug (500).
+function toSendFailure(error: unknown): unknown {
+  if (error instanceof HttpError) return error;
+
+  const isExpected = error instanceof AppError && error.isOperational;
+
+  if (!isExpected) return error;
+
+  const toHttpError = SEND_FAILURE_ERRORS[error.code] ?? ((message, code) => new BadGatewayError(message, code));
+
+  return toHttpError(error.message, error.code);
+}
+
+// Refusals that try nothing, and so change nothing: unknown, sent already, no photo to attach, Hotmail not connected.
+async function findSendableReading(id: number, attachPhoto: boolean): Promise<ReadingRow> {
+  const row = await findReading(id);
+
+  if (row.status === 'SENT') throw new ConflictError(ALREADY_SENT_MESSAGE, 'READING_ALREADY_SENT');
+
+  const isPhotoMissing = attachPhoto && !row.photo;
+
+  if (isPhotoMissing) throw new BadRequestError(NO_PHOTO_MESSAGE, 'NO_PHOTO_TO_ATTACH');
+
+  await assertMailConnected();
+
+  return row;
+}
+
+async function sendOnce(id: number, attachPhoto: boolean): Promise<ReadingResponse> {
+  const row = await findSendableReading(id, attachPhoto);
+
+  try {
+    await sendMail(await toOutgoingMail(row, attachPhoto));
+  } catch (error: unknown) {
+    await readingsRepository.markFailed(id);
+    // The id and the stable code only: the message may name the provider.
+    log.warn({ readingId: id, code: error instanceof AppError ? error.code : undefined }, 'reading not sent');
+
+    throw toSendFailure(error);
+  }
+
+  const sent = await readingsRepository.markSent(id, new Date());
+
+  if (!sent) throw new NotFoundError(ENTITY, id);
+
+  log.info({ readingId: id }, 'reading sent');
+
+  return toResponse(sent);
+}
+
+// Emails the reading to the provider from the user's Hotmail. Sent: the reading is marked sent, with the time. Not
+// sent: it is marked failed, and the error says why, so the user can try again.
+export async function sendReading(id: number, { attachPhoto }: SendReading): Promise<ReadingResponse> {
+  if (readingsBeingSent.has(id)) throw new ConflictError(BEING_SENT_MESSAGE, 'READING_BEING_SENT');
+
+  readingsBeingSent.add(id);
+
+  try {
+    return await sendOnce(id, attachPhoto);
+  } finally {
+    readingsBeingSent.delete(id);
+  }
 }

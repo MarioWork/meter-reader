@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
+import { MailStateUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
 
@@ -191,5 +192,138 @@ describe('deleting a reading', () => {
     await userEvent.click(screen.getByRole('button', { name: NEWEST_DELETE_BUTTON }));
 
     expect(within(screen.getByRole('dialog')).queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('sending a reading', () => {
+  const SEND_NEWEST = 'Send the reading of 1 Oct 2026';
+  const SEND_DIALOG = 'Send this reading?';
+
+  async function openNewestPreview() {
+    await renderHome();
+    await userEvent.click(within(historyRows()[0]).getByRole('link', { name: SEND_NEWEST }));
+
+    return screen.findByRole('dialog', { name: SEND_DIALOG });
+  }
+
+  // Keeps what the app asked to send, then lets the mock API answer it as usual (a resolver that returns nothing
+  // falls through to the next handler).
+  function recordSendRequests() {
+    const received: unknown[] = [];
+
+    server.use(
+      http.post(`${TEST_BASE_API_URL}/readings/:id/send`, async ({ request }) => {
+        received.push(await request.clone().json());
+      }),
+    );
+
+    return received;
+  }
+
+  it('previews exactly what will be sent: the address, the subject, the body and the photo', async () => {
+    const dialog = await openNewestPreview();
+
+    expect(within(dialog).getByText('readings@water-provider.example')).toBeVisible();
+    expect(within(dialog).getByText('test')).toBeVisible();
+    expect(within(dialog).getByTestId('email-body')).toHaveTextContent('Date: 1 October 2026 Reading: 00529');
+    expect(within(dialog).getByRole('checkbox', { name: 'Attach photo' })).toBeChecked();
+    expect(within(dialog).getByRole('img', { name: 'meter-2026-10-01.jpg' })).toHaveAttribute(
+      'src',
+      `${TEST_BASE_API_URL}/photos/14`,
+    );
+  });
+
+  it('sends the reading with its photo and shows it as sent', async () => {
+    const received = recordSendRequests();
+    const dialog = await openNewestPreview();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(historyRows()[0]).toHaveTextContent(/Sent 2 Nov 2026/));
+    expect(received).toEqual([{ attachPhoto: true }]);
+    expect(within(historyRows()[0]).queryByRole('link', { name: SEND_NEWEST })).not.toBeInTheDocument();
+  });
+
+  it('sends the reading without its photo when Attach photo is unticked', async () => {
+    const received = recordSendRequests();
+    const dialog = await openNewestPreview();
+
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Attach photo' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(received).toEqual([{ attachPhoto: false }]));
+    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('offers no photo to attach when the reading has none', async () => {
+    await renderHome();
+
+    // The mock history's 1 Jun 2026 reading has no photo and was never sent.
+    await userEvent.click(screen.getByRole('link', { name: 'Send the reading of 1 Jun 2026' }));
+
+    const dialog = await screen.findByRole('dialog', { name: SEND_DIALOG });
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(dialog).toHaveTextContent('No photo');
+  });
+
+  it("keeps the preview open with the server's reason when the send fails", async () => {
+    server.use(
+      http.post(`${TEST_BASE_API_URL}/readings/:id/send`, () =>
+        HttpResponse.json(
+          { code: 'MAIL_REFUSED', message: 'Microsoft did not send the email (ErrorInvalidRecipients). Try again' },
+          { status: 502 },
+        ),
+      ),
+    );
+    const dialog = await openNewestPreview();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Microsoft did not send the email (ErrorInvalidRecipients). Try again',
+    );
+  });
+
+  it('opens the preview again from Try again on a failed reading', async () => {
+    await renderHome();
+
+    // The mock history's 1 Sept 2026 reading failed to send.
+    const failed = historyRows()[1];
+    expect(failed).toHaveTextContent('Failed');
+    await userEvent.click(within(failed).getByRole('link', { name: 'Try again: send the reading of 1 Sept 2026' }));
+
+    expect(await screen.findByRole('dialog', { name: SEND_DIALOG })).toHaveTextContent('Reading: 00520');
+  });
+
+  it('disables Send and says why when Hotmail is not connected', async () => {
+    server.use(
+      http.get(`${TEST_BASE_API_URL}/mail/status`, () => HttpResponse.json({ state: MailStateUtil.NOT_CONNECTED })),
+    );
+
+    const dialog = await openNewestPreview();
+
+    expect(within(dialog).getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(dialog).toHaveTextContent('Hotmail is not connected');
+  });
+
+  it('closes the preview and sends nothing when the user cancels', async () => {
+    const received = recordSendRequests();
+    const dialog = await openNewestPreview();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(received).toEqual([]);
+    expect(historyRows()[0]).toHaveTextContent('Not sent');
+  });
+
+  it('shows a sent reading with the day it was sent and no way to send it again', async () => {
+    await renderHome();
+
+    // The mock history's 1 Aug 2026 reading was sent on 1 Aug 2026.
+    const sent = historyRows().find((row) => row.textContent?.includes('1 Aug 2026'));
+    expect(sent).toHaveTextContent(/Sent 1 Aug 2026/);
+    expect(within(sent!).queryByRole('link', { name: /Send|Try again/ })).not.toBeInTheDocument();
   });
 });
