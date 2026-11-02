@@ -8,6 +8,18 @@ const CAMERA_QUALITY = 0.95;
 // Pixel values that change from byte to byte, so the JPEG stays big, as a real photo does.
 const NOISE_STEP = 7919;
 const BYTE_VALUES = 256;
+// Real Tesseract, served by the app: the first photo loads its WebAssembly and language data, which takes a while.
+export const OCR_TIMEOUT_MS = 60_000;
+// The drawn meter: a grey body, a light strip of wheels across the middle, dark digits on it.
+const METER_FACE = {
+  width: 1600,
+  height: 1200,
+  bodyTopLeft: '#9a9a9a',
+  bodyBottomRight: '#6f6f6f',
+  wheels: { x: 250, y: 450, width: 1100, height: 300, colour: '#e8e8e0' },
+  digits: { font: 'bold 200px monospace', colour: '#1a1a1a' },
+  jpegQuality: 0.9,
+};
 
 // A camera-sized JPEG drawn in the browser (noise, so it does not compress to nothing), as a phone would hand over.
 export async function makeCameraPhoto(page: Page, width: number, height: number): Promise<PhotoFile> {
@@ -39,29 +51,32 @@ export async function makeCameraPhoto(page: Page, width: number, height: number)
 // A plain meter face drawn in the browser: dark digits on a light wheel strip, on a grey body, with a slight
 // gradient so the photo is not already pure black and white. Big enough for OCR to read without a crop.
 export async function makeMeterPhoto(page: Page, digits: string): Promise<PhotoFile> {
-  const dataUrl = await page.evaluate((digitsShown) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1600;
-    canvas.height = 1200;
-    const context = canvas.getContext('2d');
+  const dataUrl = await page.evaluate(
+    ({ digitsShown, face }) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = face.width;
+      canvas.height = face.height;
+      const context = canvas.getContext('2d');
 
-    if (!context) throw new Error('No 2d canvas in this browser');
+      if (!context) throw new Error('No 2d canvas in this browser');
 
-    const body = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-    body.addColorStop(0, '#9a9a9a');
-    body.addColorStop(1, '#6f6f6f');
-    context.fillStyle = body;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = '#e8e8e0';
-    context.fillRect(250, 450, 1100, 300);
-    context.fillStyle = '#1a1a1a';
-    context.font = 'bold 200px monospace';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText(digitsShown, canvas.width / 2, 600);
+      const body = context.createLinearGradient(0, 0, face.width, face.height);
+      body.addColorStop(0, face.bodyTopLeft);
+      body.addColorStop(1, face.bodyBottomRight);
+      context.fillStyle = body;
+      context.fillRect(0, 0, face.width, face.height);
+      context.fillStyle = face.wheels.colour;
+      context.fillRect(face.wheels.x, face.wheels.y, face.wheels.width, face.wheels.height);
+      context.fillStyle = face.digits.colour;
+      context.font = face.digits.font;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(digitsShown, face.width / 2, face.wheels.y + face.wheels.height / 2);
 
-    return canvas.toDataURL('image/jpeg', 0.9);
-  }, digits);
+      return canvas.toDataURL('image/jpeg', face.jpegQuality);
+    },
+    { digitsShown: digits, face: METER_FACE },
+  );
 
   return {
     name: 'IMG_0043.jpg',

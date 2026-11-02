@@ -27,7 +27,7 @@ const LOWER_THAN_LAST = '00500';
 const HIGHER_THAN_LAST = '00600';
 const WARNING = /lower than your last reading/;
 const READING_IN_PHOTO = '00612';
-const READING_PHOTO_STATUS = 'Reading the number from the photo…';
+const FINDING_DIGITS_STATUS = 'Reading the number from the photo…';
 const NOTHING_FOUND_STATUS = 'No number found in the photo. Type it in.';
 
 async function renderNewReading() {
@@ -206,11 +206,11 @@ it('reads the number from the picked photo into the reading field, saying so whi
 
   await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
 
-  expect(await screen.findByText(READING_PHOTO_STATUS)).toHaveRole('status');
+  expect(await screen.findByText(FINDING_DIGITS_STATUS)).toHaveRole('status');
   expect(readDigitsFromPhoto).toHaveBeenCalledWith(SHRUNK_PHOTO);
   digitsFound.resolve(READING_IN_PHOTO);
   await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
-  expect(screen.queryByText(READING_PHOTO_STATUS)).not.toBeInTheDocument();
+  expect(screen.queryByText(FINDING_DIGITS_STATUS)).not.toBeInTheDocument();
 });
 
 it('lets the user fix the number read from the photo', async () => {
@@ -242,4 +242,29 @@ it('leaves the reading field empty for typing when reading the photo fails', asy
 
   expect(await screen.findByText(NOTHING_FOUND_STATUS)).toBeVisible();
   expect(readingField()).toHaveValue('');
+});
+
+it('keeps what the user typed while the photo was being read', async () => {
+  const digitsFound = deferred<string>();
+  vi.mocked(readDigitsFromPhoto).mockReturnValueOnce(digitsFound.promise);
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await screen.findByText(FINDING_DIGITS_STATUS);
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  digitsFound.resolve(READING_IN_PHOTO);
+
+  await waitFor(() => expect(screen.queryByText(FINDING_DIGITS_STATUS)).not.toBeInTheDocument());
+  expect(readingField()).toHaveValue(HIGHER_THAN_LAST);
+});
+
+it('reads the next photo over the number the last photo filled in', async () => {
+  vi.mocked(readDigitsFromPhoto).mockResolvedValueOnce('00812').mockResolvedValueOnce(READING_IN_PHOTO);
+  await renderNewReading();
+
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await waitFor(() => expect(readingField()).toHaveValue('00812'));
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+
+  await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
 });

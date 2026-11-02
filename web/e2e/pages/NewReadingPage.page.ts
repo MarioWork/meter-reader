@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { PhotoFile } from '../fixtures/photo.fixture';
 import { READING_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
@@ -19,23 +19,24 @@ export class NewReadingPage {
     await this.page.goto(READING_ROUTES_PATHS.NEW);
   }
 
-  // The camera button on a phone; Playwright hands the file over as the camera would.
-  async takePhoto(photo: PhotoFile) {
+  // The camera button on a phone; Playwright hands the file over as the camera would. Does not wait for it.
+  async pickPhoto(photo: PhotoFile) {
     await this.page.getByLabel('Take a photo').setInputFiles(photo);
+  }
+
+  async takePhoto(photo: PhotoFile) {
+    await this.pickPhoto(photo);
     await this.page.getByRole('img', { name: 'The meter, as it will be saved' }).waitFor();
   }
 
-  // Takes the photo, waits for OCR to finish, and gives back what it put in the Reading field ('' when it found
-  // nothing).
-  async readPhoto(photo: PhotoFile, timeout: number): Promise<string> {
-    await this.takePhoto(photo);
+  // The photo is done with once OCR has filled the Reading field or found nothing, or the app could not open the
+  // file (the photo's error, role="alert"). Poll it with expect.poll.
+  async hasFinishedWithPhoto(): Promise<boolean> {
+    const hasFilledField = (await this.readingField.inputValue()) !== '';
+    const hasFoundNothing = await this.page.getByText(NOTHING_FOUND_STATUS).isVisible();
+    const isPhotoRefused = await this.page.getByRole('alert').isVisible();
 
-    const nothingFound = this.page.getByText(NOTHING_FOUND_STATUS);
-    const isDone = async () => (await this.readingField.inputValue()) !== '' || (await nothingFound.isVisible());
-
-    await expect.poll(isDone, { timeout }).toBe(true);
-
-    return this.readingField.inputValue();
+    return hasFilledField || hasFoundNothing || isPhotoRefused;
   }
 
   async save(digits: string, date: string) {

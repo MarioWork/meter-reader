@@ -6,20 +6,29 @@ import type { Plugin } from 'vite';
 const ASSETS_FOLDER = 'tesseract';
 const NODE_MODULES = path.resolve(import.meta.dirname, 'node_modules');
 
-// The worker, the three LSTM-only core builds (Tesseract picks one by the phone's WebAssembly support: plain, SIMD
-// or relaxed SIMD) and the English LSTM data, gzipped (Tesseract unzips it itself).
+// The worker, one LSTM-only core build and the English LSTM data, gzipped (Tesseract unzips it itself). Only the
+// SIMD core: every phone browser the app targets has WebAssembly SIMD (Safari 16.4+, Chrome 91+, Firefox 89+), and
+// shipping Tesseract's plain and relaxed-SIMD builds as well would add about 7.8 MB to every install.
 const ASSET_SOURCES: Record<string, string> = {
   'worker.min.js': 'tesseract.js/dist/worker.min.js',
-  'tesseract-core-lstm.wasm.js': 'tesseract.js-core/tesseract-core-lstm.wasm.js',
   'tesseract-core-simd-lstm.wasm.js': 'tesseract.js-core/tesseract-core-simd-lstm.wasm.js',
-  'tesseract-core-relaxedsimd-lstm.wasm.js': 'tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js',
   'eng.traineddata.gz': '@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz',
 };
+
+const LEADING_SLASH = /^\//;
+const QUERY_START = '?';
 
 const CONTENT_TYPES: Record<string, string> = {
   '.js': 'text/javascript',
   '.gz': 'application/gzip',
 };
+
+// The file asked for, from a request url already stripped of the assets folder: '/worker.min.js?v=1'.
+function requestedFileName(requestUrl = ''): string {
+  const [pathOnly] = requestUrl.split(QUERY_START);
+
+  return pathOnly.replace(LEADING_SLASH, '');
+}
 
 function sourcePath(fileName: string): string {
   return path.join(NODE_MODULES, ASSET_SOURCES[fileName]);
@@ -37,7 +46,7 @@ export function tesseractAssets(): Plugin {
     },
     configureServer(server) {
       server.middlewares.use(assetsUrl, (request, response, next) => {
-        const fileName = (request.url ?? '').replace(/^\//, '').split('?')[0];
+        const fileName = requestedFileName(request.url);
         const isTesseractFile = Object.hasOwn(ASSET_SOURCES, fileName);
 
         if (!isTesseractFile) return next();
