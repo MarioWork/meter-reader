@@ -6,9 +6,35 @@ A reading is sent exactly as read: every digit, leading zeros kept, red digits i
 
 ## Running on the home server
 
-> To do: filled in by a later ticket.
+The app is served at `https://meter.home.arpa:8443` (port 8443). Ports 80 and 443 belong to my-funko-collection on the same machine, so this app never uses them.
 
-The app is served at `https://meter.home.arpa:8443` (port 8443).
+`compose.yaml` runs four containers:
+
+| Service   | Does                                                                           |
+| --------- | ------------------------------------------------------------------------------ |
+| `web`     | Caddy: serves the built app over HTTPS on 8443 and proxies `/api/*` to the api |
+| `migrate` | Runs once per `up`: applies pending database migrations, then exits            |
+| `api`     | The Fastify API on port 3000, reachable only through Caddy                     |
+| `db`      | Postgres 18, reachable only by `migrate` and `api`                             |
+
+First time:
+
+1. Make the name resolve on every device that opens the app: a DNS entry on the router, or a line in each device's hosts file, pointing `meter.home.arpa` at the server's LAN address.
+2. Copy `.env.example` to `.env` next to `compose.yaml` and set `POSTGRES_PASSWORD` (letters and digits only: it goes inside a database URL). `.env` is never committed.
+3. Start everything:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. Check it: `curl -k https://meter.home.arpa:8443/api/ready` answers `{"status":"ok"}` once the database is up.
+5. Trust Caddy's certificate on each device (Caddy uses its own local CA, `tls internal`). Copy it off the server with `docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./meter-reader-root.crt` and install it as a trusted root on the phone or laptop. HTTPS is needed for the camera and for installing the app.
+
+Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service applies any new migrations before the api starts.
+
+Logs: `docker compose logs -f api` (or `web`, `db`, `migrate`).
+
+Data: the Postgres files live in `./data/postgres` (later, photos go in `./data/uploads`). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
 
 ## First sign-in
 
@@ -32,7 +58,66 @@ The app sends mail through Microsoft Graph with send-only permission (`Mail.Send
 
 ## Local development
 
-> To do: filled in by a later ticket. The sections below describe the web starter and will move under here.
+Two packages, each with its own `package.json`, Yarn release and Node version (`.node-version`, read by fnm):
+
+| Folder | What                                 | Node |
+| ------ | ------------------------------------ | ---- |
+| `web/` | The React PWA (Vite)                 | 24   |
+| `api/` | The Fastify API (Prisma on Postgres) | 26   |
+
+Run every `yarn` command inside the folder it belongs to. Yarn only, never npm.
+
+### web
+
+```bash
+cd web
+yarn install
+yarn dev
+```
+
+Opens on `http://localhost:5173/home`. In dev the API is mocked (MSW), so the api does not need to run. Vite reads `web/.env` and `web/.env.development` (see Environment below).
+
+### api
+
+Needs a local Postgres 18 (Homebrew):
+
+```bash
+brew install postgresql@18
+cd api
+yarn postgres:start          # brew services run postgresql@18
+```
+
+Once, make the user and the dev database the default `.env` points at:
+
+```bash
+psql -d postgres -c "create role meter with login password 'meter' createdb"
+psql -d postgres -c "create database meter_dev owner meter"
+```
+
+Then:
+
+```bash
+cp .env.example .env         # once; .env is git-ignored
+yarn install
+yarn dev                     # applies migrations, then runs src/server.ts with --watch
+```
+
+The api listens on `http://localhost:3000`. `GET /health` and `GET /ready` answer `{"status":"ok"}`; the OpenAPI docs are at `http://localhost:3000/docs`.
+
+| Script            | Does                                                    |
+| ----------------- | ------------------------------------------------------- |
+| `yarn dev`        | Migrates, then runs the api in watch mode (pretty logs) |
+| `yarn build`      | Compiles `src/` to `dist/`                              |
+| `yarn typecheck`  | Type-checks without emitting                            |
+| `yarn lint`       | Runs ESLint and the Prettier check                      |
+| `yarn test`       | Runs the tests once                                     |
+| `yarn db:migrate` | Makes a new migration from `prisma/schema.prisma`       |
+
+The tests need the same local Postgres and the `meter` role: each run makes a migrated `meter_test_template` database, gives every test file its own copy, and drops them all at the end (`api/.env.test`).
+
+CI (`.github/workflows/ci.yml`) runs lint, type-check, tests and build for both packages.
+
+The sections below describe the web starter. They apply inside `web/`.
 
 ## Stack
 
