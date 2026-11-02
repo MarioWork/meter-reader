@@ -18,6 +18,7 @@ const DELETING_LABEL = 'Deleting…';
 function DeleteReadingButton({ reading }: Props) {
   const { isOpen, isDeleting, failureMessage, openDialog, closeDialog, deleteReading } = useDeleteReading(reading.id);
   const readingDate = formatIsoDate(reading.date);
+  const hasPhoto = reading.photoId !== null;
 
   return (
     <>
@@ -34,7 +35,7 @@ function DeleteReadingButton({ reading }: Props) {
       >
         <p>
           The reading <span className="font-mono tabular-nums">{reading.digits}</span> from {readingDate} will be
-          removed from the history. This cannot be undone.
+          removed from the history{hasPhoto && ', with its photo'}. This cannot be undone.
         </p>
         {failureMessage && <FormAlert message={failureMessage} />}
       </ConfirmDialog>

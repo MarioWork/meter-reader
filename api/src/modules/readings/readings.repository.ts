@@ -10,7 +10,8 @@ const READING_SELECT = {
   date: true,
   status: true,
   createdAt: true,
-  photo: { select: { id: true } },
+  // The file name, so deleting a reading can remove its photo from the uploads folder too.
+  photo: { select: { id: true, fileName: true } },
 } as const satisfies Prisma.ReadingSelect;
 
 // Newest first: the latest day on top, and on the same day the one saved last.

@@ -1,10 +1,15 @@
 import { readingsRepository } from './readings.repository.ts';
 import { NotFoundError } from '../../lib/httpErrors.ts';
+import { removeUpload } from '../../lib/uploads.ts';
 import { addReading, deleteReading, getReadings } from './readings.service.ts';
 
 vi.mock('./readings.repository.ts', () => ({
   readingsRepository: { create: vi.fn(), findPage: vi.fn(), deleteById: vi.fn() },
 }));
+
+vi.mock('../../lib/uploads.ts', () => ({ removeUpload: vi.fn() }));
+
+const PHOTO = { id: 4, fileName: '5b0f3c1e-6f7a-4d2b-9a51-2c8e0d9b7f10.jpg' };
 
 const SAVED_ROW = {
   id: 7,
@@ -37,7 +42,7 @@ describe('addReading', () => {
   });
 
   it('passes the photo id on and answers it when the reading has a photo', async () => {
-    vi.mocked(readingsRepository.create).mockResolvedValueOnce({ ...SAVED_ROW, photo: { id: 4 } });
+    vi.mocked(readingsRepository.create).mockResolvedValueOnce({ ...SAVED_ROW, photo: PHOTO });
 
     const reading = await addReading({ digits: '00123', date: '2026-10-31', photoId: 4 });
 
@@ -67,6 +72,22 @@ describe('deleteReading', () => {
     await deleteReading(7);
 
     expect(readingsRepository.deleteById).toHaveBeenCalledWith(7);
+    expect(removeUpload).not.toHaveBeenCalled();
+  });
+
+  it("removes the photo's file when the deleted reading had a photo", async () => {
+    vi.mocked(readingsRepository.deleteById).mockResolvedValueOnce({ ...SAVED_ROW, photo: PHOTO });
+
+    await deleteReading(7);
+
+    expect(removeUpload).toHaveBeenCalledWith(PHOTO.fileName);
+  });
+
+  it('still succeeds when the photo file cannot be removed, as the reading is already gone', async () => {
+    vi.mocked(readingsRepository.deleteById).mockResolvedValueOnce({ ...SAVED_ROW, photo: PHOTO });
+    vi.mocked(removeUpload).mockRejectedValueOnce(Object.assign(new Error('permission denied'), { code: 'EACCES' }));
+
+    await expect(deleteReading(7)).resolves.toBeUndefined();
   });
 
   it('throws NotFoundError when the reading does not exist', async () => {

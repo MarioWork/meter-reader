@@ -1,7 +1,9 @@
+import { access } from 'node:fs/promises';
 import type { InjectOptions } from 'fastify';
 import { buildApp, type App } from '../../app.ts';
 import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
 import { prisma } from '../../lib/prisma.ts';
+import { uploadPath } from '../../lib/uploads.ts';
 import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
 
 let app: App;
@@ -206,6 +208,18 @@ describe('DELETE /readings/:id', () => {
     expect(response.statusCode).toBe(204);
     expect(response.body).toBe('');
     expect(await prisma.reading.findMany({ select: { id: true } })).toEqual([{ id: keptId }]);
+  });
+
+  it('removes the photo and its file with the reading when the reading has a photo', async () => {
+    const photoId = await addPhoto();
+    const { fileName } = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } });
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31', photoId })).json<{ id: number }>().id;
+
+    const response = await deleteReading(readingId);
+
+    expect(response.statusCode).toBe(204);
+    expect(await prisma.photo.count()).toBe(0);
+    await expect(access(uploadPath(fileName))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('returns 404 NOT_FOUND when the reading does not exist', async () => {
