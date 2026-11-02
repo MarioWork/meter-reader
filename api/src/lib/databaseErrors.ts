@@ -11,11 +11,22 @@ export function getPrismaErrorCode(error: unknown): string | undefined {
 
 type ErrorLogFields = { err: unknown };
 
-type DatabaseErrorSummary = { name: string; code: string; model: unknown };
+type DatabaseErrorSummary = { name: string; code?: string; model?: unknown };
 
-// A Prisma error's message and `meta` can carry the values of the row ("Failing row contains ..."): log the code
-// and the model only, never the data.
+// Prisma errors whose message can quote the call, its arguments included (a token, a row's values).
+function isMessageWithArguments(error: unknown): error is Error {
+  return (
+    error instanceof Prisma.PrismaClientValidationError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError ||
+    error instanceof Prisma.PrismaClientRustPanicError
+  );
+}
+
+// A Prisma error's message and `meta` can carry the values of the row ("Failing row contains ...") or of the call:
+// log the code and the model only, never the data.
 export function getErrorLogFields(error: unknown): ErrorLogFields {
+  if (isMessageWithArguments(error)) return { err: { name: error.name } };
+
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return { err: error };
 
   const summary: DatabaseErrorSummary = {

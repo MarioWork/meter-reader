@@ -2,6 +2,7 @@
 // approves it on any device at Microsoft's sign-in page, and the token is saved in the database. Run it again to
 // switch accounts or after the token was revoked.
 // Dev: yarn mail:connect. In the container: docker compose exec api node dist/cli/connectMail.js
+import { getErrorLogFields } from '../lib/databaseErrors.ts';
 import { AppError } from '../lib/errors.ts';
 import { logger } from '../lib/logger.ts';
 import { prisma } from '../lib/prisma.ts';
@@ -28,7 +29,7 @@ try {
   if (isExpected) {
     process.stderr.write(`\n${error.message}\n\n`);
   } else {
-    logger.fatal({ err: error }, 'mail:connect failed');
+    logger.fatal(getErrorLogFields(error), 'mail:connect failed');
   }
 
   process.exitCode = EXIT_FAILED;

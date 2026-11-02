@@ -36,8 +36,10 @@ await app.listen({ port: env.PORT, host: LISTEN_HOST });
 
 // The server keeps the Hotmail token alive by itself, from start (ADR 0001). refreshMailToken never rejects: a
 // failure is logged and the next round tries again.
-void refreshMailToken();
-const mailRefreshTimer = setInterval(() => void refreshMailToken(), MAIL_REFRESH_INTERVAL_MS);
+// Shutting down cuts a refresh that is waiting on Microsoft short.
+const mailRefreshAbort = new AbortController();
+void refreshMailToken(mailRefreshAbort.signal);
+const mailRefreshTimer = setInterval(() => void refreshMailToken(mailRefreshAbort.signal), MAIL_REFRESH_INTERVAL_MS);
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   logger.info({ signal }, 'shutting down');
@@ -47,6 +49,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   forceExit.unref();
 
   clearInterval(mailRefreshTimer);
+  mailRefreshAbort.abort();
 
   await app.close();
   process.exit(0);
