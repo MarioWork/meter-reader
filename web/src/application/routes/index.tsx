@@ -2,7 +2,6 @@ import { Navigate, type RouteObject } from 'react-router';
 import RouteError from '@pages/Error/RouteError';
 import { authMiddleware } from './authMiddleware';
 import { authRoutes } from './featureRoutes/authRoutes';
-import { itemRoutes } from './featureRoutes/itemRoutes';
 import { readingRoutes } from './featureRoutes/readingRoutes';
 import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS, ROUTE_IDS, defaultRedirectRoute } from './routesUtils';
 
@@ -42,7 +41,6 @@ const routes: RouteObject[] = [
             ],
           },
           ...readingRoutes,
-          ...itemRoutes,
         ],
       },
     ],

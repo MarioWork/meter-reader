@@ -162,7 +162,7 @@ echo "VITE_USE_MOCKS=false" > .env.development.local
 yarn dev
 ```
 
-The dev server proxies `/api/<path>` to `http://localhost:3000/<path>`, the same prefix strip Caddy does on the server, so the app always calls its own origin. Until ticket #3 replaces it, the starter Items page errors against the real api (there is no `/items` route).
+The dev server proxies `/api/<path>` to `http://localhost:3000/<path>`, the same prefix strip Caddy does on the server, so the app always calls its own origin.
 
 | Script               | Does                                     |
 | -------------------- | ---------------------------------------- |
@@ -286,17 +286,17 @@ Aliases: `@api`, `@services`, `@application`, `@app-types`, `@utils`, `@pages`, 
 
 ## How data flows
 
-The `items` example shows the full path:
+Readings show the full path:
 
-1. **Service** (`common/api/services/itemService/`) calls the API with axios.
+1. **Service** (`common/api/services/readingService/`) calls the API with axios.
    - A read returns the data, and a failure throws.
    - A write goes through `axiosActions` (`common/api/axiosActions.ts`). It returns `{ success, data?, error? }` (`JSONResponseUtil`) and never throws on a failed request.
-2. **Loader** (`pages/ItemList/itemListLoader.ts`) reads the URL and calls the service before the page renders.
+2. **Loader** (`pages/Home/homeLoader.ts`) reads the URL and calls the service before the page renders.
 3. **Page** reads the loader's data with `useLoaderData()`.
 4. **Form** validates with a yup schema, then submits through React Router's `useFetcher`.
-5. **Action** (`itemListActions.ts`) checks the payload against the same schema, then calls the service. The router reloads the loader afterwards.
+5. **Action** (`pages/NewReading/newReadingActions.ts`) checks the payload against the same schema, then calls the service. The router reloads the loader afterwards.
 
-A yup rule used by both the form and the service lives once in `common/utils/` (see `itemUtils.ts`).
+A yup rule used by both the form and the service lives once in `common/utils/` (see `readingUtils.ts`).
 
 ## Adding a feature
 
@@ -305,8 +305,6 @@ A yup rule used by both the form and the service lives once in `common/utils/` (
 3. Add MSW handlers in `src/mocks/handlers/<name>/` and register them in `handlers/index.ts`.
 4. Add the page in `src/pages/<Page>/`, with a `<Page>.route.ts` that exports `Component`, `loader` and `action`.
 5. Add the path to `routesUtils.ts` and a lazy route in `application/routes/featureRoutes/`.
-
-To start clean, delete the `items` example: its page, service, model, mocks, `itemUtils.ts` and route.
 
 ## Conventions enforced by the compiler and the linter
 
