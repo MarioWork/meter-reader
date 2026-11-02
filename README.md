@@ -4,6 +4,8 @@ Take a photo of your water meter, check the reading, and email it to your water 
 
 A reading is sent exactly as read: every digit, leading zeros kept, red digits included. Words used here are defined in [`docs/GLOSSARY.md`](./docs/GLOSSARY.md); the big decisions are in [`docs/adr/`](./docs/adr/).
 
+How it all fits together, as diagrams: [`docs/flow.md`](./docs/flow.md).
+
 ## Running on the home server
 
 The app is served at `https://meter.home.arpa:8443` (port 8443). Ports 80 and 443 belong to my-funko-collection on the same machine, so this app never uses them.
