@@ -142,6 +142,18 @@ export default defineConfig([
     },
   },
   {
+    // shadcn components, kept as the CLI writes them so `yarn shadcn add --diff` stays readable on an update. They
+    // export variants and managers next to components, run long, and use the registry's own class spelling. The
+    // Label is a plain <label> wrapper: each call site passes htmlFor, which this rule cannot see from here.
+    files: ['src/common/components/ui/**/*.tsx'],
+    rules: {
+      'max-lines': 'off',
+      'react-refresh/only-export-components': 'off',
+      'better-tailwindcss/enforce-canonical-classes': 'off',
+      'jsx-a11y-x/label-has-associated-control': 'off',
+    },
+  },
+  {
     files: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     plugins: {
       'testing-library': testingLibrary,
