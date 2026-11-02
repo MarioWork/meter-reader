@@ -31,10 +31,12 @@ function ConfirmDialog({ isOpen, title, children, confirmLabel, isConfirming = f
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
 
-  // Escape: the parent closes the dialog through `isOpen`, so the browser must not close it on its own.
+  // Escape: the parent closes the dialog through `isOpen`, so the browser must not close it on its own. Once the
+  // action is under way it cannot be called back, so Escape does nothing until it is done.
   const handleCancel = (event: React.SyntheticEvent<HTMLDialogElement>) => {
     event.preventDefault();
-    onCancel();
+
+    if (!isConfirming) onCancel();
   };
 
   return (
@@ -52,7 +54,7 @@ function ConfirmDialog({ isOpen, title, children, confirmLabel, isConfirming = f
         {children}
       </div>
       <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={onCancel}>
+        <Button variant="secondary" isDisabled={isConfirming} onClick={onCancel}>
           Cancel
         </Button>
         <Button isDisabled={isConfirming} onClick={onConfirm}>

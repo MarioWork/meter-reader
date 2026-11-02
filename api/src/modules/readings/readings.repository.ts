@@ -1,5 +1,6 @@
 // The history: every reading, newest first, and removing one saved by mistake.
 import type { Prisma } from '../../generated/prisma/client.ts';
+import { PRISMA_RECORD_NOT_FOUND, getPrismaErrorCode } from '../../lib/databaseErrors.ts';
 import type { SkipTake } from '../../lib/pagination.ts';
 import { prisma } from '../../lib/prisma.ts';
 
@@ -33,16 +34,15 @@ export const readingsRepository = {
     return { rows, total };
   },
 
-  // The deleted row, or null when there was none. Read and deleted in one transaction, so the caller gets the row
-  // that was really removed (and can clean up after it).
-  deleteById: (id: number): Promise<ReadingRow | null> =>
-    prisma.$transaction(async (transaction) => {
-      const row = await transaction.reading.findUnique({ where: { id }, select: READING_SELECT });
+  // The deleted row, or null when there was none. One statement, so two deletes at once cannot both find the row:
+  // the second gets null, never a database error.
+  deleteById: async (id: number): Promise<ReadingRow | null> => {
+    try {
+      return await prisma.reading.delete({ where: { id }, select: READING_SELECT });
+    } catch (error) {
+      if (getPrismaErrorCode(error) === PRISMA_RECORD_NOT_FOUND) return null;
 
-      if (!row) return null;
-
-      await transaction.reading.delete({ where: { id } });
-
-      return row;
-    }),
+      throw error;
+    }
+  },
 };

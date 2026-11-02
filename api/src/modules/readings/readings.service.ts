@@ -57,10 +57,11 @@ export async function getReadings(query: ListReadingsQuery): Promise<ReadingList
   return { data: rows.map(toResponse), totalResultNumber: total, currentPage: query.page };
 }
 
-// The seam for photos (issue #4): a reading has no stored files yet, so there is nothing to remove. Once a reading
-// keeps its photo, this deletes that file from the uploads folder.
-async function removeReadingFiles(row: ReadingRow): Promise<void> {
-  log.debug({ readingId: row.id }, 'reading has no stored files to remove');
+// The seam for photos (issue #4): a reading has no photo yet, so there is nothing to remove. Once a reading keeps
+// its photo, this deletes that file from the uploads folder. The row is already gone by then, so a file that cannot
+// be removed is logged, not turned into a failed delete.
+async function removeReadingPhoto(row: ReadingRow): Promise<void> {
+  log.debug({ readingId: row.id }, 'reading has no photo to remove');
 }
 
 export async function deleteReading(id: number): Promise<void> {
@@ -68,7 +69,7 @@ export async function deleteReading(id: number): Promise<void> {
 
   if (!row) throw new NotFoundError(ENTITY, id);
 
-  await removeReadingFiles(row);
+  await removeReadingPhoto(row);
 
   log.info({ readingId: id }, 'reading deleted');
 }
