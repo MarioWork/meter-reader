@@ -1,16 +1,11 @@
 import ErrorAlert from '@components/ErrorAlert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogTitle,
-} from '@components/ui/alert-dialog';
+import { Button } from '@components/ui/button';
 import EmailPreview from './components/EmailPreview';
+import ResponsiveDialog from './components/ResponsiveDialog';
 import { useSendReading } from './hooks/useSendReading';
 
 const DIALOG_TITLE = 'Send this reading?';
+const CLOSE_LABEL = 'Close';
 const SEND_LABEL = 'Send';
 const SENDING_LABEL = 'Sending…';
 const MAIL_NOT_CONNECTED_TEXT = "Hotmail is not connected, so the reading can't be sent. Run";
@@ -28,34 +23,37 @@ function SendReadingModal() {
     isSending,
     failureMessage,
     handleOpenChange,
+    closePreview,
     sendReading,
   } = useSendReading();
 
+  const footer = (
+    <>
+      <Button variant="outline" disabled={isSending} onClick={closePreview}>
+        {CLOSE_LABEL}
+      </Button>
+      <Button disabled={isSending || !isMailConnected} onClick={sendReading}>
+        {isSending ? SENDING_LABEL : SEND_LABEL}
+      </Button>
+    </>
+  );
+
   return (
-    <AlertDialog open onOpenChange={handleOpenChange}>
-      <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
-        <AlertDialogTitle>{DIALOG_TITLE}</AlertDialogTitle>
-        <EmailPreview
-          email={readingEmail}
-          isAttachingPhoto={isAttachingPhoto}
-          isDisabled={isSending}
-          onAttachingPhotoChange={setIsAttachingPhoto}
-        />
-        {!isMailConnected && (
-          <p className="text-warning">
-            {MAIL_NOT_CONNECTED_TEXT} <code className="font-mono">{MAIL_NOT_CONNECTED_COMMAND}</code>{' '}
-            {MAIL_NOT_CONNECTED_END}
-          </p>
-        )}
-        {failureMessage && <ErrorAlert message={failureMessage} />}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={isSending || !isMailConnected} onClick={sendReading}>
-            {isSending ? SENDING_LABEL : SEND_LABEL}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ResponsiveDialog title={DIALOG_TITLE} onOpenChange={handleOpenChange} footer={footer}>
+      <EmailPreview
+        email={readingEmail}
+        isAttachingPhoto={isAttachingPhoto}
+        isDisabled={isSending}
+        onAttachingPhotoChange={setIsAttachingPhoto}
+      />
+      {!isMailConnected && (
+        <p className="text-warning">
+          {MAIL_NOT_CONNECTED_TEXT} <code className="font-mono">{MAIL_NOT_CONNECTED_COMMAND}</code>{' '}
+          {MAIL_NOT_CONNECTED_END}
+        </p>
+      )}
+      {failureMessage && <ErrorAlert message={failureMessage} />}
+    </ResponsiveDialog>
   );
 }
 

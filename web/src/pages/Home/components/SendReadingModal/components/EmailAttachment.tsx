@@ -1,4 +1,7 @@
+import { useId } from 'react';
 import type { ReadingEmailAttachmentApiModel } from '@app-types/models';
+import { Field, FieldLabel } from '@components/ui/field';
+import { Switch } from '@components/ui/switch';
 import { getPhotoUrl } from '@pages/Home/readingPhotoUtils';
 
 type Props = {
@@ -15,20 +18,21 @@ const ATTACH_PHOTO_LABEL = 'Attach photo';
 // The "Attach photo" toggle, only when the reading has a photo, and the photo itself while it is attached. Its alt
 // text is the file name the provider will see.
 function EmailAttachment({ attachment, isAttachingPhoto, isDisabled, onAttachingPhotoChange }: Props) {
+  const switchId = useId();
+
   if (!attachment) return <span className="text-muted-foreground">{NO_PHOTO_LABEL}</span>;
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="flex min-h-6 items-center gap-2">
-        <input
-          type="checkbox"
+      <Field orientation="horizontal">
+        <Switch
+          id={switchId}
           checked={isAttachingPhoto}
           disabled={isDisabled}
-          onChange={(event) => onAttachingPhotoChange(event.target.checked)}
-          className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          onCheckedChange={onAttachingPhotoChange}
         />
-        {ATTACH_PHOTO_LABEL}
-      </label>
+        <FieldLabel htmlFor={switchId}>{ATTACH_PHOTO_LABEL}</FieldLabel>
+      </Field>
       {isAttachingPhoto && (
         <img
           src={getPhotoUrl(attachment.photoId)}

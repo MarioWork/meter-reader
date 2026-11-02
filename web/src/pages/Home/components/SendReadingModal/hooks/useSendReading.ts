@@ -25,8 +25,8 @@ export function useSendReading() {
   // Back to the same page of the history.
   const closePreview = () => void navigate({ pathname: BASE_ROUTES_PATHS.HOME, search });
 
-  // The dialog asks to close on Escape and on Cancel. Once the email is on its way it cannot be called back, so the
-  // preview stays open until it is done.
+  // The preview asks to close on Escape, a tap outside it or a swipe down. Once the email is on its way it cannot be
+  // called back, so the preview stays open until it is done.
   const handleOpenChange = (isOpening: boolean) => {
     if (isOpening || isSending) return;
 
@@ -44,6 +44,7 @@ export function useSendReading() {
     isSending,
     failureMessage,
     handleOpenChange,
+    closePreview,
     sendReading,
   };
 }

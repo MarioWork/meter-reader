@@ -2,6 +2,8 @@ import { expect, test } from '../fixtures/app.fixture';
 import { HomePage } from '../pages/HomePage.page';
 
 const NEWEST_DATE = '1 Oct 2026';
+// An iPhone 14's screen, narrower than Tailwind's `sm` breakpoint.
+const PHONE_VIEWPORT = { width: 390, height: 844 };
 
 test('a reading is previewed and sent with its photo, and the history shows it sent', async ({ page }) => {
   const homePage = new HomePage(page);
@@ -10,7 +12,7 @@ test('a reading is previewed and sent with its photo, and the history shows it s
   await homePage.openSendPreview(NEWEST_DATE);
   await expect(homePage.sendDialog).toContainText('readings@water-provider.example');
   await expect(homePage.sendDialog).toContainText('Reading: 00529');
-  await expect(homePage.attachPhotoCheckbox).toBeChecked();
+  await expect(homePage.attachPhotoSwitch).toBeChecked();
   await homePage.sendFromPreview();
 
   await expect(homePage.sendDialog).toBeHidden();
@@ -43,4 +45,36 @@ test('Send is off while Hotmail is not connected', async ({ page, mockMailNotCon
 
   await expect(homePage.sendDialog).toContainText('Hotmail is not connected');
   await expect(homePage.sendDialogSendButton).toBeDisabled();
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: PHONE_VIEWPORT });
+
+  test('the preview is a bottom sheet that closes with its Close button, no swipe needed', async ({ page }) => {
+    const homePage = new HomePage(page);
+    await homePage.goto();
+
+    await homePage.openSendPreview(NEWEST_DATE);
+    await expect(homePage.sendDialog).toContainText('Reading: 00529');
+    await expect(homePage.sendDialog).toBeInViewport();
+    // It slides up, so its position settles a moment after it shows.
+    await expect.poll(() => homePage.isSendSheetAtBottom()).toBe(true);
+    await homePage.closePreview();
+
+    await expect(homePage.sendDialog).toBeHidden();
+    await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeFocused();
+    await expect(homePage.historyRows.nth(1)).toContainText('Not sent');
+  });
+
+  test('Escape closes the sheet and gives focus back to the Send link', async ({ page }) => {
+    const homePage = new HomePage(page);
+    await homePage.goto();
+
+    await homePage.openSendPreviewWithKeyboard(NEWEST_DATE);
+    await expect(homePage.sendDialog).toBeVisible();
+    await homePage.cancelWithEscape();
+
+    await expect(homePage.sendDialog).toBeHidden();
+    await expect(homePage.sendLinkFor(NEWEST_DATE)).toBeFocused();
+  });
 });
