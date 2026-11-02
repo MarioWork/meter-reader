@@ -21,7 +21,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'The history: every reading, newest first',
+        summary: 'The history, newest first: every reading, or those in a day range and with given statuses',
         querystring: ListReadingsQuerySchema,
         response: { 200: ReadingListResponseSchema, 400: ErrorResponseSchema },
       },

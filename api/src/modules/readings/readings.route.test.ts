@@ -45,6 +45,13 @@ async function addReadingId(digits: string): Promise<number> {
   return response.json<{ id: number }>().id;
 }
 
+// Sent or failed straight in the database: how a reading gets there is POST /readings/:id/send's business.
+async function addReadingWithStatus(digits: string, date: string, status: 'SENT' | 'FAILED'): Promise<void> {
+  const id = (await addReading({ digits, date })).json<{ id: number }>().id;
+
+  await prisma.reading.update({ where: { id }, data: { status } });
+}
+
 async function addReadingWithPhotoId(): Promise<number> {
   const photoId = await addPhoto();
   const response = await addReading({ digits: '00123', date: '2026-10-31', photoId });
@@ -248,6 +255,113 @@ describe('GET /readings', () => {
     const response = await app.inject({ method: 'GET', url: '/readings' });
 
     expect(response.statusCode).toBe(401);
+  });
+
+  it('lists only the readings on or after the from day when from is given', async () => {
+    await addReading({ digits: '00100', date: '2026-08-31' });
+    await addReading({ digits: '00200', date: '2026-09-01' });
+    await addReading({ digits: '00300', date: '2026-10-01' });
+
+    const response = await getReadings('?from=2026-09-01');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 2, data: [{ digits: '00300' }, { digits: '00200' }] });
+  });
+
+  it('lists only the readings on or before the to day when to is given', async () => {
+    await addReading({ digits: '00100', date: '2026-08-31' });
+    await addReading({ digits: '00200', date: '2026-09-01' });
+    await addReading({ digits: '00300', date: '2026-09-02' });
+
+    const response = await getReadings('?to=2026-09-01');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 2, data: [{ digits: '00200' }, { digits: '00100' }] });
+  });
+
+  it('lists the readings of that one day when from and to are the same day', async () => {
+    await addReading({ digits: '00100', date: '2026-08-31' });
+    await addReading({ digits: '00200', date: '2026-09-01' });
+    await addReading({ digits: '00300', date: '2026-09-02' });
+
+    const response = await getReadings('?from=2026-09-01&to=2026-09-01');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 1, data: [{ digits: '00200' }] });
+  });
+
+  it('lists only the readings with the status when one status is given', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+    await addReadingWithStatus('00200', '2026-09-02', 'SENT');
+    await addReadingWithStatus('00300', '2026-09-03', 'FAILED');
+
+    const response = await getReadings('?status=notSent');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 1, data: [{ digits: '00100', status: 'notSent' }] });
+  });
+
+  it('lists the readings with any of the statuses when several are given, comma-separated', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+    await addReadingWithStatus('00200', '2026-09-02', 'SENT');
+    await addReadingWithStatus('00300', '2026-09-03', 'FAILED');
+
+    const response = await getReadings('?status=notSent,failed');
+
+    expect(response.json()).toMatchObject({
+      totalResultNumber: 2,
+      data: [
+        { digits: '00300', status: 'failed' },
+        { digits: '00100', status: 'notSent' },
+      ],
+    });
+  });
+
+  it('pages the filtered readings and counts only them when the filters are combined', async () => {
+    await addReading({ digits: '00100', date: '2026-08-31' });
+    await addReading({ digits: '00200', date: '2026-09-01' });
+    await addReadingWithStatus('00300', '2026-09-02', 'SENT');
+    await addReading({ digits: '00400', date: '2026-09-03' });
+    await addReading({ digits: '00500', date: '2026-09-04' });
+    await addReading({ digits: '00600', date: '2026-10-01' });
+
+    const response = await getReadings('?from=2026-09-01&to=2026-09-30&status=notSent&page=2&size=2');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 3, currentPage: 2, data: [{ digits: '00200' }] });
+  });
+
+  it('treats an empty filter as no filter when a param is sent empty', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+
+    const response = await getReadings('?from=&to=&status=');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 1 });
+  });
+
+  it('trims a filter when a param is sent with spaces around it', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+    await addReading({ digits: '00200', date: '2026-10-01' });
+
+    const response = await getReadings('?from=%202026-10-01%20&status=%20notSent,%20failed%20');
+
+    expect(response.json()).toMatchObject({ totalResultNumber: 1, data: [{ digits: '00200' }] });
+  });
+
+  it('returns 400 VALIDATION_ERROR when from is later than to', async () => {
+    const response = await getReadings('?from=2026-10-01&to=2026-09-01');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when a day is not a calendar date', async () => {
+    const response = await getReadings('?from=2026-13-01');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when a status is unknown', async () => {
+    const response = await getReadings('?status=sent,lost');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 });
 

@@ -17,7 +17,29 @@ export const CreateReadingSchema = z.strictObject({
   photoId: z.number().int().positive().optional(),
 });
 
-export const ListReadingsQuerySchema = PaginationQuerySchema;
+const STATUS_SEPARATOR = ',';
+const FROM_AFTER_TO_MESSAGE = 'From must be on or before to';
+
+// A filter is trimmed, and one sent empty is no filter: the web app's url may carry `from=` once the user clears it.
+function emptyAsAbsent(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+
+  return value.trim() || undefined;
+}
+
+// One or more statuses, comma-separated (`notSent,failed`), the way `sorting_fields` carries several values.
+const StatusFilterSchema = z
+  .string()
+  .meta({ description: `One or more of ${READING_STATUSES.join(', ')}, comma-separated`, example: 'notSent,failed' })
+  .transform((value) => value.split(STATUS_SEPARATOR).map((status) => status.trim()))
+  .pipe(z.array(z.enum(READING_STATUSES)));
+
+// The history narrowed to calendar days (both inclusive) and statuses, then paged. Still newest first.
+export const ListReadingsQuerySchema = PaginationQuerySchema.extend({
+  from: z.preprocess(emptyAsAbsent, z.iso.date().optional()),
+  to: z.preprocess(emptyAsAbsent, z.iso.date().optional()),
+  status: z.preprocess(emptyAsAbsent, StatusFilterSchema.optional()),
+}).refine(({ from, to }) => !from || !to || from <= to, { message: FROM_AFTER_TO_MESSAGE, path: ['from'] });
 
 export const ReadingParamsSchema = z.object({ id: z.coerce.number().int().positive() });
 

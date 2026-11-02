@@ -14,7 +14,7 @@ import { toSkipTake } from '../../lib/pagination.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
-import { readingsRepository, type ReadingRow } from './readings.repository.ts';
+import { readingsRepository, type ReadingFilter, type ReadingRow } from './readings.repository.ts';
 import type {
   CreateReading,
   ListReadingsQuery,
@@ -59,6 +59,13 @@ const STATUS_MAP: Record<ReadingRow['status'], ReadingStatus> = {
   NOT_SENT: 'notSent',
   SENT: 'sent',
   FAILED: 'failed',
+};
+
+// The other way round, for a status filter.
+const ROW_STATUS_MAP: Record<ReadingStatus, ReadingRow['status']> = {
+  notSent: 'NOT_SENT',
+  sent: 'SENT',
+  failed: 'FAILED',
 };
 
 // A Postgres `date` comes back as midnight UTC of that day, and goes in the same way.
@@ -115,8 +122,16 @@ export async function addReading({ digits, date, photoId }: CreateReading): Prom
   return toResponse(row);
 }
 
+function toFilter({ from, to, status }: ListReadingsQuery): ReadingFilter {
+  return {
+    from: from === undefined ? undefined : toDate(from),
+    to: to === undefined ? undefined : toDate(to),
+    statuses: status?.map((wireStatus) => ROW_STATUS_MAP[wireStatus]),
+  };
+}
+
 export async function getReadings(query: ListReadingsQuery): Promise<ReadingListResponse> {
-  const { rows, total } = await readingsRepository.findPage(toSkipTake(query));
+  const { rows, total } = await readingsRepository.findPage(toSkipTake(query), toFilter(query));
 
   return { data: rows.map(toResponse), totalResultNumber: total, currentPage: query.page };
 }
