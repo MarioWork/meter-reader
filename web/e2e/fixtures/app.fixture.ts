@@ -2,8 +2,8 @@ import { defineNetworkFixture, type NetworkFixture, type NetworkFixtureOptions }
 import { test as base, expect } from '@playwright/test';
 import { http, HttpResponse } from 'msw/http';
 import { getHandlers } from '../../src/mocks/handlers';
+import { MailStateUtil } from '@app-types/utility';
 import { resetMockReadings } from '../../src/mocks/handlers/reading/readingMockState';
-import { MailStateUtil } from '../../src/types/utility/mailStateUtil.type';
 import { BASE_URL } from '../playwright.config';
 
 // The app calls the API on its own origin (VITE_BASE_API_URL='/api'), so the mocks listen on the dev server's URL.

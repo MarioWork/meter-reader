@@ -15,6 +15,7 @@ test('home shows how to connect Hotmail when the server cannot send mail', async
 
   await page.goto(BASE_ROUTES_PATHS.HOME);
 
-  await expect(page.getByText('Hotmail not connected')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('yarn mail:connect');
+  const banner = page.getByRole('status');
+  await expect(banner).toContainText('Hotmail not connected');
+  await expect(banner).toContainText('yarn mail:connect');
 });

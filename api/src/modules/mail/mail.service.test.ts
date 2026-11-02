@@ -93,7 +93,7 @@ afterAll(() => {
 });
 
 describe('connectMail', () => {
-  it('shows the code and the address, then saves the tokens once the user approves', async () => {
+  it('shows the code and the address, then saves the tokens when the user approves', async () => {
     const deviceCodeForms = answerDeviceCode();
     const tokenForms = answerToken(errorAnswer('authorization_pending'), tokensAnswer());
     const showPrompt = vi.fn();
@@ -116,7 +116,7 @@ describe('connectMail', () => {
     expect(lifetimeMs).toBeLessThan((ACCESS_TOKEN_LIFETIME_SECONDS + 5) * SECOND_MS);
   });
 
-  it('keeps asking after Microsoft says to slow down', async () => {
+  it('keeps asking when Microsoft says to slow down', async () => {
     answerDeviceCode();
     const tokenForms = answerToken(errorAnswer('slow_down'), tokensAnswer());
 
@@ -126,7 +126,7 @@ describe('connectMail', () => {
     expect(mailRepository.replaceConnection).toHaveBeenCalledTimes(1);
   }, 10_000);
 
-  it('keeps asking through a passing Microsoft outage', async () => {
+  it('keeps asking when Microsoft has a passing outage', async () => {
     answerDeviceCode();
     const tokenForms = answerToken(outageAnswer(), errorAnswer('temporarily_unavailable'), tokensAnswer());
 
@@ -194,7 +194,7 @@ describe('connectMail', () => {
     await expect(connectMail(vi.fn())).rejects.toMatchObject({ code: 'MICROSOFT_UNREACHABLE' });
   });
 
-  it('never logs a token or the device code', async () => {
+  it('never logs a token or the device code when the sign-in succeeds', async () => {
     answerDeviceCode();
     answerToken(tokensAnswer());
 
@@ -207,7 +207,7 @@ describe('connectMail', () => {
 });
 
 describe('refreshMailToken', () => {
-  it('trades the stored refresh token for new tokens and saves them over the old ones', async () => {
+  it('saves new tokens over the old ones when Microsoft accepts the stored refresh token', async () => {
     vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
     const tokenForms = answerToken(tokensAnswer());
 
@@ -292,7 +292,7 @@ describe('refreshMailToken', () => {
     expect(mailRepository.updateConnection).not.toHaveBeenCalled();
   });
 
-  it('never logs a token', async () => {
+  it('never logs a token when Microsoft refuses the refresh', async () => {
     vi.mocked(mailRepository.findConnection).mockResolvedValueOnce(storedConnection(minutesFromNow(30)));
     answerToken(errorAnswer('invalid_grant'));
 

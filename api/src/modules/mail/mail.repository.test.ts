@@ -16,7 +16,7 @@ beforeEach(async () => {
 });
 
 describe('replaceConnection', () => {
-  it('keeps only the newest connection', async () => {
+  it('keeps only the newest connection when a connection is replaced', async () => {
     await mailRepository.replaceConnection(connection('old'));
 
     await mailRepository.replaceConnection(connection('new'));
@@ -27,7 +27,7 @@ describe('replaceConnection', () => {
 });
 
 describe('updateConnection', () => {
-  it('saves the refreshed tokens over the connection the refresh started from', async () => {
+  it('saves the refreshed tokens when the connection the refresh started from is still there', async () => {
     await mailRepository.replaceConnection(connection('old'));
 
     await mailRepository.updateConnection('old-refresh-token', connection('refreshed'));
@@ -35,7 +35,7 @@ describe('updateConnection', () => {
     expect(await mailRepository.findConnection()).toEqual(connection('refreshed'));
   });
 
-  it('leaves a connection made since the refresh started alone', async () => {
+  it('leaves the connection alone when it was made after the refresh started', async () => {
     await mailRepository.replaceConnection(connection('reconnected'));
 
     await mailRepository.updateConnection('old-refresh-token', connection('refreshed'));
@@ -45,7 +45,7 @@ describe('updateConnection', () => {
 });
 
 describe('deleteConnection', () => {
-  it('removes the refused connection', async () => {
+  it('removes the connection when it is the refused one', async () => {
     await mailRepository.replaceConnection(connection('refused'));
 
     await mailRepository.deleteConnection('refused-refresh-token');
@@ -53,7 +53,7 @@ describe('deleteConnection', () => {
     expect(await mailRepository.hasConnection()).toBe(false);
   });
 
-  it('leaves a connection made since the refusal alone', async () => {
+  it('leaves the connection alone when it was made after the refusal', async () => {
     await mailRepository.replaceConnection(connection('reconnected'));
 
     await mailRepository.deleteConnection('refused-refresh-token');
