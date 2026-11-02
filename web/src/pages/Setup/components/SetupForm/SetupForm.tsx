@@ -5,7 +5,7 @@ import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import ErrorAlert from '@components/ErrorAlert';
 import PasswordInputField from '@components/PasswordInputField';
 import { Button } from '@components/ui/button';
-import { FieldGroup } from '@components/ui/field';
+import { Field, FieldGroup, FieldLabel } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { NEW_PASSWORD_HINT } from '@utils/authUtils';
 import { createFormData } from '@utils/formDataUtils';
@@ -49,15 +49,15 @@ function SetupForm({ code }: Props) {
           error={formState.errors.password?.message}
           registration={register('password')}
         />
-        <div className="flex items-center gap-2">
+        <Field orientation="horizontal">
           <input
             id={PASSKEY_CHECKBOX_ID}
             type="checkbox"
-            className="size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="size-6 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             {...register('hasPasskey')}
           />
-          <label htmlFor={PASSKEY_CHECKBOX_ID}>Also add a passkey on this device</label>
-        </div>
+          <FieldLabel htmlFor={PASSKEY_CHECKBOX_ID}>Also add a passkey on this device</FieldLabel>
+        </Field>
       </FieldGroup>
       {failureMessage && <ErrorAlert message={failureMessage} />}
       <Button type="submit" disabled={isSaving}>
