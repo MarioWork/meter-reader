@@ -9,14 +9,17 @@ env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
 jobs:
-  check:
+  web:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .node-version
+          node-version-file: web/.node-version
 
       # The Yarn release is committed in .yarn/releases; Corepack only reads packageManager and hands over to it.
       - run: corepack enable
@@ -25,6 +28,49 @@ jobs:
 
       - run: yarn lint
 
-      - run: yarn build
+      - run: yarn typecheck
 
       - run: yarn test
+
+      - run: yarn build
+
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    # The route tests run against a real Postgres; the credentials match api/.env.test.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: meter
+          POSTGRES_PASSWORD: meter
+          POSTGRES_DB: meter_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U meter -d meter_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: api/.node-version
+
+      # The committed release runs through yarnPath, so no global Yarn or Corepack is needed (Node 26 has none).
+      - run: node .yarn/releases/yarn-4.18.1.cjs install --immutable
+        env:
+          # `prisma generate` (postinstall) reads prisma.config.ts, which needs some URL; nothing is contacted.
+          DATABASE_URL: postgresql://meter:meter@localhost:5432/meter_test
+
+      - run: node .yarn/releases/yarn-4.18.1.cjs lint
+
+      - run: node .yarn/releases/yarn-4.18.1.cjs typecheck
+
+      - run: node .yarn/releases/yarn-4.18.1.cjs test
+
+      - run: node .yarn/releases/yarn-4.18.1.cjs build
