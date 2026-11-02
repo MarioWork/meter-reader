@@ -8,7 +8,7 @@ type Props = {
   onPick: (photo: File) => void;
 };
 
-// Any picture the device has; the app turns it into a JPEG itself.
+// Any photo the device has, in any image format; the app turns it into a JPEG itself.
 const ACCEPTED_FILES = 'image/*';
 const BACK_CAMERA = 'environment';
 

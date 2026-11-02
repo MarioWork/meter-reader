@@ -8,6 +8,8 @@ import { PHOTO_MAX_SIDE_PX, type PhotoResponse } from './photos.schema.ts';
 const log = logger.child({ module: 'photos' });
 
 const JPEG_EXTENSION = '.jpg';
+// A photo uploaded but never saved with a reading (the save failed, or the page was left) is gone after a day.
+const UNLINKED_PHOTO_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const NOT_A_JPEG_MESSAGE = 'The photo must be a JPEG';
 const TOO_LARGE_MESSAGE = `The photo must be at most ${PHOTO_MAX_SIDE_PX} px on its longest side`;
 const ENTITY = 'Photo';
@@ -61,4 +63,24 @@ export async function getPhotoFile(id: number): Promise<OpenUpload> {
   }
 
   return upload;
+}
+
+async function removeUnlinkedFile(fileName: string): Promise<void> {
+  try {
+    await removeUpload(fileName);
+  } catch (error: unknown) {
+    log.warn({ err: error }, 'file of an unlinked photo not removed');
+  }
+}
+
+// Run at start: the photos no reading took within a day, rows and files.
+export async function deleteUnlinkedPhotos(now = new Date()): Promise<void> {
+  const cutoff = new Date(now.getTime() - UNLINKED_PHOTO_LIFETIME_MS);
+  const fileNames = await photosRepository.deleteUnlinkedBefore(cutoff);
+
+  for (const fileName of fileNames) {
+    await removeUnlinkedFile(fileName);
+  }
+
+  if (fileNames.length > 0) log.info({ count: fileNames.length }, 'unlinked photos removed');
 }

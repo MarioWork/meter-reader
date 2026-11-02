@@ -1,4 +1,5 @@
-import { fitWithin, PHOTO_MAX_SIDE_PX } from './photoUtils';
+import { PHOTO_MAX_SIDE_PX } from '@utils/photoUtils';
+import { fitWithin } from './photoShrinkUtils';
 
 describe('fitWithin', () => {
   it('shrinks a landscape photo to 2000 px wide, keeping its shape', () => {

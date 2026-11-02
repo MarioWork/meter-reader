@@ -24,11 +24,18 @@ export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELEC
 export type ReadingPage = { rows: ReadingRow[]; total: number };
 
 export const readingsRepository = {
-  // A photo is linked only while it belongs to no reading: an unknown or taken photo fails the whole save (P2025).
-  create: ({ digits, date, photoId }: NewReading): Promise<ReadingRow> => {
+  // The saved row, or null when the photo cannot be linked. A photo is linked only while it belongs to no reading:
+  // an unknown or taken photo fails the whole save (P2025), in one statement, so two saves cannot share a photo.
+  create: async ({ digits, date, photoId }: NewReading): Promise<ReadingRow | null> => {
     const photo = photoId === undefined ? undefined : { connect: { id: photoId, reading: { is: null } } };
 
-    return prisma.reading.create({ data: { digits, date, photo }, select: READING_SELECT });
+    try {
+      return await prisma.reading.create({ data: { digits, date, photo }, select: READING_SELECT });
+    } catch (error) {
+      if (getPrismaErrorCode(error) === PRISMA_RECORD_NOT_FOUND) return null;
+
+      throw error;
+    }
   },
 
   // The page and the total in one transaction, so the total matches the page.

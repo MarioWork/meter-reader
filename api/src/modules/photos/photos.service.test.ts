@@ -1,10 +1,10 @@
 import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
 import { openUpload, removeUpload, saveUpload } from '../../lib/uploads.ts';
 import { photosRepository } from './photos.repository.ts';
-import { addPhoto, getPhotoFile } from './photos.service.ts';
+import { addPhoto, deleteUnlinkedPhotos, getPhotoFile } from './photos.service.ts';
 
 vi.mock('./photos.repository.ts', () => ({
-  photosRepository: { create: vi.fn(), findById: vi.fn() },
+  photosRepository: { create: vi.fn(), findById: vi.fn(), deleteUnlinkedBefore: vi.fn() },
 }));
 
 vi.mock('../../lib/uploads.ts', () => ({
@@ -52,5 +52,23 @@ describe('getPhotoFile', () => {
     vi.mocked(openUpload).mockResolvedValueOnce(undefined);
 
     await expect(getPhotoFile(4)).rejects.toMatchObject({ code: 'NOT_FOUND', statusCode: 404 });
+  });
+});
+
+describe('deleteUnlinkedPhotos', () => {
+  it('removes the photos and their files when no reading took them within a day', async () => {
+    vi.mocked(photosRepository.deleteUnlinkedBefore).mockResolvedValueOnce([FILE_NAME]);
+
+    await deleteUnlinkedPhotos(new Date('2026-11-02T09:00:00.000Z'));
+
+    expect(photosRepository.deleteUnlinkedBefore).toHaveBeenCalledWith(new Date('2026-11-01T09:00:00.000Z'));
+    expect(removeUpload).toHaveBeenCalledWith(FILE_NAME);
+  });
+
+  it('still finishes when a file cannot be removed', async () => {
+    vi.mocked(photosRepository.deleteUnlinkedBefore).mockResolvedValueOnce([FILE_NAME]);
+    vi.mocked(removeUpload).mockRejectedValueOnce(new Error('permission denied'));
+
+    await expect(deleteUnlinkedPhotos(new Date('2026-11-02T09:00:00.000Z'))).resolves.toBeUndefined();
   });
 });

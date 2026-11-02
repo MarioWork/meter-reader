@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef } from 'react';
+import { useId } from 'react';
 import Button from '@components/Button';
+import { useModalDialog } from '@hooks/useModalDialog';
 
 type Props = {
   isOpen: boolean;
@@ -16,20 +17,9 @@ type Props = {
 // focus inside it (the page behind is inert), Escape cancels, and focus goes back to the control that opened it.
 // Cancel comes first, so it takes the focus when the dialog opens: Enter alone never confirms.
 function ConfirmDialog({ isOpen, title, children, confirmLabel, isConfirming = false, onConfirm, onCancel }: Props) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useModalDialog(isOpen);
   const titleId = useId();
   const messageId = useId();
-
-  // showModal() and close() are the only way into and out of the top layer, so the DOM follows `isOpen` here.
-  useEffect(() => {
-    const dialog = dialogRef.current;
-
-    if (!dialog) return;
-
-    if (isOpen && !dialog.open) dialog.showModal();
-
-    if (!isOpen && dialog.open) dialog.close();
-  }, [isOpen]);
 
   // Escape: the parent closes the dialog through `isOpen`, so the browser must not close it on its own. Once the
   // action is under way it cannot be called back, so Escape does nothing until it is done.

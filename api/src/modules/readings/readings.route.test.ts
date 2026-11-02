@@ -81,21 +81,22 @@ describe('POST /readings', () => {
     expect(photo.readingId).toBe(response.json<{ id: number }>().id);
   });
 
-  it('returns 404 NOT_FOUND and saves nothing when no photo has the id', async () => {
+  it('returns 409 PHOTO_NOT_AVAILABLE and saves nothing when no photo has the id', async () => {
     const response = await addReading({ digits: '00123', date: '2026-10-31', photoId: 999_999 });
 
-    expect(response.statusCode).toBe(404);
-    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'PHOTO_NOT_AVAILABLE' });
     expect(await prisma.reading.count()).toBe(0);
   });
 
-  it('returns 404 NOT_FOUND and keeps the first link when the photo already belongs to a reading', async () => {
+  it('returns 409 PHOTO_NOT_AVAILABLE and keeps the first link when the photo already belongs to a reading', async () => {
     const photoId = await addPhoto();
     const first = await addReading({ digits: '00123', date: '2026-10-30', photoId });
 
     const response = await addReading({ digits: '00124', date: '2026-10-31', photoId });
 
-    expect(response.statusCode).toBe(404);
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'PHOTO_NOT_AVAILABLE' });
     const photo = await prisma.photo.findUniqueOrThrow({ where: { id: photoId } });
     expect(photo.readingId).toBe(first.json<{ id: number }>().id);
     expect(await prisma.reading.count()).toBe(1);

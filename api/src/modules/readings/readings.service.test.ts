@@ -65,6 +65,16 @@ describe('getReadings', () => {
   });
 });
 
+describe('addReading with a photo', () => {
+  it('throws PHOTO_NOT_AVAILABLE when the photo is unknown or already taken', async () => {
+    vi.mocked(readingsRepository.create).mockResolvedValueOnce(null);
+
+    const adding = addReading({ digits: '00123', date: '2026-10-31', photoId: 4 });
+
+    await expect(adding).rejects.toMatchObject({ code: 'PHOTO_NOT_AVAILABLE', statusCode: 409 });
+  });
+});
+
 describe('deleteReading', () => {
   it('deletes the reading by its id when the reading exists', async () => {
     vi.mocked(readingsRepository.deleteById).mockResolvedValueOnce(SAVED_ROW);

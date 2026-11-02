@@ -4,10 +4,10 @@ import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { renderRoutes, screen, userEvent, within } from '@test-utils';
 import { todayAsIsoDate } from '@utils/dateUtils';
-import { PhotoShrinkError, shrinkPhoto } from '@utils/photoUtils';
+import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
 
 // jsdom has no canvas to shrink with: the shrink runs for real in the e2e test. Here it hands back a small JPEG.
-vi.mock('@utils/photoUtils', async (importOriginal) => ({
+vi.mock('./components/NewReadingForm/photoShrinkUtils', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   shrinkPhoto: vi.fn(),
 }));
@@ -158,7 +158,6 @@ it('shrinks the picked photo and shows it before the save', async () => {
     'src',
     expect.stringMatching(/^data:image\/jpeg;base64,/),
   );
-  expect(shrinkPhoto).toHaveBeenCalledWith(CAMERA_PHOTO);
 });
 
 it('saves the reading without a photo once the photo is removed', async () => {

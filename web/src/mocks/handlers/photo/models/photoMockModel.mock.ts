@@ -9,7 +9,7 @@ export const createPhotoMockModel = (overrides?: Partial<PhotoApiModel>): PhotoA
   ...overrides,
 });
 
-// A stand-in picture for a mock history photo: a meter face with the photo's number, so the demo shows something.
+// A drawn stand-in for a mock history photo: a meter face with the photo's number, so the demo shows something.
 export const createPhotoMockImage = (photoId: number): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">` +
   `<rect width="400" height="300" fill="#e5e7eb"/>` +
