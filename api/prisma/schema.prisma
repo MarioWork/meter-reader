@@ -185,7 +185,7 @@ enum BillFileType {
   PNG
 }
 
-// The provider's bill for one reading (docs/GLOSSARY.md: Bill): a PDF, JPEG or PNG of at most 10 MB, kept as a file in
+// The provider's bill for one reading (docs/GLOSSARY.md: Bill): a PDF of at most 10 MB, kept as a file in
 // UPLOADS_DIR beside the photos. It is uploaded first and linked when its reading is updated with its id; until then
 // readingId is null. Never part of the reading's email.
 model Bill {

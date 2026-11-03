@@ -9,6 +9,7 @@ const API = TEST_BASE_API_URL;
 const READING_ID = '14';
 const PDF_BYTES = [0x25, 0x50, 0x44, 0x46, 0x2d];
 const PDF_BILL = new File([new Uint8Array(PDF_BYTES)], 'october-bill.pdf', { type: 'application/pdf' });
+const NEXT_PDF_BILL = new File([new Uint8Array(PDF_BYTES)], 'november-bill.pdf', { type: 'application/pdf' });
 const PNG_BILL = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'october-bill.png', { type: 'image/png' });
 const FOUND_STATUS = 302;
 
@@ -65,7 +66,7 @@ it('replaces the saved bill with the one uploaded now', async () => {
   await submit({ changes: { costCents: null }, bill: PDF_BILL });
   const received = recordUpdateRequests();
 
-  await submit({ changes: { costCents: null }, bill: PNG_BILL });
+  await submit({ changes: { costCents: null }, bill: NEXT_PDF_BILL });
 
   expect(received).toEqual([{ costCents: null, billId: 2 }]);
 });
@@ -86,7 +87,7 @@ it('sends the bill as null to remove it, with no upload', async () => {
 });
 
 it.each([
-  ['BILL_NOT_SUPPORTED', 400, 'The bill must be a PDF, JPEG or PNG'],
+  ['BILL_NOT_SUPPORTED', 400, 'Bills must be a PDF.'],
   ['BILL_TOO_LARGE', 413, 'The bill must be at most 10 MB'],
 ])("returns the upload's %s failure and changes nothing on the reading", async (code, status, message) => {
   server.use(http.post(`${API}/bills`, () => HttpResponse.json({ code, message }, { status })));
@@ -95,5 +96,17 @@ it.each([
   const result = await submit({ changes: { costCents: 4210 }, bill: PDF_BILL });
 
   expect(result).toEqual({ success: false, error: { statusCode: status, code, message } });
+  expect(received).toEqual([]);
+});
+
+it("returns the mock API's BILL_NOT_SUPPORTED failure and changes nothing on the reading when the bill is no PDF", async () => {
+  const received = recordUpdateRequests();
+
+  const result = await submit({ changes: { costCents: 4210 }, bill: PNG_BILL });
+
+  expect(result).toEqual({
+    success: false,
+    error: { statusCode: 400, code: 'BILL_NOT_SUPPORTED', message: 'Bills must be a PDF.' },
+  });
   expect(received).toEqual([]);
 });

@@ -948,7 +948,7 @@ describe("a reading's bill", () => {
   const PDF_BYTES = 184_320;
   const BILL_NAME = 'Fatura de Outubro.pdf';
   const BILL_LINK_NAME = `${BILL_NAME}, opens the bill in a new tab`;
-  const PNG_BILL = new File([new Uint8Array(2_400_000)], 'october-bill.png', { type: 'image/png' });
+  const NEW_PDF_BILL = new File([new Uint8Array(PDF_BYTES)], 'november-bill.pdf', { type: 'application/pdf' });
 
   // The newest reading with a bill already saved, as the API answers it once updated with one. (A bill picked in the
   // dialog cannot go through the router in jsdom: its File is not the kind the router's Request reads. The upload
@@ -1026,13 +1026,14 @@ describe("a reading's bill", () => {
     expect(await screen.findByRole('menuitem', { name: EDIT_COST_AND_BILL })).toBeVisible();
   });
 
-  it('offers a file picker for a PDF, JPEG or PNG when the reading has no bill', async () => {
+  it('offers a file picker for PDF files only when the reading has no bill', async () => {
     await renderHome();
 
     const dialog = await openBillDialog(ADD_COST_AND_BILL);
 
     expect(billField(dialog)).toHaveAttribute('type', 'file');
-    expect(billField(dialog)).toHaveAccessibleDescription('A PDF, JPEG or PNG of up to 10 MB.');
+    expect(billField(dialog)).toHaveAttribute('accept', 'application/pdf,.pdf');
+    expect(billField(dialog)).toHaveAccessibleDescription('A PDF of up to 10 MB.');
     expect(within(dialog).queryByRole('button', { name: 'Remove bill' })).not.toBeInTheDocument();
   });
 
@@ -1041,7 +1042,7 @@ describe("a reading's bill", () => {
     await renderHome();
 
     const dialog = await openBillDialog();
-    await userEvent.upload(billField(dialog), PNG_BILL);
+    await userEvent.upload(billField(dialog), NEW_PDF_BILL);
 
     expect(within(dialog).getByText('Saved bill:')).toBeVisible();
     expect(within(dialog).getByRole('link', { name: BILL_LINK_NAME })).toHaveAttribute(

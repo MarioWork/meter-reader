@@ -14,10 +14,12 @@ export const BillFileQuerySchema = z.object({
 
 // The request body is the file itself, not JSON: the content-type parser in bills.route.ts hands it over as bytes,
 // whatever type the client says it is.
-export const AddBillBodySchema = z.instanceof(Buffer).meta({ description: 'The bill: a PDF, JPEG or PNG' });
+export const AddBillBodySchema = z.instanceof(Buffer).meta({ description: 'The bill: a PDF' });
 
 // GET /bills/:id answers the file's bytes as a stream, which has no JSON shape to check: the schema only documents it.
-export const BillFileSchema = z.any().meta({ description: 'The bill: a PDF, JPEG or PNG' });
+export const BillFileSchema = z
+  .any()
+  .meta({ description: 'The bill: a PDF (a JPEG or PNG when it was kept before bills were PDF only)' });
 
 // The name the file had on the user's device, percent-encoded (encodeURIComponent), as a header holds ASCII only.
 // Left out, or not cleanly encoded, the bill is named by the server instead.

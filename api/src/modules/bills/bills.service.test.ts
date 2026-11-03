@@ -90,8 +90,16 @@ describe('addBill', () => {
     expect(removeUpload).toHaveBeenCalledWith(FILE_NAME);
   });
 
-  it('throws BILL_NOT_SUPPORTED and keeps nothing when the bytes are no PDF, JPEG or PNG', async () => {
-    await expect(addBill(Buffer.from('GIF89a'))).rejects.toMatchObject({ code: 'BILL_NOT_SUPPORTED', statusCode: 400 });
+  it.each([
+    ['a JPEG', Buffer.from([0xff, 0xd8, 0xff, 0xe0])],
+    ['a PNG', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+    ['a GIF', Buffer.from('GIF89a')],
+  ])('throws BILL_NOT_SUPPORTED and keeps nothing when the bytes are %s, not a PDF', async (_scenario, contents) => {
+    await expect(addBill(contents)).rejects.toMatchObject({
+      code: 'BILL_NOT_SUPPORTED',
+      statusCode: 400,
+      message: 'Bills must be a PDF.',
+    });
 
     expect(saveUpload).not.toHaveBeenCalled();
   });

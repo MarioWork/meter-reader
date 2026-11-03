@@ -46,7 +46,7 @@ export const costAndBillFormSchema = object({
 
 export type CostAndBillFormValues = InferType<typeof costAndBillFormSchema>;
 
-// The API's codes for a bill it refuses: not a PDF, JPEG or PNG, or over 10 MB. Its reason belongs under the field.
+// The API's codes for a bill it refuses: not a PDF, or over 10 MB. Its reason belongs under the field.
 const REFUSED_BILL_CODES = new Set(['BILL_NOT_SUPPORTED', 'BILL_TOO_LARGE']);
 const CONTENT_TOO_LARGE_STATUS = 413;
 

@@ -13,7 +13,7 @@ import {
   BillResponseSchema,
 } from './bills.schema.ts';
 import { addBill, getBillFile } from './bills.service.ts';
-import { BILL_CONTENT_TYPES } from './bills.type.ts';
+import { BILL_CONTENT_TYPES, BILL_UPLOAD_CONTENT_TYPE } from './bills.type.ts';
 
 const TAGS = ['bills'];
 const ANY_CONTENT_TYPE = '*';
@@ -65,8 +65,8 @@ export const billsRoutes: FastifyPluginAsyncZod = async (app) => {
       preParsing: refuseTooLarge,
       schema: {
         tags: TAGS,
-        summary: "Upload a reading's bill (a PDF, JPEG or PNG), before the reading is updated with its id",
-        consumes: [...BILL_CONTENT_TYPES],
+        summary: "Upload a reading's bill (a PDF), before the reading is updated with its id",
+        consumes: [BILL_UPLOAD_CONTENT_TYPE],
         headers: AddBillHeadersSchema,
         body: AddBillBodySchema,
         response: {

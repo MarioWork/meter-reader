@@ -38,7 +38,6 @@ function addReading(payload: InjectOptions['payload']) {
 }
 
 const PDF_BILL = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(500, 0x20)]);
-const PNG_BILL = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 
 async function addBill(payload = PDF_BILL, contentType = 'application/pdf', sentName?: string): Promise<number> {
   const nameHeader = sentName === undefined ? {} : { [BILL_NAME_HEADER]: encodeURIComponent(sentName) };
@@ -1051,11 +1050,11 @@ describe('PATCH /readings/:id', () => {
     const oldBillId = await addBill();
     const oldFileName = await billFileName(oldBillId);
     await updateReading(readingId, { billId: oldBillId });
-    const newBillId = await addBill(PNG_BILL, 'image/png');
+    const newBillId = await addBill(Buffer.from('%PDF-1.7 the new bill'));
 
     const response = await updateReading(readingId, { billId: newBillId });
 
-    expect(response.json()).toMatchObject({ bill: { id: newBillId, contentType: 'image/png' } });
+    expect(response.json()).toMatchObject({ bill: { id: newBillId, contentType: 'application/pdf' } });
     expect(await prisma.bill.findUnique({ where: { id: oldBillId } })).toBeNull();
     await expect(access(uploadPath(oldFileName))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(access(uploadPath(await billFileName(newBillId)))).resolves.toBeUndefined();
