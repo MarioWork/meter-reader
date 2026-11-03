@@ -30,6 +30,30 @@ it('returns a failure with the status and the API envelope instead of throwing',
   });
 });
 
+it("returns the refused fields with the API's reasons when the API names them", async () => {
+  server.use(
+    http.post(TEST_URL, () =>
+      HttpResponse.json(
+        {
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          issues: [{ path: '/subjectTemplate', message: '{readng} is not a placeholder.' }, { path: 7 }],
+        },
+        { status: 400 },
+      ),
+    ),
+  );
+
+  const result = await axiosActions({ url: TEST_PATH, method: HttpVerbsUtil.POST });
+
+  expect(result.error).toEqual({
+    statusCode: 400,
+    code: 'VALIDATION_ERROR',
+    message: 'Request validation failed',
+    issues: [{ path: '/subjectTemplate', message: '{readng} is not a placeholder.' }],
+  });
+});
+
 it('returns only the status when the answer is not the API envelope', async () => {
   server.use(http.post(TEST_URL, () => HttpResponse.json({ message: 'Conflict' }, { status: 409 })));
 

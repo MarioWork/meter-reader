@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { READING_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
-import { setMockProviderEmail } from '@mocks/handlers/settings/settingsMockState';
+import { updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
   deferred,
@@ -112,7 +112,7 @@ it('shows who the email is from and to, with the subject ready to edit', async (
   const email = screen.getByRole('group', { name: 'Email' });
   expect(email).toHaveTextContent('Fromme@hotmail.example');
   expect(email).toHaveTextContent('Toreadings@water-provider.example');
-  expect(within(email).getByRole('textbox', { name: 'Subject' })).toHaveValue('test');
+  expect(within(email).getByRole('textbox', { name: 'Subject' })).toHaveValue(`Meter reading ${TODAY_IN_EMAIL}`);
   expect(within(email).getByRole('textbox', { name: 'Message' })).toHaveValue(`Date: ${TODAY_IN_EMAIL}\nReading: `);
 });
 
@@ -141,6 +141,32 @@ it('fills the message with the reading as it is typed, and sends the edited subj
   ]);
 });
 
+it('fills the subject and the message from the templates saved in Settings, following the reading', async () => {
+  updateMockSettings({ subjectTemplate: 'Leitura {reading} {date}', bodyTemplate: 'Leitura - {reading} - {date}' });
+  await renderNewReading();
+
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+
+  expect(screen.getByRole('textbox', { name: 'Subject' })).toHaveValue(`Leitura ${HIGHER_THAN_LAST} ${TODAY_IN_EMAIL}`);
+  expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue(
+    `Leitura - ${HIGHER_THAN_LAST} - ${TODAY_IN_EMAIL}`,
+  );
+});
+
+it('keeps a subject the user edited, even when the reading changes', async () => {
+  updateMockSettings({ subjectTemplate: 'Leitura {reading}' });
+  await renderNewReading();
+  const subject = screen.getByRole('textbox', { name: 'Subject' });
+
+  await userEvent.type(readingField(), '00');
+  expect(subject).toHaveValue('Leitura 00');
+  await userEvent.clear(subject);
+  await userEvent.type(subject, 'Meter');
+  await userEvent.type(readingField(), '600');
+
+  expect(subject).toHaveValue('Meter');
+});
+
 it('keeps a message the user edited, even when the reading changes', async () => {
   await renderNewReading();
   const message = screen.getByRole('textbox', { name: 'Message' });
@@ -155,7 +181,7 @@ it('keeps a message the user edited, even when the reading changes', async () =>
 });
 
 it("turns Send reading off and says why while the provider's address is not set, but still saves", async () => {
-  setMockProviderEmail(null);
+  updateMockSettings({ to: null });
   await renderNewReading();
 
   expect(screen.getByRole('button', { name: 'Send reading' })).toBeDisabled();

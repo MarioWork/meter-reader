@@ -1,5 +1,11 @@
 import { boolean, number, object, string, type InferType } from 'yup';
 import { costCentsSchema } from '@utils/costUtils';
+import {
+  BODY_TOO_LONG_MESSAGE,
+  EMAIL_BODY_MAX_LENGTH,
+  EMAIL_SUBJECT_MAX_LENGTH,
+  SUBJECT_TOO_LONG_MESSAGE,
+} from '@utils/emailUtils';
 import { readingDateSchema, readingDigitsSchema } from '@utils/readingUtils';
 
 export const CreateReadingSchema = object({
@@ -17,17 +23,11 @@ export const ReadingParamsSchema = object({
 });
 
 // The API's limits on an edited subject and body.
-const SUBJECT_MAX_LENGTH = 200;
-const BODY_MAX_LENGTH = 5000;
-
 const emailSubjectSchema = string()
   .trim()
   .required('Write a subject.')
-  .max(SUBJECT_MAX_LENGTH, 'Keep the subject under 200 characters.');
-const emailBodySchema = string()
-  .trim()
-  .required('Write a message.')
-  .max(BODY_MAX_LENGTH, 'Keep the message under 5000 characters.');
+  .max(EMAIL_SUBJECT_MAX_LENGTH, SUBJECT_TOO_LONG_MESSAGE);
+const emailBodySchema = string().trim().required('Write a message.').max(EMAIL_BODY_MAX_LENGTH, BODY_TOO_LONG_MESSAGE);
 
 // The subject and body as the user left them in the preview. Shared by the preview's form and the send action.
 export const EmailTextSchema = object({

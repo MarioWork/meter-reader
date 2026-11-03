@@ -18,6 +18,10 @@ const MINUTE_MS = 60_000;
 const READINGS_PAST_ONE_PAGE = 12;
 const DATE_PART_LENGTH = 2;
 const DIGIT_COUNT = 5;
+// The templates the tests save in Settings, with both placeholders in the subject too.
+const TEMPLATES = { subjectTemplate: 'Meter reading {date}', bodyTemplate: 'Date: {date}\nReading: {reading}' };
+// What they fill in to for 00123, read on 31 October 2026.
+const SUBJECT = 'Meter reading 31 October 2026';
 
 let app: App;
 let token: string;
@@ -93,9 +97,18 @@ async function connectHotmail(): Promise<void> {
   });
 }
 
-// The provider's address as the user saves it on the Settings page.
-async function saveProviderEmail(providerEmail = PROVIDER_EMAIL): Promise<void> {
-  await app.inject({ method: 'PUT', url: '/settings', payload: { to: providerEmail }, ...withSession(token) });
+// The provider's address and the templates, as the user saves them on the Settings page.
+// Any field left out is the tests' own address or template.
+type SettingsChanges = Partial<typeof TEMPLATES & { to: string }>;
+
+async function saveSettings(settings: SettingsChanges = {}): Promise<void> {
+  const payload = { to: PROVIDER_EMAIL, ...TEMPLATES, ...settings };
+
+  await app.inject({ method: 'PUT', url: '/settings', payload, ...withSession(token) });
+}
+
+async function saveProviderEmail(providerEmail: string): Promise<void> {
+  await saveSettings({ to: providerEmail });
 }
 
 function attachmentsOf(received: ReceivedSendMail | undefined): unknown {
@@ -121,7 +134,7 @@ beforeEach(async () => {
   await prisma.settings.deleteMany();
   await resetAuthTables();
   token = await setUpWithPassword(app);
-  await saveProviderEmail();
+  await saveSettings();
 });
 
 afterEach(() => {
@@ -570,24 +583,23 @@ describe('DELETE /readings/:id', () => {
 });
 
 describe('GET /readings/email-defaults', () => {
-  it('answers who the email is from and to, and its subject', async () => {
+  it('answers who the email is from and to, and the saved templates, when Settings were saved', async () => {
     const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
-      from: 'me@hotmail.example',
-      to: PROVIDER_EMAIL,
-      subject: 'test',
-      bodyTemplate: 'Date: {date}\nReading: {reading}',
-    });
+    expect(response.json()).toEqual({ from: 'me@hotmail.example', to: PROVIDER_EMAIL, ...TEMPLATES });
   });
 
-  it('answers no address when the provider address is not set', async () => {
+  it("answers no address and a fresh install's templates when Settings were never saved", async () => {
     await prisma.settings.deleteMany();
 
     const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
 
-    expect(response.json()).toMatchObject({ to: null });
+    expect(response.json()).toMatchObject({
+      to: null,
+      subjectTemplate: 'Leitura {date}',
+      bodyTemplate: 'Leitura - {reading} - {date}',
+    });
   });
 
   it('returns 401 when the browser is not signed in', async () => {
@@ -757,10 +769,31 @@ describe('GET /readings/:id/email', () => {
     expect(response.json()).toEqual({
       from: 'me@hotmail.example',
       to: PROVIDER_EMAIL,
-      subject: 'test',
+      subject: SUBJECT,
       body: 'Date: 31 October 2026\nReading: 00123',
       attachment: { photoId, name: 'meter-2026-10-31.jpg' },
     });
+  });
+
+  it("fills in a fresh install's templates when Settings were never saved", async () => {
+    const readingId = await addReadingId('00123');
+    await prisma.settings.deleteMany();
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({
+      subject: 'Leitura 31 October 2026',
+      body: 'Leitura - 00123 - 31 October 2026',
+    });
+  });
+
+  it('fills in the templates saved last when they were changed after the reading was saved', async () => {
+    const readingId = await addReadingId('00123');
+    await saveSettings({ subjectTemplate: '{reading} on {date}', bodyTemplate: 'Reading {reading}, {reading}' });
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ subject: '00123 on 31 October 2026', body: 'Reading 00123, 00123' });
   });
 
   it('answers no attachment when the reading has no photo', async () => {
@@ -821,7 +854,7 @@ describe('POST /readings/:id/send', () => {
     expect(received[0]?.authorization).toBe(`Bearer ${STORED_ACCESS_TOKEN}`);
     expect(received[0]?.body).toMatchObject({
       message: {
-        subject: 'test',
+        subject: SUBJECT,
         body: { content: 'Date: 31 October 2026\nReading: 00123' },
         toRecipients: [{ emailAddress: { address: PROVIDER_EMAIL } }],
       },
@@ -973,6 +1006,20 @@ describe('POST /readings/:id/send', () => {
     const response = await getReading(readingId);
 
     expect(response.json()).toMatchObject({ sentEmail: { to: PROVIDER_EMAIL } });
+  });
+
+  it('keeps the subject and body a reading went out with when the templates change afterwards', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    answerSendMail();
+    await sendReading(readingId);
+    await saveSettings({ subjectTemplate: 'New subject', bodyTemplate: 'New body' });
+
+    const response = await getReading(readingId);
+
+    expect(response.json()).toMatchObject({
+      sentEmail: { subject: SUBJECT, body: 'Date: 31 October 2026\nReading: 00123' },
+    });
   });
 
   it('returns 409 PROVIDER_EMAIL_NOT_SET, sends nothing and keeps the reading not sent when no address is set', async () => {

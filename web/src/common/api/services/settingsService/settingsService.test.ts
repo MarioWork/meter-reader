@@ -3,7 +3,8 @@ import { server, TEST_BASE_API_URL } from '@mocks/server';
 import settingsService from './settingsService';
 
 const API = TEST_BASE_API_URL;
-const SETTINGS = { from: 'me@hotmail.example', to: 'readings@water-provider.example' };
+const TEMPLATES = { subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' };
+const SETTINGS = { from: 'me@hotmail.example', to: 'readings@water-provider.example', ...TEMPLATES };
 
 describe('getSettings', () => {
   it('returns the settings from GET /settings', async () => {
@@ -20,7 +21,7 @@ describe('getSettings', () => {
 });
 
 describe('updateSettings', () => {
-  it('puts the address to /settings and returns the saved settings', async () => {
+  it('puts the address and the templates to /settings and returns the saved settings', async () => {
     let receivedBody: unknown;
     server.use(
       http.put(`${API}/settings`, async ({ request }) => {
@@ -30,9 +31,9 @@ describe('updateSettings', () => {
       }),
     );
 
-    const result = await settingsService.updateSettings({ to: SETTINGS.to });
+    const result = await settingsService.updateSettings({ to: SETTINGS.to, ...TEMPLATES });
 
-    expect(receivedBody).toEqual({ to: SETTINGS.to });
+    expect(receivedBody).toEqual({ to: SETTINGS.to, ...TEMPLATES });
     expect(result).toEqual({ success: true, data: SETTINGS });
   });
 
@@ -43,7 +44,7 @@ describe('updateSettings', () => {
       ),
     );
 
-    const result = await settingsService.updateSettings({ to: 'not an address' });
+    const result = await settingsService.updateSettings({ to: 'not an address', ...TEMPLATES });
 
     expect(result).toEqual({
       success: false,

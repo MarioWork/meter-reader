@@ -253,7 +253,7 @@ describe('getReadingEmail', () => {
         receivedPath = new URL(request.url).pathname;
         return HttpResponse.json({
           to: 'readings@water-provider.example',
-          subject: 'test',
+          subject: 'Meter reading 1 October 2026',
           body: 'Date: 1 October 2026\nReading: 00529',
           attachment: null,
         });

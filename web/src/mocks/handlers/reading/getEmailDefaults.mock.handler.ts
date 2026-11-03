@@ -9,6 +9,6 @@ export default (baseUrl: string) => [
   http.get(`${baseUrl}/readings/email-defaults`, async () => {
     await delay(MOCK_DELAY);
 
-    return HttpResponse.json(createEmailDefaultsMockModel({ to: getMockSettings().to }));
+    return HttpResponse.json(createEmailDefaultsMockModel(getMockSettings()));
   }),
 ];

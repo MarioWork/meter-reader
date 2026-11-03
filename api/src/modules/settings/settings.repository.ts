@@ -4,9 +4,16 @@ import { prisma } from '../../lib/prisma.ts';
 
 const SETTINGS_ID = 1;
 
-const SETTINGS_SELECT = { providerEmail: true } as const satisfies Prisma.SettingsSelect;
+const SETTINGS_SELECT = {
+  providerEmail: true,
+  subjectTemplate: true,
+  bodyTemplate: true,
+} as const satisfies Prisma.SettingsSelect;
 
-export type SettingsRow = { providerEmail: string | null };
+export type SettingsRow = { providerEmail: string | null; subjectTemplate: string; bodyTemplate: string };
+
+// What a save writes: every field the Settings page has.
+export type SettingsColumns = { providerEmail: string; subjectTemplate: string; bodyTemplate: string };
 
 export const settingsRepository = {
   // Undefined until the user saves Settings the first time.
@@ -16,11 +23,11 @@ export const settingsRepository = {
     return row ?? undefined;
   },
 
-  saveProviderEmail: (providerEmail: string): Promise<SettingsRow> =>
+  save: (columns: SettingsColumns): Promise<SettingsRow> =>
     prisma.settings.upsert({
       where: { id: SETTINGS_ID },
-      create: { id: SETTINGS_ID, providerEmail },
-      update: { providerEmail },
+      create: { id: SETTINGS_ID, ...columns },
+      update: columns,
       select: SETTINGS_SELECT,
     }),
 };

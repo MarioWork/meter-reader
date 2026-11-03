@@ -4,8 +4,6 @@ const HTTPS_PROTOCOL = 'https:';
 // The web dev server (cd web && yarn dev).
 const DEFAULT_APP_ORIGIN = 'http://localhost:5173';
 const DEFAULT_UPLOADS_DIR = './data/uploads';
-// ADR 0001: "test" until the provider says what it wants.
-const DEFAULT_MAIL_SUBJECT = 'test';
 
 const EnvSchema = z
   .object({
@@ -39,8 +37,6 @@ const EnvSchema = z
     // The user's own Hotmail address, shown as "From" on every email. Display only: Microsoft sends from whichever
     // account yarn mail:connect signed in. Optional; left empty, the app shows no "From".
     MAIL_FROM: z.preprocess((value) => (value === '' ? undefined : value), z.email().optional()),
-    // The subject of every reading's email.
-    MAIL_SUBJECT: z.string().trim().min(1).default(DEFAULT_MAIL_SUBJECT),
     // The folder the photos are kept in, relative to where the api starts. In the container it is the
     // ./data/uploads volume, so the photos outlive the container.
     UPLOADS_DIR: z.string().min(1).default(DEFAULT_UPLOADS_DIR),

@@ -15,7 +15,7 @@ const CONFLICT = 409;
 const MOCK_SENT_AT = '2026-11-02T09:00:00.000Z';
 
 // The mock mail service always accepts: a failed send is a test's own `server.use(...)`. Like the API, it keeps the
-// email as it went out: the user's subject and body when they edited them, the API's own otherwise.
+// email as it went out: the user's subject and body when they edited them, the templates filled in otherwise.
 export default (baseUrl: string) => [
   http.post(`${baseUrl}/readings/:id/send`, async ({ params, request }) => {
     await delay(MOCK_DELAY);
@@ -29,12 +29,13 @@ export default (baseUrl: string) => [
       return HttpResponse.json(createReadingAlreadySentMockModel(), { status: CONFLICT });
     }
 
-    const { to } = getMockSettings();
+    const settings = getMockSettings();
+    const { to } = settings;
 
     if (!to) return HttpResponse.json(createProviderEmailNotSetMockModel(), { status: CONFLICT });
 
     const { attachPhoto, subject, body } = (await request.json()) as SendReading;
-    const defaultEmail = createReadingEmailMockModel(reading);
+    const defaultEmail = createReadingEmailMockModel(reading, settings);
     const sentEmail = {
       from: defaultEmail.from,
       to,

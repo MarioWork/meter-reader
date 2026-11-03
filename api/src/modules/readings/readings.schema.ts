@@ -157,8 +157,9 @@ export const EmailDefaultsResponseSchema = z
     from: z.string().nullable(),
     // The provider's address saved in Settings; null until one is saved.
     to: z.string().nullable(),
-    subject: z.string(),
-    // The body with {date} (spelled out, "3 November 2026") and {reading} (the digits as read) to fill in.
+    // The templates saved in Settings, with {date} (spelled out, "3 November 2026") and {reading} (the digits as
+    // read) to fill in.
+    subjectTemplate: z.string(),
     bodyTemplate: z.string(),
   })
   .meta({ id: 'EmailDefaults' });
