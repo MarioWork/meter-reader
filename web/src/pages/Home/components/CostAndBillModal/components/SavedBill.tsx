@@ -14,7 +14,7 @@ const REMOVED_TEXT = 'The saved bill is removed when you save.';
 const REMOVE_LABEL = 'Remove bill';
 const KEEP_LABEL = 'Keep bill';
 
-// The bill the reading has now, by its file name (a link that opens it in a new tab), and one button that marks it for
+// The bill the reading has now, by its file name (which opens it in the app's viewer), and one button that marks it for
 // removal or keeps it after all. The same button either way, so focus stays on it; the line beside it says what
 // saving will do, and is read out when it changes.
 function SavedBill({ bill, isRemoved, isDisabled, onToggleRemoved }: Props) {

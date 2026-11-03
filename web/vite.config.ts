@@ -8,6 +8,7 @@ import path from 'node:path';
 import { loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { configDefaults, defineConfig } from 'vitest/config';
+import { pdfjsAssets } from './pdfjsAssetsPlugin';
 import { tesseractAssets } from './tesseractAssetsPlugin';
 
 const alias = {
@@ -43,8 +44,9 @@ const APP_DESCRIPTION = 'Read a water meter from a photo';
 // index.html's theme-color tags give the dark one, and the browser prefers those tags.
 const THEME_COLOR = '#ffffff';
 const BACKGROUND_COLOR = '#ffffff';
-// The app's code and icons, plus Tesseract's gzipped language data (photo OCR must work offline).
-const PRECACHE_GLOBS = ['**/*.{js,css,html,ico,png,svg,webmanifest,gz}'];
+// The app's code and icons, plus Tesseract's gzipped language data (photo OCR must work offline) and pdf.js's image
+// decoders and fonts (a bill must open offline).
+const PRECACHE_GLOBS = ['**/*.{js,css,html,ico,png,svg,webmanifest,gz,wasm,pfb}'];
 // Workbox skips anything over 2 MB by default; Tesseract's core builds are about 3.9 MB each.
 const PRECACHE_MAX_FILE_BYTES = 5_000_000;
 
@@ -70,6 +72,8 @@ export default defineConfig(({ mode }) => {
       msw(),
       // Tesseract's worker, core and language data, served by the app itself (photo OCR offline).
       tesseractAssets(),
+      // pdf.js's worker, image decoders and fonts, served by the app itself (bills open offline).
+      pdfjsAssets(),
       // Installable app: web manifest, generated icons and an offline cache. Off in dev by default.
       VitePWA({
         disable: useMocks,

@@ -11,5 +11,11 @@
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["vite.config.ts", "pwa-assets.config.ts", "tesseractAssetsPlugin.ts"]
+  "include": [
+    "vite.config.ts",
+    "pwa-assets.config.ts",
+    "appAssetsPlugin.ts",
+    "tesseractAssetsPlugin.ts",
+    "pdfjsAssetsPlugin.ts"
+  ]
 }
