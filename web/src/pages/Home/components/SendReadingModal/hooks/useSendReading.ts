@@ -31,6 +31,7 @@ export function useSendReading() {
   const { search } = useLocation();
 
   const isMailConnected = layoutData?.mailStatus.state === MailStateUtil.CONNECTED;
+  const hasProviderEmail = readingEmail.to !== null;
   const isSending = fetcher.state !== 'idle';
 
   // Back to the same page of the history.
@@ -55,6 +56,7 @@ export function useSendReading() {
     isAttachingPhoto,
     setIsAttachingPhoto,
     isMailConnected,
+    hasProviderEmail,
     isSending,
     failureMessage,
     handleOpenChange,

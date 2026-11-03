@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
-import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
+import { READING_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
+import { setMockProviderEmail } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
   deferred,
@@ -151,6 +152,22 @@ it('keeps a message the user edited, even when the reading changes', async () =>
   await userEvent.type(readingField(), '600');
 
   expect(message).toHaveValue('Hello');
+});
+
+it("turns Send reading off and says why while the provider's address is not set, but still saves", async () => {
+  setMockProviderEmail(null);
+  await renderNewReading();
+
+  expect(screen.getByRole('button', { name: 'Send reading' })).toBeDisabled();
+  expect(screen.getByText(/Set the provider's address in/)).toHaveTextContent(
+    "Set the provider's address in Settings.",
+  );
+  expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', SETTINGS_ROUTES_PATHS.BASE);
+
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  await save();
+
+  expect(await findNotification('Reading saved')).toBeVisible();
 });
 
 it('goes back Home without saving when the user cancels', async () => {

@@ -1,5 +1,6 @@
 import { SendIcon } from 'lucide-react';
 import ErrorAlert from '@components/ErrorAlert';
+import ProviderEmailMissingNote from '@components/ProviderEmailMissingNote';
 import EmailAddresses from '@components/EmailAddresses';
 import { Button } from '@components/ui/button';
 import { Spinner } from '@components/ui/spinner';
@@ -17,7 +18,8 @@ const SENDING_LABEL = 'Sending…';
 const FORM_ID = 'send-reading-form';
 
 // The email as it will go out, ready to edit: the subject, the message and the photo. Send stays off while Hotmail is
-// not connected (ADR 0001). Open for as long as its route is: closing it goes back to the history.
+// not connected (ADR 0001), and while no provider address is saved (ADR 0003). Open for as long as its route is:
+// closing it goes back to the history.
 function SendReadingModal() {
   'use no memo';
 
@@ -28,14 +30,17 @@ function SendReadingModal() {
     isAttachingPhoto,
     setIsAttachingPhoto,
     isMailConnected,
+    hasProviderEmail,
     isSending,
     failureMessage,
     handleOpenChange,
     sendReading,
   } = useSendReading();
 
+  const canSend = !isSending && isMailConnected && hasProviderEmail;
+
   const footer = (
-    <Button type="submit" form={FORM_ID} disabled={isSending || !isMailConnected}>
+    <Button type="submit" form={FORM_ID} disabled={!canSend}>
       {isSending ? <Spinner aria-hidden="true" /> : <SendIcon aria-hidden="true" />}
       {isSending ? SENDING_LABEL : SEND_LABEL}
     </Button>
@@ -59,6 +64,7 @@ function SendReadingModal() {
           onAttachingPhotoChange={setIsAttachingPhoto}
         />
       </form>
+      {!hasProviderEmail && <ProviderEmailMissingNote />}
       {!isMailConnected && <MailNotConnectedNote />}
       {failureMessage && <ErrorAlert message={failureMessage} />}
     </ResponsiveDialog>

@@ -3,7 +3,7 @@ import routes from '@application/routes';
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil, ThemeUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { renderRoutes, screen, userEvent } from '@test-utils';
+import { renderRoutes, screen, userEvent, within } from '@test-utils';
 import { THEME_STORAGE_KEY } from '@utils/themeUtils';
 
 const DARK_CLASS = 'dark';
@@ -58,6 +58,32 @@ it('switches to the theme picked in the header menu, and remembers it', async ()
 
   expect(document.documentElement).toHaveClass(DARK_CLASS);
   expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe(ThemeUtil.DARK);
+});
+
+it('opens Settings from the header menu', async () => {
+  await renderHomeAndOpenMenu();
+
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+});
+
+it('opens Settings from the link in the header on a wide screen', async () => {
+  vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query) =>
+      ({
+        matches: query.includes('min-width'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }) as unknown as MediaQueryList,
+  );
+  renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
+  await screen.findByRole('heading', { name: 'Water Readings' });
+
+  await userEvent.click(within(screen.getByRole('banner')).getByRole('link', { name: 'Settings' }));
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 });
 
 it('signs out from the header menu and opens the login page', async () => {

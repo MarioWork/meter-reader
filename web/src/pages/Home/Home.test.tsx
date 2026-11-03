@@ -1,8 +1,9 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
-import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
+import { BASE_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil } from '@app-types/utility';
 import { createReadingMockModel } from '@mocks/handlers/reading/models/readingMockModel.mock';
+import { setMockProviderEmail } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
   findNotification,
@@ -667,6 +668,16 @@ describe('sending a reading', () => {
 
     expect(within(dialog).getByRole('button', { name: 'Send' })).toBeDisabled();
     expect(dialog).toHaveTextContent('Hotmail is not connected');
+  });
+
+  it("disables Send and says why when the provider's address is not set", async () => {
+    setMockProviderEmail(null);
+
+    const dialog = await openNewestPreview();
+
+    expect(within(dialog).getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(dialog).toHaveTextContent("Set the provider's address in Settings.");
+    expect(within(dialog).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', SETTINGS_ROUTES_PATHS.BASE);
   });
 
   it('closes the preview and sends nothing when the user presses Close', async () => {

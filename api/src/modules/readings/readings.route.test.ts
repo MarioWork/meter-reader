@@ -82,6 +82,11 @@ async function connectHotmail(): Promise<void> {
   });
 }
 
+// The provider's address as the user saves it on the Settings page.
+async function saveProviderEmail(providerEmail = PROVIDER_EMAIL): Promise<void> {
+  await app.inject({ method: 'PUT', url: '/settings', payload: { to: providerEmail }, ...withSession(token) });
+}
+
 function attachmentsOf(received: ReceivedSendMail | undefined): unknown {
   const body = received?.body as { message?: { attachments?: unknown } } | undefined;
 
@@ -102,8 +107,10 @@ beforeEach(async () => {
   await prisma.photo.deleteMany();
   await prisma.reading.deleteMany();
   await prisma.mailConnection.deleteMany();
+  await prisma.settings.deleteMany();
   await resetAuthTables();
   token = await setUpWithPassword(app);
+  await saveProviderEmail();
 });
 
 afterEach(() => {
@@ -435,6 +442,14 @@ describe('GET /readings/email-defaults', () => {
     });
   });
 
+  it('answers no address when the provider address is not set', async () => {
+    await prisma.settings.deleteMany();
+
+    const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
+
+    expect(response.json()).toMatchObject({ to: null });
+  });
+
   it('returns 401 when the browser is not signed in', async () => {
     const response = await app.inject({ method: 'GET', url: '/readings/email-defaults' });
 
@@ -508,6 +523,16 @@ describe('GET /readings/:id/email', () => {
     const response = await getReadingEmail(readingId);
 
     expect(response.json()).toMatchObject({ body: 'Date: 31 October 2026\nReading: 000045', attachment: null });
+  });
+
+  it('answers no address when the provider address is not set', async () => {
+    await prisma.settings.deleteMany();
+    const readingId = await addReadingId('00123');
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ to: null });
   });
 
   it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
@@ -662,6 +687,49 @@ describe('POST /readings/:id/send', () => {
 
     expect(response.statusCode).toBe(409);
     expect(response.json()).toMatchObject({ code: 'MAIL_NOT_CONNECTED' });
+    expect(received).toEqual([]);
+    const reading = await prisma.reading.findUniqueOrThrow({ where: { id: readingId } });
+    expect(reading.status).toBe('NOT_SENT');
+  });
+
+  it('sends to the address saved last when the provider address was changed in Settings', async () => {
+    await connectHotmail();
+    await saveProviderEmail('meter@other-provider.example');
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail();
+
+    await sendReading(readingId);
+
+    expect(received[0]?.body).toMatchObject({
+      message: { toRecipients: [{ emailAddress: { address: 'meter@other-provider.example' } }] },
+    });
+  });
+
+  it('keeps the address a reading went out with when the provider address changes afterwards', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    answerSendMail();
+    await sendReading(readingId);
+
+    await saveProviderEmail('meter@other-provider.example');
+    const response = await getReading(readingId);
+
+    expect(response.json()).toMatchObject({ sentEmail: { to: PROVIDER_EMAIL } });
+  });
+
+  it('returns 409 PROVIDER_EMAIL_NOT_SET, sends nothing and keeps the reading not sent when no address is set', async () => {
+    await connectHotmail();
+    await prisma.settings.deleteMany();
+    const readingId = await addReadingId('00123');
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId);
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      code: 'PROVIDER_EMAIL_NOT_SET',
+      message: "Set the provider's address in Settings.",
+    });
     expect(received).toEqual([]);
     const reading = await prisma.reading.findUniqueOrThrow({ where: { id: readingId } });
     expect(reading.status).toBe('NOT_SENT');

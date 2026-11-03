@@ -173,3 +173,15 @@ model Photo {
 
   @@map("photos")
 }
+
+// The app's own settings, set on the Settings page (ADR 0003). One row at most, id 1, made the first time the user
+// saves: until then, and while a field is empty, that setting is not set.
+model Settings {
+  id            Int      @id @default(1)
+  // The provider's one address: every reading is emailed here. No default: the user sets it.
+  providerEmail String?  @map("provider_email")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("settings")
+}

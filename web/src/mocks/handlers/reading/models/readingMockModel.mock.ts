@@ -1,4 +1,5 @@
 import type { ReadingApiModel, ReadingId } from '@app-types/models';
+import { MOCK_PROVIDER_EMAIL } from '@mocks/handlers/settings/models/settingsMockModel.mock';
 import { ReadingStatusUtil } from '@app-types/utility';
 import { createReadingEmailMockModel } from './readingEmailMockModel.mock';
 
@@ -60,8 +61,8 @@ function sendOutcome(reading: ReadingApiModel): SendOutcome {
     return { status: ReadingStatusUtil.FAILED, sentAt: null, sentEmail: null };
   }
 
-  const { from, to, subject, body } = createReadingEmailMockModel(reading);
-  const sentEmail = { from, to, subject, body, hasPhoto: reading.photoId !== null };
+  const { from, subject, body } = createReadingEmailMockModel(reading);
+  const sentEmail = { from, to: MOCK_PROVIDER_EMAIL, subject, body, hasPhoto: reading.photoId !== null };
 
   return { status: ReadingStatusUtil.SENT, sentAt: `${reading.date}${MOCK_SENT_TIME}`, sentEmail };
 }

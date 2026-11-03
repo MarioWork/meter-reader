@@ -13,6 +13,7 @@ import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
+import { getProviderEmail, requireProviderEmail } from '../settings/settings.service.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
 import type {
@@ -120,9 +121,10 @@ function toAttachmentName(row: ReadingRow): string {
   return `meter-${toIsoDate(row.date)}.jpg`;
 }
 
-// The address, the subject and the body: one builder for the preview and the send, so they cannot drift apart.
-function toMailContent(row: ReadingRow): OutgoingMail {
-  return { to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT, body: toEmailBody(row) };
+// The subject and the body: one builder for the preview and the send, so they cannot drift apart. The address is the
+// one saved in Settings.
+function toMailText(row: ReadingRow): Pick<OutgoingMail, 'subject' | 'body'> {
+  return { subject: env.MAIL_SUBJECT, body: toEmailBody(row) };
 }
 
 async function findReading(id: number): Promise<ReadingRow> {
@@ -185,19 +187,21 @@ export async function deleteReading(id: number): Promise<void> {
   log.info({ readingId: id }, 'reading deleted');
 }
 
-// Exactly what sending the reading emails, so the user sees it before it goes.
+// Exactly what sending the reading emails, so the user sees it before it goes. `to` is null while no address is saved
+// in Settings: the web app then turns Send off.
 export async function getReadingEmail(id: number): Promise<ReadingEmailResponse> {
   const row = await findReading(id);
   const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
+  const to = await getProviderEmail();
 
-  return { from: env.MAIL_FROM ?? null, ...toMailContent(row), attachment };
+  return { from: env.MAIL_FROM ?? null, to, ...toMailText(row), attachment };
 }
 
 // The parts of every email that do not depend on a reading.
-export function getEmailDefaults(): EmailDefaultsResponse {
+export async function getEmailDefaults(): Promise<EmailDefaultsResponse> {
   return {
     from: env.MAIL_FROM ?? null,
-    to: env.PROVIDER_EMAIL,
+    to: await getProviderEmail(),
     subject: env.MAIL_SUBJECT,
     bodyTemplate: EMAIL_BODY_TEMPLATE,
   };
@@ -211,10 +215,14 @@ async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
   return { name: toAttachmentName(row), contentType: JPEG_CONTENT_TYPE, contents };
 }
 
-// The server's subject and body, unless the user edited them in the preview. The address is never the user's to change.
-async function toOutgoingMail(row: ReadingRow, { attachPhoto, subject, body }: SendReading): Promise<OutgoingMail> {
-  const defaultMail = toMailContent(row);
-  const mail = { ...defaultMail, subject: subject ?? defaultMail.subject, body: body ?? defaultMail.body };
+// The server's subject and body, unless the user edited them in the preview. The address is the one in Settings, never
+// the preview's to change.
+async function toOutgoingMail(
+  { row, to }: SendableReading,
+  { attachPhoto, subject, body }: SendReading,
+): Promise<OutgoingMail> {
+  const defaultText = toMailText(row);
+  const mail = { to, subject: subject ?? defaultText.subject, body: body ?? defaultText.body };
 
   if (!attachPhoto) return mail;
 
@@ -235,8 +243,12 @@ function toHttpSendError(error: unknown): unknown {
   return toHttpError(error.message, error.code);
 }
 
-// Refusals that try nothing, and so change nothing: unknown, sent already, no photo to attach, Hotmail not connected.
-async function findSendableReading(id: number, { attachPhoto }: SendReading): Promise<ReadingRow> {
+// A reading that passed every check before a send, with the address it goes to.
+type SendableReading = { row: ReadingRow; to: string };
+
+// Refusals that try nothing, and so change nothing: unknown, sent already, no photo to attach, no provider address,
+// Hotmail not connected.
+async function findSendableReading(id: number, { attachPhoto }: SendReading): Promise<SendableReading> {
   const row = await findReading(id);
 
   if (row.status === 'SENT') throw new ConflictError(ALREADY_SENT_MESSAGE, 'READING_ALREADY_SENT');
@@ -245,9 +257,11 @@ async function findSendableReading(id: number, { attachPhoto }: SendReading): Pr
 
   if (isPhotoMissing) throw new BadRequestError(NO_PHOTO_MESSAGE, 'NO_PHOTO_TO_ATTACH');
 
+  const to = await requireProviderEmail();
+
   await assertMailConnected();
 
-  return row;
+  return { row, to };
 }
 
 // Saving the failure must not hide why the send failed: a database error here is logged, and the user still hears
@@ -273,11 +287,11 @@ async function saveSent(id: number, email: SentEmail): Promise<ReadingRow | null
 }
 
 async function sendOnce(id: number, fields: SendReading): Promise<ReadingResponse> {
-  const row = await findSendableReading(id, fields);
+  const sendable = await findSendableReading(id, fields);
   let mail: OutgoingMail;
 
   try {
-    mail = await toOutgoingMail(row, fields);
+    mail = await toOutgoingMail(sendable, fields);
     await sendMail(mail);
   } catch (error: unknown) {
     await saveFailure(id);

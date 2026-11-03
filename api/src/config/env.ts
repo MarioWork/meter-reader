@@ -36,9 +36,6 @@ const EnvSchema = z
     // Hotmail"). Not a secret: the app is a public client. Empty until that one-time setup is done; the api still
     // starts, and the web app shows that Hotmail is not connected.
     MICROSOFT_CLIENT_ID: z.string().trim().default(''),
-    // The provider's one address: every reading is emailed here. No default: an app that cannot say where readings go
-    // has no reason to start.
-    PROVIDER_EMAIL: z.email(),
     // The user's own Hotmail address, shown as "From" on every email. Display only: Microsoft sends from whichever
     // account yarn mail:connect signed in. Optional; left empty, the app shows no "From".
     MAIL_FROM: z.preprocess((value) => (value === '' ? undefined : value), z.email().optional()),

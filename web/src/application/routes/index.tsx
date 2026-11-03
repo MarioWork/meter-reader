@@ -3,6 +3,7 @@ import RouteError from '@pages/Error/RouteError';
 import { authMiddleware } from './authMiddleware';
 import { authRoutes } from './featureRoutes/authRoutes';
 import { readingRoutes } from './featureRoutes/readingRoutes';
+import { settingsRoutes } from './featureRoutes/settingsRoutes';
 import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS, ROUTE_IDS, defaultRedirectRoute } from './routesUtils';
 
 const routes: RouteObject[] = [
@@ -51,6 +52,7 @@ const routes: RouteObject[] = [
             ],
           },
           ...readingRoutes,
+          ...settingsRoutes,
         ],
       },
     ],

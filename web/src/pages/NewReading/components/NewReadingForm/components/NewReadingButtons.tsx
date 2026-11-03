@@ -5,11 +5,13 @@ import { Button, buttonVariants } from '@components/ui/button';
 
 type Props = {
   isDisabled: boolean;
+  // Off on its own while the email has nowhere to go: Save still works.
+  isSendDisabled: boolean;
   onSend: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
 // Cancel, Save reading (the form's submit, so Enter saves) and Send reading, which saves and sends in one go.
-function NewReadingButtons({ isDisabled, onSend }: Props) {
+function NewReadingButtons({ isDisabled, isSendDisabled, onSend }: Props) {
   const { search } = useLocation();
 
   return (
@@ -25,7 +27,7 @@ function NewReadingButtons({ isDisabled, onSend }: Props) {
         <SaveIcon aria-hidden="true" />
         Save reading
       </Button>
-      <Button type="button" size="lg" disabled={isDisabled} className="flex-1" onClick={onSend}>
+      <Button type="button" size="lg" disabled={isDisabled || isSendDisabled} className="flex-1" onClick={onSend}>
         <SendIcon aria-hidden="true" />
         Send reading
       </Button>

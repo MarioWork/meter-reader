@@ -3,6 +3,8 @@ import { delay } from 'msw/utils/delay';
 import { ReadingStatusUtil } from '@app-types/utility';
 import type { SendReading } from '@services/readingService/readingService.type';
 import { MOCK_DELAY } from '@mocks/handlers';
+import { createProviderEmailNotSetMockModel } from '@mocks/handlers/settings/models/settingsErrorMockModel.mock';
+import { getMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { createReadingEmailMockModel } from './models/readingEmailMockModel.mock';
 import { createReadingAlreadySentMockModel, createReadingNotFoundMockModel } from './models/readingErrorMockModel.mock';
 import { findMockReading, updateMockReading } from './readingMockState';
@@ -27,11 +29,15 @@ export default (baseUrl: string) => [
       return HttpResponse.json(createReadingAlreadySentMockModel(), { status: CONFLICT });
     }
 
+    const { to } = getMockSettings();
+
+    if (!to) return HttpResponse.json(createProviderEmailNotSetMockModel(), { status: CONFLICT });
+
     const { attachPhoto, subject, body } = (await request.json()) as SendReading;
     const defaultEmail = createReadingEmailMockModel(reading);
     const sentEmail = {
       from: defaultEmail.from,
-      to: defaultEmail.to,
+      to,
       subject: subject ?? defaultEmail.subject,
       body: body ?? defaultEmail.body,
       hasPhoto: attachPhoto,
