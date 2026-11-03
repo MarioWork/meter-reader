@@ -3,6 +3,7 @@ export type { ApiErrorIssue } from './apiErrorIssue.type';
 export type { BackupReadingApiModel } from './backupReadingApiModel.type';
 export type { ReadingsBackupApiModel } from './readingsBackupApiModel.type';
 export type { AuthStatusApiModel } from './authStatusApiModel.type';
+export type { CostListApiModel } from './costListApiModel.type';
 export type { ReadingApiModel, ReadingId } from './readingApiModel.type';
 export type { ReadingEmailApiModel } from './readingEmailApiModel.type';
 export type { SentEmailApiModel } from './sentEmailApiModel.type';

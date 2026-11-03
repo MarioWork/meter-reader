@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { historyFilterDraft, isRangeBackwards } from '../../../historyFilterUtils';
-import type { HistoryFilterDraft, HistoryFilterValues } from '../../../types';
-import { DatePreset } from '../../../types/datePreset.type';
+import { historyFilterDraft, isRangeBackwards } from '@utils/historyFilterUtils';
+import type { HistoryFilterDraft, HistoryFilterValues } from '../types';
+import { DatePreset } from '../types/datePreset.type';
 
 // The filter sheet's choices, starting from the url's filters each time the sheet opens. Nothing reaches the url
 // until they are applied.

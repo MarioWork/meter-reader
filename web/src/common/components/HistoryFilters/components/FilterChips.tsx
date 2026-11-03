@@ -1,4 +1,4 @@
-import type { HistoryFilterChip } from '../../../types';
+import type { HistoryFilterChip } from '../types';
 import FilterChip from './FilterChip';
 
 type Props = {

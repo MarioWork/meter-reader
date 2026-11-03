@@ -1,10 +1,16 @@
 import type { ReadingStatusUtil } from '@app-types/utility';
-import { HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
+import { HISTORY_FILTER_SEARCH_PARAMS, HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
 import { formatIsoDate, ISO_DATE_PATTERN, toIsoDate } from '@utils/dateUtils';
-import { READING_STATUS_LABELS, READING_STATUSES } from './readingStatusLabels';
-import type { DayRange, HistoryFilterChip, HistoryFilterDraft, HistoryFilterValues, NamedDatePreset } from './types';
+import { READING_STATUS_LABELS, READING_STATUSES } from './readingStatusUtils';
+import type {
+  DayRange,
+  HistoryFilterChip,
+  HistoryFilterDraft,
+  HistoryFilterValues,
+  NamedDatePreset,
+} from '@components/HistoryFilters/types';
 // The value set itself, not only its type, so from its own file: the types barrel is type-only.
-import { DatePreset } from './types/datePreset.type';
+import { DatePreset } from '@components/HistoryFilters/types/datePreset.type';
 
 export const DATE_PRESET_LABELS: Record<DatePreset, string> = {
   [DatePreset.THIS_MONTH]: 'This month',
@@ -133,8 +139,8 @@ export function isRangeBackwards({ dateFrom, dateTo }: DayRange): boolean {
 }
 
 function readDayRange(searchParams: URLSearchParams): DayRange {
-  const dateFrom = readIsoDate(searchParams, HOME_SEARCH_PARAMS.DATE_FROM);
-  const dateTo = readIsoDate(searchParams, HOME_SEARCH_PARAMS.DATE_TO);
+  const dateFrom = readIsoDate(searchParams, HISTORY_FILTER_SEARCH_PARAMS.DATE_FROM);
+  const dateTo = readIsoDate(searchParams, HISTORY_FILTER_SEARCH_PARAMS.DATE_TO);
 
   if (isRangeBackwards({ dateFrom, dateTo })) return {};
 
@@ -146,11 +152,17 @@ function readDayRange(searchParams: URLSearchParams): DayRange {
 export function readHistoryFilters(searchParams: URLSearchParams): HistoryFilterValues {
   // Both `status=sent,failed` and `status=sent&status=failed`.
   const statusValues = searchParams
-    .getAll(HOME_SEARCH_PARAMS.STATUSES)
+    .getAll(HISTORY_FILTER_SEARCH_PARAMS.STATUSES)
     .flatMap((statusParam) => statusParam.split(STATUS_SEPARATOR));
   const statuses = inStatusOrder(statusValues.filter(isReadingStatus));
 
   return { ...readDayRange(searchParams), statuses };
+}
+
+// The filters a url asks for on a page with no status filter (Costs): its day range only. A status in the url is
+// left out, and goes from the url with the next change.
+export function readDateFilters(searchParams: URLSearchParams): HistoryFilterValues {
+  return { ...readDayRange(searchParams), statuses: [] };
 }
 
 function setOrDelete(searchParams: URLSearchParams, name: string, value: string | undefined) {
@@ -169,9 +181,9 @@ export function withHistoryFilters(searchParams: URLSearchParams, filters: Histo
   const nextSearchParams = new URLSearchParams(searchParams);
 
   nextSearchParams.delete(HOME_SEARCH_PARAMS.SHOWN_PAGES);
-  setOrDelete(nextSearchParams, HOME_SEARCH_PARAMS.DATE_FROM, filters.dateFrom);
-  setOrDelete(nextSearchParams, HOME_SEARCH_PARAMS.DATE_TO, filters.dateTo);
-  setOrDelete(nextSearchParams, HOME_SEARCH_PARAMS.STATUSES, filters.statuses.join(STATUS_SEPARATOR));
+  setOrDelete(nextSearchParams, HISTORY_FILTER_SEARCH_PARAMS.DATE_FROM, filters.dateFrom);
+  setOrDelete(nextSearchParams, HISTORY_FILTER_SEARCH_PARAMS.DATE_TO, filters.dateTo);
+  setOrDelete(nextSearchParams, HISTORY_FILTER_SEARCH_PARAMS.STATUSES, filters.statuses.join(STATUS_SEPARATOR));
 
   return nextSearchParams;
 }

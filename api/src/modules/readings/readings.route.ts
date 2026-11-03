@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
 import { XLSX_CONTENT_TYPE } from '../../lib/spreadsheet.ts';
 import {
+  CostListResponseSchema,
   CreateReadingSchema,
   ExportReadingsQuerySchema,
+  ListCostsQuerySchema,
   ListReadingsQuerySchema,
   EmailDefaultsResponseSchema,
   ReadingEmailResponseSchema,
@@ -19,6 +21,7 @@ import {
 import {
   addReading,
   deleteReading,
+  getCosts,
   getEmailDefaults,
   getReading,
   getReadingEmail,
@@ -54,6 +57,19 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   // Static, so it wins over /:id.
+  app.get(
+    '/costs',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'The readings that have a Cost, newest first, optionally in a day range, with the sum of their costs',
+        querystring: ListCostsQuerySchema,
+        response: { 200: CostListResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
+      },
+    },
+    async (request) => getCosts(request.query),
+  );
+
   app.get(
     '/export.xlsx',
     {

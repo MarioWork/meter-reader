@@ -36,6 +36,9 @@
   --border: #ade8f4;
   --input: #5f86a3;
   --ring: #006ba4;
+  /* The Costs chart's bars, drawn on a card. A palette blue inside the dataviz lightness band for each theme, and at
+     least 3:1 against the card (WCAG 1.4.11). */
+  --chart-1: #0077b6;
   /* Dims the page behind a modal; the same in both themes. */
   --scrim: #01022a;
   --radius: 0.625rem;
@@ -67,6 +70,7 @@
   --border: #1d4a6e;
   --input: #48cae4;
   --ring: #48cae4;
+  --chart-1: #0096c7;
 }
 
 @theme inline {

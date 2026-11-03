@@ -1,7 +1,7 @@
 import { FieldLegend, FieldSet } from '@components/ui/field';
 import { ToggleGroup } from '@components/ui/toggle-group';
-import { DATE_PRESET_LABELS, DATE_PRESETS } from '../../../historyFilterUtils';
-import type { DatePreset } from '../../../types';
+import { DATE_PRESET_LABELS, DATE_PRESETS } from '@utils/historyFilterUtils';
+import type { DatePreset } from '../types';
 import ChoiceToggle from './ChoiceToggle';
 
 type Props = {

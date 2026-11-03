@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { axiosActions } from '@api/axiosActions';
-import type { EmailDefaultsApiModel, ReadingApiModel, ReadingEmailApiModel, ReadingId } from '@app-types/models';
+import type {
+  CostListApiModel,
+  EmailDefaultsApiModel,
+  ReadingApiModel,
+  ReadingEmailApiModel,
+  ReadingId,
+} from '@app-types/models';
 import {
   ApiUrlParamsUtil,
   HttpVerbsUtil,
@@ -50,6 +56,12 @@ function toSearchParams(params: Record<string, string | undefined>): URLSearchPa
   return new URLSearchParams(setParams);
 }
 
+// The Costs page's day range, either end open. Not paged: the API answers every reading with a Cost in it.
+type GetCostsFields = {
+  dateFrom?: string;
+  dateTo?: string;
+};
+
 export default {
   getReadings: async ({
     pagination,
@@ -89,6 +101,18 @@ export default {
 
   getReadingsBackupCsvUrl: (): string =>
     `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_BACKUP_CSV_SEGMENT}`,
+
+  // The readings that have a Cost, newest first, and the sum of their costs.
+  getCosts: async ({ dateFrom, dateTo }: GetCostsFields): Promise<CostListApiModel> => {
+    const response = await axios.get<CostListApiModel>(`${BASE_READINGS_URL}/costs`, {
+      params: {
+        [ApiUrlParamsUtil.dateFrom]: dateFrom,
+        [ApiUrlParamsUtil.dateTo]: dateTo,
+      },
+    });
+
+    return response.data;
+  },
 
   // What a new reading's email starts with, before the reading is saved.
   getEmailDefaults: async (): Promise<EmailDefaultsApiModel> => {

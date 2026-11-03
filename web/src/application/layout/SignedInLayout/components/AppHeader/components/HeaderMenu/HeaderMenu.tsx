@@ -11,7 +11,7 @@ import SignOutMenuGroup from './components/SignOutMenuGroup';
 import ThemeMenuGroup from './components/ThemeMenuGroup';
 import { useSignOut } from '../../hooks/useSignOut';
 
-// The header's one menu: Settings, the theme and Sign out. The trigger is 36 px square, over the 24 px minimum target.
+// The header's one menu: Costs and Settings, the theme and Sign out. The trigger is 36 px square, over the 24 px minimum target.
 function HeaderMenu() {
   const { signOut } = useSignOut();
 

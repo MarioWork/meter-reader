@@ -26,9 +26,11 @@ import { CSV_EXTENSION, JSON_EXTENSION, readingsBackupFileName, toReadingsBackup
 import { readingsSpreadsheetFileName, toReadingsSpreadsheet, type ReadingSheetLine } from './readings.spreadsheet.ts';
 import type {
   BackupReading,
+  CostListResponse,
   CreateReading,
   ReadingsBackupResponse,
   ExportReadingsQuery,
+  ListCostsQuery,
   ListReadingsQuery,
   ReadingEmailResponse,
   ReadingListResponse,
@@ -184,6 +186,17 @@ export async function getReadings(query: ListReadingsQuery): Promise<ReadingList
   const { rows, total } = await readingsRepository.findPage(toSkipTake(query), toFilter(query));
 
   return { data: rows.map(toResponse), totalResultNumber: total, currentPage: query.page };
+}
+
+function sumCostCents(rows: ReadingRow[]): number {
+  return rows.reduce((totalCents, row) => totalCents + (row.costCents ?? 0), 0);
+}
+
+// The Costs page: every reading with a Cost in the range, and what they cost together.
+export async function getCosts(query: ListCostsQuery): Promise<CostListResponse> {
+  const rows = await readingsRepository.findWithCost(toFilter(query));
+
+  return { data: rows.map(toResponse), totalCostCents: sumCostCents(rows) };
 }
 
 function toSheetLine(row: ReadingRow): ReadingSheetLine {

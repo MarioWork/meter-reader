@@ -14,14 +14,18 @@ export const AUTH_SEARCH_PARAMS = {
   SETUP_CODE: 'code',
 };
 
-export const HOME_SEARCH_PARAMS = {
-  // How many pages of the history are shown: ?pages=3 shows the first three. Not the API's `page`, which is one page.
-  SHOWN_PAGES: 'pages',
-  // The history's filters, named as the API names them: a day range (both ends inclusive, YYYY-MM-DD) and the
-  // statuses to show, comma-separated.
+// The history's filters, named as the API names them: a day range (both ends inclusive, YYYY-MM-DD) and the
+// statuses to show, comma-separated. Home and Costs both keep them in the url; Costs has the day range only.
+export const HISTORY_FILTER_SEARCH_PARAMS = {
   DATE_FROM: 'from',
   DATE_TO: 'to',
   STATUSES: 'status',
+};
+
+export const HOME_SEARCH_PARAMS = {
+  // How many pages of the history are shown: ?pages=3 shows the first three. Not the API's `page`, which is one page.
+  SHOWN_PAGES: 'pages',
+  ...HISTORY_FILTER_SEARCH_PARAMS,
 };
 
 export const READING_ROUTES_PATHS = {
@@ -35,6 +39,11 @@ export const READING_ROUTES_PATHS = {
   send: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/send`,
   // A routed modal over the history: what the reading cost, added after it is saved.
   costAndBill: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/cost-and-bill`,
+};
+
+// What the readings cost, over time, narrowed by the same day range as Home's history.
+export const COSTS_ROUTES_PATHS = {
+  BASE: '/costs',
 };
 
 export const SETTINGS_ROUTES_PATHS = {

@@ -26,6 +26,26 @@ const FAILED_READING_IDS: ReadingId[] = [13];
 const NO_PHOTO_EVERY = 5;
 const NO_PHOTO_REMAINDER = 0;
 
+// What each month's water cost, in euro cents, oldest first: varied, so the Costs chart has bars of different heights.
+// The two newest readings have none yet (their bill has not come), and one older one was never given a cost, so the
+// Costs page shows that only readings with a cost count.
+const MONTHLY_COST_CENTS: (number | null)[] = [
+  3820,
+  4105,
+  3650,
+  3990,
+  4410,
+  3775,
+  null,
+  4260,
+  3540,
+  4890,
+  4135,
+  3905,
+  null,
+  null,
+];
+
 // More than one page, so paging can be seen working.
 export const READING_MOCK_COUNT = 14;
 
@@ -78,6 +98,7 @@ export const createReadingMockModelList = (length: number, overrides?: Partial<R
       createdAt: `${monthStart(index)}${MOCK_READ_TIME}`,
       // A mock history photo has its reading's id (getPhoto.mock.handler.ts draws it).
       photoId: (index + 1) % NO_PHOTO_EVERY === NO_PHOTO_REMAINDER ? null : index + 1,
+      costCents: MONTHLY_COST_CENTS[index] ?? null,
     });
 
     return { ...reading, ...sendOutcome(reading), ...overrides };

@@ -3,7 +3,7 @@ import { ReadingStatusUtil } from '@app-types/utility';
 import type { VariantProps } from 'class-variance-authority';
 import { Badge, type badgeVariants } from '@components/ui/badge';
 import { formatTimestamp } from '@utils/dateUtils';
-import { READING_STATUS_LABELS } from '../../readingStatusLabels';
+import { READING_STATUS_LABELS } from '@utils/readingStatusUtils';
 
 type Props = {
   reading: ReadingApiModel;

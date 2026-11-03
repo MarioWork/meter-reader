@@ -5,7 +5,7 @@ import type { ReadingApiModel } from '@app-types/models';
 import { ApiUrlParamsUtil } from '@app-types/utility';
 import { MOCK_DELAY } from '@mocks/handlers';
 import { narrowMockList } from '@mocks/mockListUtils';
-import { READING_STATUS_LABELS } from '@pages/Home/readingStatusLabels';
+import { READING_STATUS_LABELS } from '@utils/readingStatusUtils';
 import { createReadingValidationErrorMockModel } from './models/readingErrorMockModel.mock';
 import { ReadingApiSearchFields } from '@services/readingService/readingService';
 import { getMockReadings } from './readingMockState';
