@@ -255,4 +255,30 @@ describe('on a wide screen', () => {
     await waitFor(() => expect(router.state.location.search).toBe('?from=2025-01-01&to=2025-12-31'));
     await waitFor(() => expect(total()).toHaveTextContent('€155.65'));
   });
+
+  it('puts the total and the chart first, side by side, with the list of readings under them', async () => {
+    await renderCosts();
+
+    const chart = screen.getByRole('img', { name: /^Bar chart of 11 costs/ });
+    const list = screen.getByRole('list', { name: 'Readings with a cost or a bill' });
+    const summary = screen.getByRole('group', { name: 'Summary' });
+
+    expect(within(summary).getByRole('region', { name: 'Total' })).toHaveTextContent(ALL_COSTS_TOTAL);
+    expect(within(summary).getByRole('img', { name: /^Bar chart of 11 costs/ })).toBe(chart);
+    expect(within(summary).queryByRole('list')).not.toBeInTheDocument();
+    expect(summary.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('link', { name: EXPORT_LINK_NAME })).toBeVisible();
+  });
+
+  it('narrows the total, the chart and the list together, and exports the same days', async () => {
+    await renderCosts(FIRST_QUARTER_2026);
+
+    const summary = screen.getByRole('group', { name: 'Summary' });
+
+    expect(within(summary).getByRole('region', { name: 'Total' })).toHaveTextContent('€81.85');
+    expect(within(summary).getByRole('img', { name: /^Bar chart of 2 costs/ })).toBeVisible();
+    expect(costItems()).toHaveLength(2);
+    expect(exportUrl().searchParams.get('from')).toBe('2026-01-01');
+    expect(exportUrl().searchParams.get('to')).toBe('2026-03-31');
+  });
 });

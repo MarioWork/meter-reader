@@ -5,16 +5,17 @@ import CostsBarChart from './components/CostsBarChart';
 
 type Props = {
   readings: ReadingApiModel[];
+  className?: string;
 };
 
 // Each reading's Cost at its date, on a card. A reading with no Cost gets no bar, and with no bar there is no chart.
-function CostsChart({ readings }: Props) {
+function CostsChart({ readings, className }: Props) {
   const bars = costBars(readings);
 
   if (bars.length === 0) return null;
 
   return (
-    <Card>
+    <Card className={className}>
       <CardContent>
         <CostsBarChart bars={bars} />
       </CardContent>

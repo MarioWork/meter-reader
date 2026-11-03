@@ -52,7 +52,7 @@ function CostsBarChart({ bars }: Props) {
       config={CHART_CONFIG}
       role="img"
       aria-label={costsChartLabel(bars)}
-      className="aspect-auto h-56 w-full"
+      className="aspect-auto h-56 w-full lg:h-80"
     >
       <BarChart data={bars} accessibilityLayer={false} margin={CHART_MARGIN}>
         <CartesianGrid vertical={false} />
