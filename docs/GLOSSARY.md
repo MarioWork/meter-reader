@@ -16,6 +16,10 @@ _Avoid_: Value, count, measurement
 The picture of the meter that a reading was taken from, attached to its email.
 _Avoid_: Image, picture, scan
 
+**Digit window**:
+The strip on the meter where its digits show. Before the number is read from a photo, the user marks it with a box and turns the photo until the digits read left to right (or skips that, and the whole photo is read). Only the digit window is read; the photo is saved whole.
+_Avoid_: Display, crop area, region
+
 **Provider**:
 The water company that receives the readings by email, at one fixed address.
 _Avoid_: Supplier, utility, company

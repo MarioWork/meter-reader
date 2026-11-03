@@ -53,7 +53,17 @@ Send the photo to a vision-capable model and ask it for the meter reading.
 
 Tesseract.js runs on the phone once a photo is picked: the shrunk photo is turned grayscale, then pure black and
 white at its own threshold (Otsu's method), and read with only the digits 0–9 allowed. The longest run of digits
-fills the Reading field; the user checks it and can change it. No crop step yet.
+fills the Reading field; the user checks it and can change it.
+
+Before it reads (issue #68), the user marks the digit window with a box and turns the photo with Rotate left /
+Rotate right until the digits read left to right: real meter photos are small in the frame and often sideways.
+Only that part, turned, goes to Tesseract, so the black-and-white threshold is worked out from the digit window
+alone; the photo that is saved stays whole. The box can be drawn or moved by dragging, or moved and sized one step
+per click with buttons. The crop can be skipped, which reads the whole photo as before.
+
+Neither step waits for ever: getting the photo ready gives up after about 15 seconds, and reading the number after
+about 20 seconds (the Tesseract worker is stopped, and the next photo starts a fresh one). The user types the
+number in.
 
 Tesseract's worker, core and English data are served by the app (`web/tesseractAssetsPlugin.ts`) and precached
 by the service worker, so it works offline. That adds about 7 MB to the first install. Only Tesseract's
@@ -70,4 +80,5 @@ WebAssembly SIMD core build ships (Safari 16.4+, Chrome 91+, Firefox 89+).
    ```
 
 3. It prints `HIT` or `MISS` per photo (with what was read) and the hit rate. Each photo goes through the real New
-   reading page in Chromium, so the shrink and black-and-white steps are the ones the phone runs.
+   reading page in Chromium, so the shrink and black-and-white steps are the ones the phone runs. It skips the crop
+   step (it cannot know where the digit window is), so it measures the whole photo: a lower bound.

@@ -1,3 +1,6 @@
+import { boxInPixels, isWholePhoto, turnCanvas, turnedSize } from './photoCropUtils';
+import type { PhotoCrop } from './types';
+
 const CANVAS_CONTEXT = '2d';
 const NO_CANVAS_MESSAGE = 'This browser cannot prepare the photo for reading.';
 const CHANNELS = 4;
@@ -84,22 +87,85 @@ export function toBlackAndWhite(pixels: Uint8ClampedArray): void {
   }
 }
 
-// The photo on a canvas, black and white, ready for Tesseract. It is already shrunk, so it is drawn at its own size.
-export async function drawForReading(photo: Blob): Promise<HTMLCanvasElement> {
+function isBlackAt(pixels: Uint8ClampedArray, index: number): boolean {
+  return pixels[index * CHANNELS] === BLACK;
+}
+
+function whitenAt(pixels: Uint8ClampedArray, index: number): void {
+  const offset = index * CHANNELS;
+
+  pixels.fill(WHITE, offset, offset + CHANNELS - 1);
+}
+
+// Every pixel on the edge of the picture, by its index.
+function edgeIndexes(width: number, height: number): number[] {
+  const indexes: number[] = [];
+
+  for (let x = 0; x < width; x += 1) indexes.push(x, (height - 1) * width + x);
+  for (let y = 1; y < height - 1; y += 1) indexes.push(y * width, y * width + width - 1);
+
+  return indexes;
+}
+
+// After toBlackAndWhite, on a crop of the digit window: the meter's body and the window's frame around the box come
+// out as black that reaches the edge, and Tesseract finds no digits inside a thick black frame. Every black patch
+// that touches the edge is turned white; digits sit inside the box, clear of its edge, so they stay. A flood fill
+// with a stack instead of recursion, so a big patch cannot overflow the call stack. Each pixel is whitened as it
+// goes on the stack, so it goes on at most once.
+export function clearEdgeBlack(pixels: Uint8ClampedArray, width: number): void {
+  const height = pixels.length / CHANNELS / width;
+  const lastRowStart = (height - 1) * width;
+  const stack = new Int32Array(width * height);
+  let stackSize = 0;
+
+  function clearIfBlack(index: number) {
+    if (!isBlackAt(pixels, index)) return;
+
+    whitenAt(pixels, index);
+    stack[stackSize] = index;
+    stackSize += 1;
+  }
+
+  for (const index of edgeIndexes(width, height)) clearIfBlack(index);
+
+  while (stackSize > 0) {
+    stackSize -= 1;
+
+    const index = stack[stackSize];
+    const x = index % width;
+
+    if (x > 0) clearIfBlack(index - 1);
+    if (x < width - 1) clearIfBlack(index + 1);
+    if (index >= width) clearIfBlack(index - width);
+    if (index < lastRowStart) clearIfBlack(index + width);
+  }
+}
+
+// The part of the photo OCR reads on a canvas, black and white, ready for Tesseract: the photo turned, then cut down
+// to the marked box (the whole photo for WHOLE_PHOTO, read as it was before the crop step). The photo is already
+// shrunk, so it is drawn at its own size. Only this canvas is cut: the photo that is saved stays whole.
+export async function drawForReading(photo: Blob, crop: PhotoCrop): Promise<HTMLCanvasElement> {
   const bitmap = await createImageBitmap(photo);
   const canvas = document.createElement('canvas');
   const context = canvas.getContext(CANVAS_CONTEXT, { willReadFrequently: true });
 
   if (!context) throw new Error(NO_CANVAS_MESSAGE);
 
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
+  const cropInPixels = boxInPixels(crop.box, turnedSize(bitmap, crop.turn));
+
+  canvas.width = cropInPixels.width;
+  canvas.height = cropInPixels.height;
+  context.translate(-cropInPixels.x, -cropInPixels.y);
+  turnCanvas(context, bitmap, crop.turn);
   context.drawImage(bitmap, 0, 0);
   bitmap.close();
 
   const image = context.getImageData(0, 0, canvas.width, canvas.height);
 
   toBlackAndWhite(image.data);
+
+  if (!isWholePhoto(crop)) clearEdgeBlack(image.data, canvas.width);
+
   context.putImageData(image, 0, 0);
 
   return canvas;

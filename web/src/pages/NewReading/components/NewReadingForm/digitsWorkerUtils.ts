@@ -41,3 +41,15 @@ export function getDigitsWorker(): Promise<Worker> {
 
   return digitsWorker;
 }
+
+// Stops the worker mid-read, when reading took too long: Tesseract stops using the phone's processor, and the next
+// photo starts a fresh worker. Nothing to do when no worker was started.
+export async function stopDigitsWorker(): Promise<void> {
+  const stopping = digitsWorker;
+
+  digitsWorker = undefined;
+
+  const worker = await stopping?.catch(() => undefined);
+
+  await worker?.terminate();
+}

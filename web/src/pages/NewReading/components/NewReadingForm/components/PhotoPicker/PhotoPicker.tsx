@@ -1,17 +1,20 @@
 import { CameraIcon, ImageIcon, KeyboardIcon } from 'lucide-react';
 import { Button } from '@components/ui/button';
+import { DigitsReadStatus, type PhotoCrop } from '../../types';
+import CropStep from './components/CropStep';
 import PhotoDigitsStatus from './components/PhotoDigitsStatus';
 import PhotoInput from './components/PhotoInput';
 
 type Props = {
   previewUrl?: string;
   isShrinking: boolean;
-  // OCR is still reading the number from the last photo.
-  isFindingDigits: boolean;
-  // OCR found no number in the last photo.
-  hasFoundNothing: boolean;
+  // The photo is ready, and the user is marking its digit window before it is read.
+  isCropping: boolean;
+  digitsStatus: DigitsReadStatus;
   errorMessage?: string;
   onPick: (photo: File) => void;
+  // Reads the marked part. The crop step then closes, so the form moves focus on to the Reading field.
+  onReadCrop: (crop: PhotoCrop) => void;
   onRemove: () => void;
   // The user types the reading in without a photo.
   onSkip: () => void;
@@ -22,27 +25,33 @@ const FILE_INPUT_ID = 'reading-photo-file';
 const ERROR_ID = 'reading-photo-error';
 
 // Optional, but first on the page: take the photo with the camera, or pick one already on the device. Either way it
-// is shrunk first, then the number in it is read into the Reading field. The camera stays in the same place in the
-// page once a photo shows, so keyboard focus is not lost when it shrinks to a button.
+// is shrunk first, then the user marks its digit window (or skips that), then the number in it is read into the
+// Reading field. The camera stays in the same place in the page once a photo shows, so keyboard focus is not lost
+// when it shrinks to a button.
 function PhotoPicker({
   previewUrl,
   isShrinking,
-  isFindingDigits,
-  hasFoundNothing,
+  isCropping,
+  digitsStatus,
   errorMessage,
   onPick,
+  onReadCrop,
   onRemove,
   onSkip,
 }: Props) {
   const errorId = errorMessage ? ERROR_ID : undefined;
   const hasPhoto = previewUrl !== undefined;
+  const isCropShown = hasPhoto && isCropping;
+  const isPreviewShown = hasPhoto && !isCropping;
   // A new photo, or removing this one, waits until the last one is shrunk and read.
-  const isBusy = isShrinking || isFindingDigits;
+  const isBusy = isShrinking || digitsStatus === DigitsReadStatus.READING;
 
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-2 text-sm font-medium">Photo (optional)</legend>
-      {hasPhoto && (
+      {/* A new photo starts a new crop, with the box back where it starts. */}
+      {isCropShown && <CropStep key={previewUrl} previewUrl={previewUrl} onRead={onReadCrop} />}
+      {isPreviewShown && (
         <img
           src={previewUrl}
           alt="The meter, as it will be saved"
@@ -80,7 +89,7 @@ function PhotoPicker({
           </Button>
         )}
       </div>
-      <PhotoDigitsStatus isFindingDigits={isFindingDigits} hasFoundNothing={hasFoundNothing} />
+      <PhotoDigitsStatus status={digitsStatus} />
       {isShrinking && <p role="status">Shrinking the photo…</p>}
       {errorMessage && (
         <p id={ERROR_ID} role="alert" className="text-destructive">

@@ -8,7 +8,8 @@ import { NewReadingPage } from '../pages/NewReadingPage.page';
 //   OCR_PHOTOS_DIR=/path/to/photos yarn ocr-hit-rate
 // Each photo is named after the reading it shows, every digit kept: 00529.jpg, or 00529-kitchen.jpg for a second
 // photo of the same reading. JPEG or PNG (export iPhone HEIC photos as JPEG first: desktop Chromium cannot open
-// HEIC). Every photo goes through the real page: shrink, black and white, Tesseract.
+// HEIC). Every photo goes through the real page: shrink, black and white, Tesseract. The crop step is skipped, so
+// this measures the whole photo, as read without a digit window marked.
 const PHOTOS_DIR = process.env.OCR_PHOTOS_DIR;
 const PHOTO_TYPES: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' };
 const EXPECTED_DIGITS = /^\d+/;
@@ -41,6 +42,7 @@ test('OCR hit rate on the real meter photos in OCR_PHOTOS_DIR', async ({ page })
   for (const { photo, expected } of photoCases) {
     await newReadingPage.goto();
     await newReadingPage.pickPhoto(photo);
+    await newReadingPage.readWholePhoto();
     await expect.poll(() => newReadingPage.hasFinishedWithPhoto(), { timeout: OCR_TIMEOUT_MS }).toBe(true);
     const digitsRead = await newReadingPage.readingField.inputValue();
     const isHit = digitsRead === expected;

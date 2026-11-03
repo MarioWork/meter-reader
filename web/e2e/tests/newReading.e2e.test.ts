@@ -51,6 +51,7 @@ test('the number in a meter photo is read into the reading field, where it can s
   const meterPhoto = await makeMeterPhoto(page, '00612');
 
   await newReadingPage.takePhoto(meterPhoto);
+  await newReadingPage.readWholePhoto();
 
   await expect.poll(() => newReadingPage.hasFinishedWithPhoto(), { timeout: OCR_TIMEOUT_MS }).toBe(true);
   await expect(newReadingPage.readingField).toHaveValue('00612');

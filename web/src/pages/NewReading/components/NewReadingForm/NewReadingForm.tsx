@@ -64,7 +64,7 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
     });
 
   const fetcher = useFetcher<JSONResponseUtil>();
-  const { photo, previewUrl, isShrinking, errorMessage, isFindingDigits, hasFoundNothing, pickPhoto, removePhoto } =
+  const { photo, previewUrl, isShrinking, isCropping, errorMessage, digitsStatus, pickPhoto, readCrop, removePhoto } =
     useReadingPhoto({
       getDigits: () => getValues('digits'),
       // Filled in as if typed, so the digits are checked and compared with the last reading the same way.
@@ -108,10 +108,15 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
         <PhotoPicker
           previewUrl={previewUrl}
           isShrinking={isShrinking}
-          isFindingDigits={isFindingDigits}
-          hasFoundNothing={hasFoundNothing}
+          isCropping={isCropping}
+          digitsStatus={digitsStatus}
           errorMessage={errorMessage}
           onPick={(picked) => void pickPhoto(picked)}
+          onReadCrop={(crop) => {
+            // The crop step closes and the camera is off while the number is read: focus would fall to the page.
+            setFocus('digits');
+            void readCrop(crop);
+          }}
           onRemove={removePhoto}
           onSkip={() => setFocus('digits')}
         />
