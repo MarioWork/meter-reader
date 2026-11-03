@@ -18,8 +18,12 @@ import {
 import type { CreateReading, SendReading, UpdateReading } from './readingService.type';
 
 const BASE_READINGS_URL = '/readings';
-const READINGS_SPREADSHEET_SEGMENT = 'export.xlsx';
+// Both spreadsheets, the readings' and the costs', sit under this name.
+const SPREADSHEET_SEGMENT = 'export.xlsx';
 const COSTS_SEGMENT = 'costs';
+const EMAIL_DEFAULTS_SEGMENT = 'email-defaults';
+const EMAIL_SEGMENT = 'email';
+const SEND_SEGMENT = 'send';
 const READINGS_BACKUP_JSON_SEGMENT = 'backup.json';
 const READINGS_BACKUP_CSV_SEGMENT = 'backup.csv';
 const READINGS_BACKUP_ZIP_SEGMENT = 'backup.zip';
@@ -95,7 +99,7 @@ export default {
       [ReadingApiExportParams.TIME_ZONE]: timeZone,
     });
 
-    return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
+    return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
   },
 
   // The backup, plain downloads like the spreadsheet: every reading, whatever Home is filtered to, so no params.
@@ -129,12 +133,12 @@ export default {
       [ApiUrlParamsUtil.dateTo]: dateTo,
     });
 
-    return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${COSTS_SEGMENT}/${READINGS_SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
+    return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${COSTS_SEGMENT}/${SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
   },
 
   // What a new reading's email starts with, before the reading is saved.
   getEmailDefaults: async (): Promise<EmailDefaultsApiModel> => {
-    const response = await axios.get<EmailDefaultsApiModel>(`${BASE_READINGS_URL}/email-defaults`);
+    const response = await axios.get<EmailDefaultsApiModel>(`${BASE_READINGS_URL}/${EMAIL_DEFAULTS_SEGMENT}`);
 
     return response.data;
   },
@@ -157,14 +161,18 @@ export default {
 
   // The preview: exactly what sendReading would email, built by the server.
   getReadingEmail: async (id: ReadingId): Promise<ReadingEmailApiModel> => {
-    const response = await axios.get<ReadingEmailApiModel>(`${BASE_READINGS_URL}/${id}/email`);
+    const response = await axios.get<ReadingEmailApiModel>(`${BASE_READINGS_URL}/${id}/${EMAIL_SEGMENT}`);
 
     return response.data;
   },
 
   // Emails the reading to the provider. Sent or not, the API saves the outcome on the reading.
   sendReading: async (id: ReadingId, fields: SendReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
-    axiosActions<ReadingApiModel>({ url: `${BASE_READINGS_URL}/${id}/send`, method: HttpVerbsUtil.POST, data: fields }),
+    axiosActions<ReadingApiModel>({
+      url: `${BASE_READINGS_URL}/${id}/${SEND_SEGMENT}`,
+      method: HttpVerbsUtil.POST,
+      data: fields,
+    }),
 };
 
 export const ReadingApiSearchFields = {

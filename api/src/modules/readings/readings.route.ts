@@ -16,7 +16,7 @@ import {
   ReadingResponseSchema,
   ReadingsBackupResponseSchema,
   ReadingsFilesBackupResponseSchema,
-  ReadingsSpreadsheetResponseSchema,
+  SpreadsheetResponseSchema,
   SendReadingSchema,
   UpdateReadingSchema,
 } from './readings.schema.ts';
@@ -85,7 +85,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
           "The Costs page's readings as an .xlsx spreadsheet, newest first, with a link to each Bill and the sum",
         querystring: ListCostsQuerySchema,
         produces: [XLSX_CONTENT_TYPE],
-        response: { 200: ReadingsSpreadsheetResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
+        response: { 200: SpreadsheetResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
       },
     },
     async (request, reply) => {
@@ -103,7 +103,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
         summary: 'Every reading the filters match (not a page) as an .xlsx spreadsheet, newest first',
         querystring: ExportReadingsQuerySchema,
         produces: [XLSX_CONTENT_TYPE],
-        response: { 200: ReadingsSpreadsheetResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
+        response: { 200: SpreadsheetResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
       },
     },
     async (request, reply) => {

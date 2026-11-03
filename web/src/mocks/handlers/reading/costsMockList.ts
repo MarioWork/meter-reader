@@ -2,6 +2,7 @@
 // readings with a Cost or a Bill in it.
 import type { ReadingApiModel } from '@app-types/models';
 import { ApiUrlParamsUtil } from '@app-types/utility';
+import { narrowMockList } from '@mocks/mockListUtils';
 import { getMockReadings } from './readingMockState';
 
 export type MockDayRange = { dateFrom: string | null; dateTo: string | null };
@@ -17,21 +18,15 @@ export function isMockRangeBackwards({ dateFrom, dateTo }: MockDayRange): boolea
   return Boolean(dateFrom && dateTo && dateFrom > dateTo);
 }
 
-// YYYY-MM-DD strings sort as the days do; an end left out is open.
-function isInRange(reading: ReadingApiModel, { dateFrom, dateTo }: MockDayRange): boolean {
-  const isOnOrAfterFrom = !dateFrom || reading.date >= dateFrom;
-  const isOnOrBeforeTo = !dateTo || reading.date <= dateTo;
-
-  return isOnOrAfterFrom && isOnOrBeforeTo;
-}
-
 function hasCostOrBill(reading: ReadingApiModel): boolean {
   return reading.costCents !== null || reading.bill !== null;
 }
 
-// Every reading with a Cost or a Bill in the range (both ends inclusive), newest first.
-export function getMockCostReadings(range: MockDayRange): ReadingApiModel[] {
-  return getMockReadings().filter((reading) => hasCostOrBill(reading) && isInRange(reading, range));
+// Every reading with a Cost or a Bill in the request's day range (both ends inclusive), newest first.
+export function getMockCostReadings(request: Request): ReadingApiModel[] {
+  return narrowMockList(request, getMockReadings().filter(hasCostOrBill), {
+    ranges: [{ from: ApiUrlParamsUtil.dateFrom, to: ApiUrlParamsUtil.dateTo, read: (reading) => reading.date }],
+  });
 }
 
 export function sumMockCostCents(readings: ReadingApiModel[]): number {

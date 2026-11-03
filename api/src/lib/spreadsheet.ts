@@ -110,17 +110,20 @@ function stripeRule(rowCount: number, columnCount: number) {
   return { cellRange, condition: { formula: STRIPE_FORMULA }, style: STRIPE_STYLE };
 }
 
-// Every linked cell of the data rows. getCellAddress counts rows and columns from 0, the header being row 0.
+// One data row's linked cells. getCellAddress counts rows and columns from 0, the header being row 0.
+function rowLinksOf<Item>(item: Item, itemIndex: number, columns: SpreadsheetColumn<Item>[]): CellLink[] {
+  return columns.flatMap((column, columnIndex) => {
+    const url = linkOf(item, column);
+
+    if (url === null) return [];
+
+    return [{ address: getCellAddress(itemIndex + HEADER_ROWS, columnIndex), url }];
+  });
+}
+
+// Every linked cell of the data rows.
 function linksOf<Item>(items: Item[], columns: SpreadsheetColumn<Item>[]): CellLink[] {
-  return items.flatMap((item, itemIndex) =>
-    columns.flatMap((column, columnIndex) => {
-      const url = linkOf(item, column);
-
-      if (url === null) return [];
-
-      return [{ address: getCellAddress(itemIndex + HEADER_ROWS, columnIndex), url }];
-    }),
-  );
+  return items.flatMap((item, itemIndex) => rowLinksOf(item, itemIndex, columns));
 }
 
 // A summed column's numbers added up, without the floating-point noise; any other value in it (an empty cell) adds

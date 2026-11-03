@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { COSTS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { addMockBill } from '@mocks/handlers/bill/billMockState';
+import { createBillMockModel } from '@mocks/handlers/bill/models/billMockModel.mock';
 import { updateMockReading } from '@mocks/handlers/reading/readingMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { mockWideScreen, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
@@ -15,6 +16,8 @@ const FIRST_QUARTER_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-01-01&to=2026-0
 const NO_COST_READING_ID = 13;
 const COSTED_READING_ID = 12;
 const EXPORT_LINK_NAME = 'Export costs as a spreadsheet';
+// September and October 2026 have no cost.
+const SEPT_OCT_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`;
 
 async function renderCosts(path = COSTS_ROUTES_PATHS.BASE) {
   const { router } = renderRoutes(routes, { initialEntries: [path] });
@@ -33,7 +36,8 @@ function costItems() {
 
 // A bill saved on the mock reading, as the API answers the reading once updated with one. Its id, for the link.
 function saveMockBill(readingId: number): number {
-  const { id, contentType, sizeBytes } = addMockBill(new Blob([new Uint8Array(1000)]), 'application/pdf');
+  const { contentType, sizeBytes } = createBillMockModel();
+  const { id } = addMockBill(new Blob([new Uint8Array(sizeBytes)]), contentType);
 
   updateMockReading(readingId, { bill: { id, contentType, sizeBytes } });
 
@@ -89,7 +93,11 @@ describe('readings with a bill', () => {
     expect(costItems()[0]).toHaveTextContent('No cost');
     expect(total()).toHaveTextContent(ALL_COSTS_TOTAL);
     expect(total()).toHaveTextContent(`${ALL_COSTS_COUNT} readings`);
-    expect(screen.getByRole('img', { name: /^Bar chart of 11 costs, from 1 Sept 2025 to 1 Aug 2026\./ })).toBeVisible();
+    expect(
+      screen.getByRole('img', {
+        name: new RegExp(`^Bar chart of ${ALL_COSTS_COUNT} costs, from 1 Sept 2025 to 1 Aug 2026\\.`),
+      }),
+    ).toBeVisible();
   });
 
   it('links each row with a bill to it, in a new tab, and the rows without one to nothing', async () => {
@@ -111,7 +119,7 @@ describe('readings with a bill', () => {
   it('lists the readings with only a bill when no reading in the dates has a cost', async () => {
     saveMockBill(NO_COST_READING_ID);
 
-    await renderCosts(`${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`);
+    await renderCosts(SEPT_OCT_2026);
 
     expect(costItems()).toHaveLength(1);
     expect(total()).toHaveTextContent('€0.00');
@@ -141,7 +149,7 @@ describe('exporting the costs', () => {
   });
 
   it('is not offered when no reading in the dates has a cost or a bill', async () => {
-    await renderCosts(`${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`);
+    await renderCosts(SEPT_OCT_2026);
 
     expect(screen.queryByRole('link', { name: EXPORT_LINK_NAME })).not.toBeInTheDocument();
   });
@@ -215,7 +223,7 @@ it('says there are no costs yet when no reading has one', async () => {
 
 it('says no cost matches the dates, and Clear filters shows every cost again', async () => {
   // September and October 2026 have no cost.
-  const router = await renderCosts(`${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`);
+  const router = await renderCosts(SEPT_OCT_2026);
 
   expect(screen.getByRole('heading', { name: 'No costs in these dates' })).toBeVisible();
 

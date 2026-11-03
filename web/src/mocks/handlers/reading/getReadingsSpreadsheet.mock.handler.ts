@@ -8,8 +8,9 @@ import { narrowMockList } from '@mocks/mockListUtils';
 import { READING_STATUS_LABELS } from '@utils/readingStatusUtils';
 import { createReadingValidationErrorMockModel } from './models/readingErrorMockModel.mock';
 import { ReadingApiSearchFields } from '@services/readingService/readingService';
+import { isMockRangeBackwards, readMockDayRange } from './costsMockList';
 import { getMockReadings } from './readingMockState';
-import { toMockCostCell, toMockDayCell, XLSX_CONTENT_TYPE } from './readingSheetMockCells';
+import { BOLD, toMockCostCell, toMockDayCell, XLSX_CONTENT_TYPE } from './readingSheetMockCells';
 
 const BAD_REQUEST = 400;
 const FILE_NAME = 'water-readings.xlsx';
@@ -34,12 +35,7 @@ export default (baseUrl: string) => [
   http.get(`${baseUrl}/readings/export.xlsx`, async ({ request }) => {
     await delay(MOCK_DELAY);
 
-    const params = new URL(request.url).searchParams;
-    const dateFrom = params.get(ApiUrlParamsUtil.dateFrom);
-    const dateTo = params.get(ApiUrlParamsUtil.dateTo);
-    const isRangeBackwards = Boolean(dateFrom && dateTo && dateFrom > dateTo);
-
-    if (isRangeBackwards) {
+    if (isMockRangeBackwards(readMockDayRange(request))) {
       return HttpResponse.json(createReadingValidationErrorMockModel(), { status: BAD_REQUEST });
     }
 
@@ -48,7 +44,7 @@ export default (baseUrl: string) => [
       choices: { [ReadingApiSearchFields.STATUS]: (reading) => reading.status },
       ranges: [{ from: ApiUrlParamsUtil.dateFrom, to: ApiUrlParamsUtil.dateTo, read: (reading) => reading.date }],
     });
-    const header = HEADER_TITLES.map((title) => ({ value: title, fontWeight: 'bold' as const }));
+    const header = HEADER_TITLES.map((title) => ({ value: title, fontWeight: BOLD }));
     const blob = await writeExcelFile([header, ...readings.map(toRow)]).toBlob();
 
     return new HttpResponse(blob, {

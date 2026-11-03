@@ -197,8 +197,9 @@ export const CostListResponseSchema = z
   })
   .meta({ id: 'CostList' });
 
-// The .xlsx file. Binary: a Buffer goes out as is (Fastify never serialises one); the schema documents it as a file.
-export const ReadingsSpreadsheetResponseSchema = z.instanceof(Buffer).meta({ type: 'string', format: 'binary' });
+// An .xlsx file, the readings' or the costs'. Binary: a Buffer goes out as is (Fastify never serialises one); the
+// schema documents it as a file.
+export const SpreadsheetResponseSchema = z.instanceof(Buffer).meta({ type: 'string', format: 'binary' });
 
 // The files zip, streamed: Fastify sends a stream as it is (never serialised); the schema documents it as a file.
 export const ReadingsFilesBackupResponseSchema = z.instanceof(Readable).meta({ type: 'string', format: 'binary' });

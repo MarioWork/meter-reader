@@ -12,10 +12,10 @@ import {
 } from 'write-excel-file/utility';
 import { WORKSHEET_FILE, type NodeFeature } from './spreadsheetFeature.ts';
 
+const CELL_ADDRESS = /^[A-Z]+(\d+)$/;
+
 // One formula cell, by its address ("C5"), and the number its formula gives.
 export type FormulaResult = { address: string; value: number };
-
-const CELL_ADDRESS = /^[A-Z]+(\d+)$/;
 
 function rowNumberOf(address: string): string {
   return CELL_ADDRESS.exec(address)?.[1] ?? '';

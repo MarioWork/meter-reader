@@ -21,7 +21,7 @@ export default (baseUrl: string) => [
       return HttpResponse.json(createReadingValidationErrorMockModel(), { status: BAD_REQUEST });
     }
 
-    const readings = getMockCostReadings(range);
+    const readings = getMockCostReadings(request);
 
     return HttpResponse.json({ data: readings, totalCostCents: sumMockCostCents(readings) });
   }),

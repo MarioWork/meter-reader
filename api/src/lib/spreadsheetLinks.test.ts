@@ -8,13 +8,13 @@ const sheetTransform = feature.files?.transform?.['xl/worksheets/sheet{id}.xml']
 const relationshipsInsert = feature.files?.transform?.['xl/worksheets/_rels/sheet{id}.xml.rels']?.insert;
 
 describe('cellLinks', () => {
-  it('lists the linked cell in the sheet, before the page margins as the format orders it', () => {
+  it('lists the linked cell before the page margins, as the format orders it, when the sheet has a link', () => {
     const xml = sheetTransform?.(SHEET_XML, {}, SHEET_PROPERTIES);
 
     expect(xml).toContain('</sheetData><hyperlinks><hyperlink ref="D2" r:id="rId-link-1"/></hyperlinks><pageMargins/>');
   });
 
-  it('points the link at its url, escaped, as an outside address', () => {
+  it('points the link at its url, escaped, as an outside address when the url has special characters', () => {
     const markup = relationshipsInsert?.({}, SHEET_PROPERTIES);
 
     expect(markup).toBe(
@@ -24,7 +24,7 @@ describe('cellLinks', () => {
     );
   });
 
-  it('leaves a sheet with no links as it is', () => {
+  it('leaves the sheet as it is when it has no links', () => {
     const otherSheet = { sheetIndex: 1, sheetId: '2' };
 
     expect(sheetTransform?.(SHEET_XML, {}, otherSheet)).toBe(SHEET_XML);
