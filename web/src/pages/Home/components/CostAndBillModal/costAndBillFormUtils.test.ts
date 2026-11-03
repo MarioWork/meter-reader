@@ -56,7 +56,7 @@ describe('toSaveFailure', () => {
   const FALLBACK = 'The cost and bill could not be saved. Please try again.';
 
   it.each([
-    ['BILL_NOT_SUPPORTED', 400, 'The bill must be a PDF, JPEG or PNG'],
+    ['BILL_NOT_SUPPORTED', 400, 'Bills must be a PDF.'],
     ['BILL_TOO_LARGE', 413, 'The bill must be at most 10 MB'],
     ['FST_ERR_CTP_BODY_TOO_LARGE', 413, 'Request body is too large'],
   ])("puts the server's %s reason on the Bill field", (code, statusCode, message) => {

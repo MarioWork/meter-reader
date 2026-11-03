@@ -10,7 +10,7 @@ const log = logger.child({ module: 'bills' });
 
 // A bill uploaded but never saved with a reading (the save failed, or the page was left) is gone after a day.
 const UNLINKED_BILL_LIFETIME_MS = 24 * 60 * 60 * 1000;
-const NOT_SUPPORTED_MESSAGE = 'The bill must be a PDF, JPEG or PNG';
+const NOT_SUPPORTED_MESSAGE = 'Bills must be a PDF.';
 const ENTITY = 'Bill';
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
@@ -34,20 +34,19 @@ type BillFileType = BillRow['fileType'];
 // What a bill's name is made from: the name it came with, else its kind (and its reading's day, when it has one).
 type NamedBill = Pick<BillRow, 'originalName' | 'fileType'>;
 
-// What each kind of bill is on the wire and on disk, and the first bytes every file of that kind starts with.
-type BillFormat = { contentType: BillContentType; extension: string; signature: Buffer };
+// What each kind of bill is on the wire and on disk. A new bill is always a PDF; a JPEG or PNG kept before that is
+// served as it is.
+type BillFormat = { contentType: BillContentType; extension: string };
 
 const BILL_FORMATS: Record<BillFileType, BillFormat> = {
-  PDF: { contentType: 'application/pdf', extension: '.pdf', signature: Buffer.from('%PDF-') },
-  JPEG: { contentType: 'image/jpeg', extension: '.jpg', signature: Buffer.from([0xff, 0xd8, 0xff]) },
-  PNG: {
-    contentType: 'image/png',
-    extension: '.png',
-    signature: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  },
+  PDF: { contentType: 'application/pdf', extension: '.pdf' },
+  JPEG: { contentType: 'image/jpeg', extension: '.jpg' },
+  PNG: { contentType: 'image/png', extension: '.png' },
 };
 
-const BILL_FILE_TYPES = Object.keys(BILL_FORMATS) as BillFileType[];
+// The only kind a new bill may be, and the first bytes every file of that kind starts with.
+const UPLOADED_FILE_TYPE: BillFileType = 'PDF';
+const PDF_SIGNATURE = Buffer.from('%PDF-');
 
 // `downloadName` is ASCII, for the browsers that cannot read `name`.
 export type BillFile = OpenUpload & { contentType: BillContentType; name: string; downloadName: string };
@@ -87,17 +86,11 @@ function toResponse(row: BillRow): BillResponse {
   };
 }
 
-function startsWith(contents: Buffer, signature: Buffer): boolean {
-  return contents.subarray(0, signature.length).equals(signature);
-}
+// Refuses any file that is not a PDF, read from how its bytes start: never from the client's content type or name.
+function assertIsPdf(contents: Buffer): void {
+  const isPdf = contents.subarray(0, PDF_SIGNATURE.length).equals(PDF_SIGNATURE);
 
-// The kind of file the bytes are, read from how they start: never from the client's content type or file name.
-function detectFileType(contents: Buffer): BillFileType {
-  const fileType = BILL_FILE_TYPES.find((type) => startsWith(contents, BILL_FORMATS[type].signature));
-
-  if (!fileType) throw new BadRequestError(NOT_SUPPORTED_MESSAGE, 'BILL_NOT_SUPPORTED');
-
-  return fileType;
+  if (!isPdf) throw new BadRequestError(NOT_SUPPORTED_MESSAGE, 'BILL_NOT_SUPPORTED');
 }
 
 function decodeName(sentName: string): string | null {
@@ -137,15 +130,21 @@ function toOriginalName(sentName: string | undefined): string | null {
   return isNameless ? null : cleaned;
 }
 
-// Keeps the bill, not yet linked to a reading: updating the reading with its id links them. The size limit is the
-// route's body limit. `sentName` is the name the file had on the user's device, percent-encoded.
+// Keeps the bill, a PDF, not yet linked to a reading: updating the reading with its id links them. The size limit is
+// the route's body limit. `sentName` is the name the file had on the user's device, percent-encoded.
 export async function addBill(contents: Buffer, sentName?: string): Promise<BillResponse> {
-  const fileType = detectFileType(contents);
+  assertIsPdf(contents);
+
   const originalName = toOriginalName(sentName);
-  const fileName = await saveUpload(contents, BILL_FORMATS[fileType].extension);
+  const fileName = await saveUpload(contents, BILL_FORMATS[UPLOADED_FILE_TYPE].extension);
 
   try {
-    const row = await billsRepository.create({ fileName, fileType, originalName, sizeBytes: contents.length });
+    const row = await billsRepository.create({
+      fileName,
+      fileType: UPLOADED_FILE_TYPE,
+      originalName,
+      sizeBytes: contents.length,
+    });
 
     log.info({ billId: row.id }, 'bill saved');
 

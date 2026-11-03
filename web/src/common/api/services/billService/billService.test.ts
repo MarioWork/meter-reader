@@ -38,10 +38,7 @@ it("posts the file's bytes as the body, with its own type and name, and returns 
 it('returns a failure envelope with the server reason instead of throwing', async () => {
   server.use(
     http.post(`${API}/bills`, () =>
-      HttpResponse.json(
-        { code: 'BILL_NOT_SUPPORTED', message: 'The bill must be a PDF, JPEG or PNG' },
-        { status: 400 },
-      ),
+      HttpResponse.json({ code: 'BILL_NOT_SUPPORTED', message: 'Bills must be a PDF.' }, { status: 400 }),
     ),
   );
 
@@ -49,6 +46,6 @@ it('returns a failure envelope with the server reason instead of throwing', asyn
 
   expect(response).toEqual({
     success: false,
-    error: { statusCode: 400, code: 'BILL_NOT_SUPPORTED', message: 'The bill must be a PDF, JPEG or PNG' },
+    error: { statusCode: 400, code: 'BILL_NOT_SUPPORTED', message: 'Bills must be a PDF.' },
   });
 });

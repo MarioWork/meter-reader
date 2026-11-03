@@ -1,9 +1,9 @@
 export type BillErrorMockModel = { code: string; message: string };
 
-// The API's error envelope for a file that is no PDF, JPEG or PNG.
+// The API's error envelope for a file that is no PDF.
 export const createBillNotSupportedMockModel = (): BillErrorMockModel => ({
   code: 'BILL_NOT_SUPPORTED',
-  message: 'The bill must be a PDF, JPEG or PNG',
+  message: 'Bills must be a PDF.',
 });
 
 // The API's error envelope for a file over 10 MB.

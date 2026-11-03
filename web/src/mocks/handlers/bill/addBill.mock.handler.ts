@@ -1,27 +1,19 @@
 import { http, HttpResponse } from 'msw/http';
 import { delay } from 'msw/utils/delay';
-import type { BillContentType } from '@app-types/models';
 import { MOCK_DELAY } from '@mocks/handlers';
 import { BILL_NAME_HEADER } from '@services/billService/billService';
 import { createBillNotSupportedMockModel, createBillTooLargeMockModel } from './models/billErrorMockModel.mock';
 import { addMockBill } from './billMockState';
 
-// The API's limits. It reads the type from the file's bytes; the mock trusts the type the browser gave it.
-const BILL_CONTENT_TYPES: BillContentType[] = ['application/pdf', 'image/jpeg', 'image/png'];
+// The API's limits: a PDF of at most 10 MB. It reads the type from the file's bytes; the mock trusts the type the
+// browser gave it.
+const PDF_CONTENT_TYPE = 'application/pdf';
 const BILL_MAX_BYTES = 10_000_000;
 const BAD_REQUEST = 400;
 const CONTENT_TOO_LARGE = 413;
 const CREATED = 201;
 // The API's own name for a bill that came with none, before a reading gives it a day.
-const UNNAMED_BILL_NAMES: Record<BillContentType, string> = {
-  'application/pdf': 'bill.pdf',
-  'image/jpeg': 'bill.jpg',
-  'image/png': 'bill.png',
-};
-
-function isBillContentType(contentType: string): contentType is BillContentType {
-  return BILL_CONTENT_TYPES.some((billContentType) => billContentType === contentType);
-}
+const UNNAMED_BILL_NAME = 'bill.pdf';
 
 // The name the app sent, percent-encoded; the API also cleans it, which the demo does not need.
 function sentNameOf(request: Request): string | null {
@@ -41,18 +33,18 @@ export default (baseUrl: string) => [
     await delay(MOCK_DELAY);
 
     const file = await request.blob();
-    const contentType = request.headers.get('content-type') ?? '';
+    const isPdf = request.headers.get('content-type') === PDF_CONTENT_TYPE;
 
     if (file.size > BILL_MAX_BYTES) {
       return HttpResponse.json(createBillTooLargeMockModel(), { status: CONTENT_TOO_LARGE });
     }
 
-    if (!isBillContentType(contentType)) {
+    if (!isPdf) {
       return HttpResponse.json(createBillNotSupportedMockModel(), { status: BAD_REQUEST });
     }
 
-    const name = sentNameOf(request) ?? UNNAMED_BILL_NAMES[contentType];
+    const name = sentNameOf(request) ?? UNNAMED_BILL_NAME;
 
-    return HttpResponse.json(addMockBill(file, contentType, name), { status: CREATED });
+    return HttpResponse.json(addMockBill(file, PDF_CONTENT_TYPE, name), { status: CREATED });
   }),
 ];

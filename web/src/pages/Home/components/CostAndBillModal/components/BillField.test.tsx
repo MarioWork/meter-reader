@@ -23,16 +23,22 @@ function renderBillField(error?: string) {
   return screen.getByLabelText('Bill');
 }
 
-it("marks the picker invalid and reads out the server's reason under it when the API refused the file", () => {
-  const field = renderBillField('The bill must be a PDF, JPEG or PNG');
+it("marks the picker invalid and reads out the server's reason under it when the API refused a file that is no PDF", () => {
+  const field = renderBillField('Bills must be a PDF.');
 
   expect(field).toHaveAttribute('aria-invalid', 'true');
-  expect(field).toHaveAccessibleDescription(/The bill must be a PDF, JPEG or PNG/);
+  expect(field).toHaveAccessibleDescription(/Bills must be a PDF\./);
+});
+
+it('offers PDF files only in the picker', () => {
+  const field = renderBillField();
+
+  expect(field).toHaveAttribute('accept', 'application/pdf,.pdf');
 });
 
 it('describes the picker with its hint alone while nothing was refused', () => {
   const field = renderBillField();
 
   expect(field).toHaveAttribute('aria-invalid', 'false');
-  expect(field).toHaveAccessibleDescription('A PDF, JPEG or PNG of up to 10 MB. It replaces the saved bill.');
+  expect(field).toHaveAccessibleDescription('A PDF of up to 10 MB. It replaces the saved bill.');
 });

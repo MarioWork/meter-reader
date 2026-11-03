@@ -111,26 +111,9 @@ describe('POST /bills', () => {
   });
 
   it.each([
-    ['a JPEG', JPEG_BILL, 'image/jpeg', 'JPEG', '.jpg'],
-    ['a PNG', PNG_BILL, 'image/png', 'PNG', '.png'],
-  ])('keeps the bill when it is %s', async (_scenario, payload, contentType, fileType, extension) => {
-    const response = await addBill(payload, contentType);
-
-    expect(response.statusCode).toBe(201);
-    expect(response.json()).toMatchObject({ contentType });
-    const row = await prisma.bill.findUniqueOrThrow({ where: { id: response.json<{ id: number }>().id } });
-    expect(row.fileType).toBe(fileType);
-    expect(row.fileName.endsWith(extension)).toBe(true);
-  });
-
-  it('keeps the bill as a PNG when the client says it is a PDF but the bytes are a PNG', async () => {
-    const response = await addBill(PNG_BILL, PDF);
-
-    expect(response.statusCode).toBe(201);
-    expect(response.json()).toMatchObject({ contentType: 'image/png' });
-  });
-
-  it.each([
+    ['a JPEG', JPEG_BILL, 'image/jpeg'],
+    ['a PNG', PNG_BILL, 'image/png'],
+    ['a PNG sent as a PDF', PNG_BILL, PDF],
     ['a GIF', Buffer.from('GIF89a......'), 'image/gif'],
     ['text sent as a PDF', Buffer.from('not a bill'), PDF],
     ['a Word document', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]), 'application/msword'],
@@ -140,7 +123,7 @@ describe('POST /bills', () => {
       const response = await addBill(payload, type);
 
       expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({ code: 'BILL_NOT_SUPPORTED', message: 'The bill must be a PDF, JPEG or PNG' });
+      expect(response.json()).toEqual({ code: 'BILL_NOT_SUPPORTED', message: 'Bills must be a PDF.' });
       expect(await prisma.bill.count()).toBe(0);
     },
   );
@@ -214,14 +197,14 @@ describe('GET /bills/:id', () => {
   });
 
   it('answers the file to save when download=true', async () => {
-    const billId = await addBillId(PNG_BILL, 'image/png');
+    const billId = await addBillId();
 
     const response = await getBill(billId, '?download=true');
 
     expect(response.statusCode).toBe(200);
-    expect(response.headers['content-type']).toBe('image/png');
+    expect(response.headers['content-type']).toBe(PDF);
     expect(response.headers['content-disposition']).toBe(
-      'attachment; filename="bill.png"; filename*=UTF-8\'\'bill.png',
+      'attachment; filename="bill.pdf"; filename*=UTF-8\'\'bill.pdf',
     );
   });
 

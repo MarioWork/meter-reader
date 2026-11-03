@@ -42,7 +42,7 @@ Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service
 
 Logs: `docker compose logs -f api` (or `web`, `db`, `migrate`).
 
-Data: the Postgres files live in `./data/postgres` and the photos and bills in `./data/uploads` (one JPEG per photo, one PDF, JPEG or PNG per bill, all named by the server). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
+Data: the Postgres files live in `./data/postgres` and the photos and bills in `./data/uploads` (one JPEG per photo, one PDF per bill, all named by the server). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
 
 ## First sign-in
 
