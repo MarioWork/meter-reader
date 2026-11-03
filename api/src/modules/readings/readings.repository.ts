@@ -10,6 +10,11 @@ const READING_SELECT = {
   date: true,
   status: true,
   sentAt: true,
+  sentFrom: true,
+  sentTo: true,
+  sentSubject: true,
+  sentBody: true,
+  sentWithPhoto: true,
   createdAt: true,
   // The file name, so deleting a reading can remove its photo from the uploads folder too, and sending it can attach it.
   photo: { select: { id: true, fileName: true } },
@@ -27,8 +32,31 @@ export type ReadingPage = { rows: ReadingRow[]; total: number };
 // Which readings a page is taken from. Every part is optional; the days are inclusive.
 export type ReadingFilter = { from?: Date; to?: Date; statuses?: ReadingRow['status'][] };
 
-// What a send ends in: sent at a time, or failed (and so not sent at any time).
-type SendOutcome = { status: 'SENT'; sentAt: Date } | { status: 'FAILED'; sentAt: null };
+// The email as it went out, kept on the reading once it is sent.
+export type SentEmail = { from: string | null; to: string; subject: string; body: string; withPhoto: boolean };
+
+type SentEmailColumns = {
+  sentFrom: string | null;
+  sentTo: string | null;
+  sentSubject: string | null;
+  sentBody: string | null;
+  sentWithPhoto: boolean | null;
+};
+
+// What a send ends in: sent at a time with its email, or failed (and so not sent at any time, with no email).
+type SendOutcome = ({ status: 'SENT'; sentAt: Date } | { status: 'FAILED'; sentAt: null }) & SentEmailColumns;
+
+const NO_SENT_EMAIL: SentEmailColumns = {
+  sentFrom: null,
+  sentTo: null,
+  sentSubject: null,
+  sentBody: null,
+  sentWithPhoto: null,
+};
+
+function toSentEmailColumns({ from, to, subject, body, withPhoto }: SentEmail): SentEmailColumns {
+  return { sentFrom: from, sentTo: to, sentSubject: subject, sentBody: body, sentWithPhoto: withPhoto };
+}
 
 // The updated row, or null when the reading was deleted meanwhile.
 async function updateSendOutcome(id: number, outcome: SendOutcome): Promise<ReadingRow | null> {
@@ -74,9 +102,11 @@ export const readingsRepository = {
   findById: (id: number): Promise<ReadingRow | null> =>
     prisma.reading.findUnique({ where: { id }, select: READING_SELECT }),
 
-  markSent: (id: number, sentAt: Date): Promise<ReadingRow | null> => updateSendOutcome(id, { status: 'SENT', sentAt }),
+  markSent: (id: number, sentAt: Date, email: SentEmail): Promise<ReadingRow | null> =>
+    updateSendOutcome(id, { status: 'SENT', sentAt, ...toSentEmailColumns(email) }),
 
-  markFailed: (id: number): Promise<ReadingRow | null> => updateSendOutcome(id, { status: 'FAILED', sentAt: null }),
+  markFailed: (id: number): Promise<ReadingRow | null> =>
+    updateSendOutcome(id, { status: 'FAILED', sentAt: null, ...NO_SENT_EMAIL }),
 
   // The deleted row, or null when there was none. One statement, so two deletes at once cannot both find the row:
   // the second gets null, never a database error.

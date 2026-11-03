@@ -9,10 +9,12 @@ import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS } from './routesUtils';
 const UNKNOWN_PATH = '/no-such-page';
 
 describe('an unknown page', () => {
-  it('shows the error page with one heading and a link home', async () => {
+  it('shows the not-found page with one heading and a link home', async () => {
     renderRoutes(routes, { initialEntries: [UNKNOWN_PATH] });
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Page not available' })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: 'This page went off the dial' })).toBeVisible();
+    expect(screen.getByText('Reading 404')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', BASE_ROUTES_PATHS.HOME);
   });
 
@@ -22,6 +24,23 @@ describe('an unknown page', () => {
     await userEvent.click(await screen.findByRole('link', { name: 'Back to home' }));
 
     expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
+  });
+});
+
+describe('a page that breaks while opening', () => {
+  it('shows the error page with Try again and a link home, never the error itself', async () => {
+    server.use(
+      http.get(`${TEST_BASE_API_URL}/readings`, () =>
+        HttpResponse.json({ code: 'INTERNAL_ERROR', message: 'Something went wrong' }, { status: 500 }),
+      ),
+    );
+
+    renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Something sprang a leak' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', BASE_ROUTES_PATHS.HOME);
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 });
 
@@ -37,7 +56,7 @@ describe('signed-in pages', () => {
 
     renderRoutes(routes, { initialEntries: [READING_ROUTES_PATHS.NEW] });
 
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   });
 
   it('sends a browser to the setup page before the app is set up', async () => {
@@ -61,6 +80,6 @@ describe('signed-in pages', () => {
 
     await userEvent.click(screen.getByRole('link', { name: 'New reading' }));
 
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   });
 });

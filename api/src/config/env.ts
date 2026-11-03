@@ -39,6 +39,9 @@ const EnvSchema = z
     // The provider's one address: every reading is emailed here. No default: an app that cannot say where readings go
     // has no reason to start.
     PROVIDER_EMAIL: z.email(),
+    // The user's own Hotmail address, shown as "From" on every email. Display only: Microsoft sends from whichever
+    // account yarn mail:connect signed in. Optional; left empty, the app shows no "From".
+    MAIL_FROM: z.preprocess((value) => (value === '' ? undefined : value), z.email().optional()),
     // The subject of every reading's email.
     MAIL_SUBJECT: z.string().trim().min(1).default(DEFAULT_MAIL_SUBJECT),
     // The folder the photos are kept in, relative to where the api starts. In the container it is the

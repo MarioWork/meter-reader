@@ -6,66 +6,67 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * The palette (meterpallet): dark green-grey #373F3C, grey #5E5F61, mid grey #8E8D92, lilac #BFB1C9, light grey
- * #D6D6D6. Shades off the palette are darker or lighter steps of it, picked so every text and control pair passes
- * WCAG 2.2 AA; src/themeContrast.test.ts checks each pair. Status colours are muted green, red and amber.
+ * The palette (Ocean Blue Serenity): navy #03045E, #023E8A, #0077B6, #0096C7, #00B4D8, #48CAE4, #90E0EF, #ADE8F4,
+ * pale aqua #CAF0F8. Shades off the palette are lighter or darker steps of it, picked so every text and control pair
+ * passes WCAG 2.2 AA; src/themeContrast.test.ts checks each pair. Status colours are muted green, red and amber.
  */
 :root {
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #373f3c;
+  --background: #e8f6fa;
+  --foreground: #03045e;
   --card: #ffffff;
-  --card-foreground: #373f3c;
+  --card-foreground: #03045e;
   --popover: #ffffff;
-  --popover-foreground: #373f3c;
-  /* Lilac is too light for text or a button on white, so light mode uses a deeper step of it. */
-  --primary: #6b5a7a;
+  --popover-foreground: #03045e;
+  /* #0077B6 is a touch too light for text on the pale aqua, so light mode uses a deeper step of it. */
+  --primary: #006ba4;
   --primary-foreground: #ffffff;
-  --secondary: #ece7f0;
-  --secondary-foreground: #373f3c;
-  --muted: #f1f1f2;
-  --muted-foreground: #5e5f61;
-  --accent: #ece7f0;
-  --accent-foreground: #373f3c;
+  --secondary: #caf0f8;
+  --secondary-foreground: #03045e;
+  --muted: #f0f9fc;
+  --muted-foreground: #3e5c76;
+  --accent: #caf0f8;
+  --accent-foreground: #03045e;
   --destructive: #a23b3b;
   --destructive-foreground: #ffffff;
   --success: #2e6b45;
   --success-foreground: #ffffff;
   --warning: #8a5a00;
   --warning-foreground: #ffffff;
-  --border: #d6d6d6;
-  --input: #858489;
-  --ring: #6b5a7a;
+  --border: #ade8f4;
+  --input: #5f86a3;
+  --ring: #006ba4;
   /* Dims the page behind a modal; the same in both themes. */
-  --scrim: #1c201e;
+  --scrim: #01022a;
   --radius: 0.625rem;
 }
 
 .dark {
+  /* A calm deep sea, not the palette's vivid navy: dark blue-teal surfaces, pale aqua text, #48CAE4 for actions. */
   color-scheme: dark;
-  --background: #373f3c;
-  --foreground: #d6d6d6;
-  --card: #404844;
-  --card-foreground: #d6d6d6;
-  --popover: #404844;
-  --popover-foreground: #d6d6d6;
-  --primary: #bfb1c9;
-  --primary-foreground: #373f3c;
-  --secondary: #463f52;
-  --secondary-foreground: #d6d6d6;
-  --muted: #404844;
-  --muted-foreground: #bdbcc1;
-  --accent: #463f52;
-  --accent-foreground: #d6d6d6;
+  --background: #06121f;
+  --foreground: #caf0f8;
+  --card: #0c2236;
+  --card-foreground: #caf0f8;
+  --popover: #0c2236;
+  --popover-foreground: #caf0f8;
+  --primary: #48cae4;
+  --primary-foreground: #03045e;
+  --secondary: #123a5c;
+  --secondary-foreground: #caf0f8;
+  --muted: #0c2236;
+  --muted-foreground: #90e0ef;
+  --accent: #123a5c;
+  --accent-foreground: #caf0f8;
   --destructive: #e8a39e;
   --destructive-foreground: #373f3c;
   --success: #9ccba9;
   --success-foreground: #373f3c;
   --warning: #e2bf7a;
   --warning-foreground: #373f3c;
-  --border: #5e5f61;
-  --input: #9a999e;
-  --ring: #bfb1c9;
+  --border: #1d4a6e;
+  --input: #48cae4;
+  --ring: #48cae4;
 }
 
 @theme inline {
@@ -100,6 +101,60 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* The sign-in pages' logo: a slow bob with a little sway, its shadow shrinking as it rises. Used with motion-safe:
+   only. */
+@theme {
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-float-shadow: float-shadow 4s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-3deg);
+    }
+    50% {
+      transform: translateY(-10px) rotate(3deg);
+    }
+  }
+  @keyframes float-shadow {
+    0%,
+    100% {
+      transform: scaleX(1);
+      opacity: 0.6;
+    }
+    50% {
+      transform: scaleX(0.7);
+      opacity: 0.3;
+    }
+  }
+}
+
+/* Anything clickable gets the hand, so it reads as clickable. Tailwind 4 resets buttons to the default arrow, so
+   controls get it in the base layer, where a control's own cursor-* utility still wins. The vendored menu items set
+   cursor-default, so their hand is unlayered: it beats that utility without editing src/common/components/ui.
+   Disabled controls keep the arrow. */
+@layer base {
+  :is(
+    button,
+    summary,
+    label[for],
+    [role='button'],
+    [role='tab'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio']
+  ):not(:disabled, [aria-disabled='true'], [data-disabled]) {
+    cursor: pointer;
+  }
+}
+
+:is([role='menuitem'], [role='menuitemcheckbox'], [role='menuitemradio'], [role='option']):not(
+  [aria-disabled='true'],
+  [data-disabled]
+) {
+  cursor: pointer;
 }
 
 @layer base {

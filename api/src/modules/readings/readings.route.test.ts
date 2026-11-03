@@ -59,6 +59,10 @@ async function addReadingWithPhotoId(): Promise<number> {
   return response.json<{ id: number }>().id;
 }
 
+function getReading(id: number | string) {
+  return app.inject({ method: 'GET', url: `/readings/${id}`, ...withSession(token) });
+}
+
 function getReadingEmail(id: number | string) {
   return app.inject({ method: 'GET', url: `/readings/${id}/email`, ...withSession(token) });
 }
@@ -118,6 +122,7 @@ describe('POST /readings', () => {
       'id',
       'photoId',
       'sentAt',
+      'sentEmail',
       'status',
     ]);
     expect(response.json()).toMatchObject({
@@ -126,6 +131,7 @@ describe('POST /readings', () => {
       status: 'notSent',
       photoId: null,
       sentAt: null,
+      sentEmail: null,
     });
   });
 
@@ -416,6 +422,64 @@ describe('DELETE /readings/:id', () => {
   });
 });
 
+describe('GET /readings/email-defaults', () => {
+  it('answers who the email is from and to, and its subject', async () => {
+    const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ from: 'me@hotmail.example', to: PROVIDER_EMAIL, subject: 'test' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const response = await app.inject({ method: 'GET', url: '/readings/email-defaults' });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('GET /readings/:id', () => {
+  it('answers the reading with its photo id, status and save time', async () => {
+    const photoId = await addPhoto();
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31', photoId })).json<{ id: number }>().id;
+
+    const response = await getReading(readingId);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      id: readingId,
+      digits: '00123',
+      date: '2026-10-31',
+      status: 'notSent',
+      photoId,
+      sentAt: null,
+      sentEmail: null,
+    });
+    expect(Date.parse(response.json<{ createdAt: string }>().createdAt)).not.toBeNaN();
+  });
+
+  it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
+    const response = await getReading('abc');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 404 NOT_FOUND when the reading does not exist', async () => {
+    const response = await getReading(999_999);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const readingId = await addReadingId('00100');
+
+    const response = await app.inject({ method: 'GET', url: `/readings/${readingId}` });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
 describe('GET /readings/:id/email', () => {
   it('answers the address, the subject and the body, with the photo to attach, when the reading has a photo', async () => {
     const photoId = await addPhoto();
@@ -425,6 +489,7 @@ describe('GET /readings/:id/email', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
+      from: 'me@hotmail.example',
       to: PROVIDER_EMAIL,
       subject: 'test',
       body: 'Date: 31 October 2026\nReading: 00123',
@@ -486,6 +551,55 @@ describe('POST /readings/:id/send', () => {
       },
     });
     expect(attachmentsOf(received[0])).toEqual([]);
+  });
+
+  it("emails the user's own subject and body when they edited the preview", async () => {
+    await connectHotmail();
+    const readingId = await addReadingWithPhotoId();
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId, {
+      attachPhoto: false,
+      subject: '  Water meter reading  ',
+      body: 'Hello,\nthe meter shows 00123.',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(received[0]?.body).toMatchObject({
+      message: { subject: 'Water meter reading', body: { content: 'Hello,\nthe meter shows 00123.' } },
+    });
+  });
+
+  it('returns 400 VALIDATION_ERROR and sends nothing when the edited subject is blank', async () => {
+    await connectHotmail();
+    const readingId = await addReadingWithPhotoId();
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId, { attachPhoto: false, subject: '   ' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(received).toHaveLength(0);
+  });
+
+  it('keeps the email exactly as it went out on the reading, the edits included', async () => {
+    await connectHotmail();
+    const readingId = await addReadingWithPhotoId();
+    answerSendMail();
+
+    await sendReading(readingId, { attachPhoto: true, subject: 'Water meter reading', body: 'The meter shows 00123.' });
+    const response = await getReading(readingId);
+
+    expect(response.json()).toMatchObject({
+      status: 'sent',
+      sentEmail: {
+        from: 'me@hotmail.example',
+        to: PROVIDER_EMAIL,
+        subject: 'Water meter reading',
+        body: 'The meter shows 00123.',
+        hasPhoto: true,
+      },
+    });
   });
 
   it("attaches the photo's file when the photo is asked for", async () => {

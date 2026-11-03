@@ -1,12 +1,13 @@
 import {
   act,
   configure,
+  fireEvent,
   render,
   renderHook,
   screen,
+  type RenderOptions,
   waitFor,
   within,
-  type RenderOptions,
 } from '@testing-library/react';
 import userEventBase from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
@@ -83,4 +84,13 @@ export function renderRoutes(routes: RouteObject[], { initialEntries = ['/'], ..
   return { ...renderWithProviders(<RouterProvider router={router} />, options), router };
 }
 
-export { act, renderWithProviders as render, renderHookWithProviders as renderHook, screen, waitFor, within };
+// fireEvent only for what a user cannot do, such as an image finishing or failing to load.
+export {
+  act,
+  fireEvent,
+  renderWithProviders as render,
+  renderHookWithProviders as renderHook,
+  screen,
+  waitFor,
+  within,
+};

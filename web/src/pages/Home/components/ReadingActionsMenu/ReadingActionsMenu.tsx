@@ -17,8 +17,8 @@ type Props = {
 const MENU_LABEL = 'More actions for the reading of';
 // The menu item's text, and the dialog's confirm button.
 const DELETE_LABEL = 'Delete';
-const PHOTO_DIALOG_TITLE = 'Photo of';
 const PHOTO_DESCRIPTION = 'The meter showing';
+const PHOTO_SUBTITLE = 'Reading';
 
 // The "⋯" menu of a reading: View photo and Delete, which asks first. Each item opens its own dialog; closing it
 // gives focus back to the "⋯" button.
@@ -53,7 +53,8 @@ function ReadingActionsMenu({ reading }: Props) {
       {reading.photoId !== null && (
         <PhotoDialog
           isOpen={isPhotoOpen}
-          title={`${PHOTO_DIALOG_TITLE} ${photoSubject}`}
+          title={`Photo of the ${readingDate} reading`}
+          subtitle={`${PHOTO_SUBTITLE} ${reading.digits}`}
           photoUrl={getPhotoUrl(reading.photoId)}
           photoDescription={`${PHOTO_DESCRIPTION} ${photoSubject}`}
           returnFocusRef={menuButtonRef}

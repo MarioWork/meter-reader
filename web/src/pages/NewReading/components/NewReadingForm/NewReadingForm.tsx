@@ -1,24 +1,32 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useFetcher } from 'react-router';
-import type { ReadingApiModel } from '@app-types/models';
+import type { EmailDefaultsApiModel, ReadingApiModel } from '@app-types/models';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
-import { Button } from '@components/ui/button';
 import ErrorAlert from '@components/ErrorAlert';
 import { FieldGroup } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
 import { isReadingLower, readingDigitsSchema } from '@utils/readingUtils';
-import { SAVE_FAILED_MESSAGE } from '../../newReadingUtils';
+import { NewReadingIntent, SAVE_FAILED_MESSAGE, type NewReadingEmail } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
 import ReadingDateField from './components/ReadingDateField';
 import ReadingDigitsField from './components/ReadingDigitsField';
 import PhotoPicker from './components/PhotoPicker';
 import { useReadingPhoto } from './hooks/useReadingPhoto';
-import { getInitialValues, newReadingFormSchema, toPayload, type NewReadingFormValues } from './newReadingFormUtils';
+import NewReadingButtons from './components/NewReadingButtons';
+import NewReadingEmailFields from './components/NewReadingEmailFields';
+import {
+  getInitialValues,
+  newReadingFormSchema,
+  toEmail,
+  toPayload,
+  type NewReadingFormValues,
+} from './newReadingFormUtils';
 
 type Props = {
   lastReading?: ReadingApiModel;
+  emailDefaults: EmailDefaultsApiModel;
 };
 
 const WARNING_ID = 'reading-lower-warning';
@@ -35,13 +43,20 @@ function isLowerThanLast(digits: string, lastReading?: ReadingApiModel): boolean
   return isReadingLower(digits.trim(), lastReading.digits);
 }
 
-function NewReadingForm({ lastReading }: Props) {
+// Only a send carries the email; a save leaves it out.
+function emailFor(intent: NewReadingIntent, values: NewReadingFormValues): NewReadingEmail | undefined {
+  if (intent !== NewReadingIntent.SEND) return undefined;
+
+  return toEmail(values);
+}
+
+function NewReadingForm({ lastReading, emailDefaults }: Props) {
   // react-hook-form drives uncontrolled inputs through the `ref` callback `register()` returns on every render.
   // The React Compiler would memoize that spread, so the inputs would stop reaching the form state.
   'use no memo';
 
   const { register, handleSubmit, formState, control, getValues, setValue, setFocus } = useForm<NewReadingFormValues>({
-    defaultValues: getInitialValues(),
+    defaultValues: getInitialValues(emailDefaults.subject),
     resolver: yupResolver(newReadingFormSchema),
   });
 
@@ -53,12 +68,15 @@ function NewReadingForm({ lastReading }: Props) {
       fillDigits: (digits) => setValue('digits', digits, { shouldDirty: true, shouldValidate: formState.isSubmitted }),
     });
 
-  const onSubmit = handleSubmit((values) =>
-    fetcher.submit(createFormData({ reading: toPayload(values), photo }), {
-      method: HttpVerbsUtil.POST,
-      encType: WITH_FILES,
-    }),
-  );
+  // Both buttons check the form the same way; they only differ in what the action does once it is saved.
+  function submitReading(intent: NewReadingIntent) {
+    return handleSubmit((values) =>
+      fetcher.submit(createFormData({ intent, reading: toPayload(values), photo, email: emailFor(intent, values) }), {
+        method: HttpVerbsUtil.POST,
+        encType: WITH_FILES,
+      }),
+    );
+  }
 
   const digits = useWatch({ control, name: 'digits' });
   const isLower = isLowerThanLast(digits, lastReading);
@@ -67,7 +85,11 @@ function NewReadingForm({ lastReading }: Props) {
   const failureMessage = useFetcherFailure(fetcher, SAVE_FAILED_MESSAGE);
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-6">
+    <form
+      onSubmit={(event) => void submitReading(NewReadingIntent.SAVE)(event)}
+      noValidate
+      className="flex flex-col gap-6"
+    >
       <FieldGroup>
         <PhotoPicker
           previewUrl={previewUrl}
@@ -87,10 +109,9 @@ function NewReadingForm({ lastReading }: Props) {
         {isLower && lastReading && <LowerReadingWarning id={WARNING_ID} lastReading={lastReading} />}
         <ReadingDateField error={formState.errors.date?.message} registration={register('date')} />
       </FieldGroup>
+      <NewReadingEmailFields emailDefaults={emailDefaults} register={register} errors={formState.errors} />
       {failureMessage && <ErrorAlert message={failureMessage} />}
-      <Button type="submit" size="lg" disabled={!canSave} className="w-full">
-        Save reading
-      </Button>
+      <NewReadingButtons isDisabled={!canSave} onSend={(event) => void submitReading(NewReadingIntent.SEND)(event)} />
     </form>
   );
 }

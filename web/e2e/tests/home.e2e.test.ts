@@ -3,7 +3,7 @@ import { expect, test } from '../fixtures/app.fixture';
 import { HomePage } from '../pages/HomePage.page';
 
 const NEWEST_DATE = '1 Oct 2026';
-const NEWEST_PHOTO = `Photo of 00529 on ${NEWEST_DATE}`;
+const NEWEST_PHOTO = `Photo of the ${NEWEST_DATE} reading`;
 
 test('home shows the last reading on top and the earlier ones as cards', async ({ page }) => {
   const homePage = new HomePage(page);

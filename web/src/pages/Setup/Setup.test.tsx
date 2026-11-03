@@ -122,5 +122,5 @@ it('sends a set-up app to the login page', async () => {
 
   renderRoutes(routes, { initialEntries: [setupPath(MOCK_SETUP_CODE)] });
 
-  expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
 });

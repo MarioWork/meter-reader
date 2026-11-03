@@ -168,7 +168,7 @@ describe('sendReading', () => {
     let receivedPath = '';
     server.use(
       http.post(`${API}/readings/:id/send`, async ({ request }) => {
-        receivedBody = await request.json();
+        receivedBody = await request.clone().json();
         receivedPath = new URL(request.url).pathname;
       }),
     );

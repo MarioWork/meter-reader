@@ -13,7 +13,7 @@ type StatusChipVariant = VariantProps<typeof badgeVariants>['variant'];
 
 // Always text as well as colour, never colour alone.
 const STATUS_CHIP_VARIANTS: Record<ReadingStatusUtil, StatusChipVariant> = {
-  [ReadingStatusUtil.NOT_SENT]: 'outline',
+  [ReadingStatusUtil.NOT_SENT]: 'warning',
   [ReadingStatusUtil.SENT]: 'success',
   [ReadingStatusUtil.FAILED]: 'error',
 };

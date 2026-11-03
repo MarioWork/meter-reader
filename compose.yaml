@@ -61,6 +61,8 @@ services:
       # Where every reading is emailed, and the subject (README, "Connecting Hotmail").
       PROVIDER_EMAIL: ${PROVIDER_EMAIL:?set PROVIDER_EMAIL in .env}
       MAIL_SUBJECT: ${MAIL_SUBJECT:-test}
+      # Your Hotmail address, shown as "From" in the app. Optional.
+      MAIL_FROM: ${MAIL_FROM:-}
       # The photos, on the volume below, so they outlive the container.
       UPLOADS_DIR: /app/data/uploads
     volumes:

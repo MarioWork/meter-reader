@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { axiosActions } from '@api/axiosActions';
-import type { ReadingApiModel, ReadingEmailApiModel, ReadingId } from '@app-types/models';
+import type { EmailDefaultsApiModel, ReadingApiModel, ReadingEmailApiModel, ReadingId } from '@app-types/models';
 import {
   ApiUrlParamsUtil,
   HttpVerbsUtil,
@@ -47,6 +47,19 @@ export default {
         [ReadingApiSearchFields.STATUS]: toStatusParam(statuses),
       },
     });
+
+    return response.data;
+  },
+
+  // What a new reading's email starts with, before the reading is saved.
+  getEmailDefaults: async (): Promise<EmailDefaultsApiModel> => {
+    const response = await axios.get<EmailDefaultsApiModel>(`${BASE_READINGS_URL}/email-defaults`);
+
+    return response.data;
+  },
+
+  getReading: async (id: ReadingId): Promise<ReadingApiModel> => {
+    const response = await axios.get<ReadingApiModel>(`${BASE_READINGS_URL}/${id}`);
 
     return response.data;
   },

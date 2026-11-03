@@ -1,3 +1,4 @@
+import { LogInIcon } from 'lucide-react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { useFetcher } from 'react-router';
@@ -51,7 +52,8 @@ function PasswordSignInForm() {
         />
       </FieldGroup>
       {failureMessage && <ErrorAlert message={failureMessage} />}
-      <Button type="submit" disabled={isSigningIn}>
+      <Button type="submit" size="lg" disabled={isSigningIn}>
+        <LogInIcon aria-hidden="true" />
         Sign in
       </Button>
     </form>

@@ -34,7 +34,7 @@ test.describe('by keyboard', () => {
 
     await header.signOutWithKeyboard();
 
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   });
 });
 
@@ -60,7 +60,7 @@ test.describe('by touch', () => {
     await header.tapMenuButton();
     await header.tapSignOut();
 
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   });
 
   test('keeps every menu target at least 24 px square', async ({ page }) => {

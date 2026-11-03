@@ -34,6 +34,16 @@ const routes: RouteObject[] = [
             lazy: () => import('@pages/Home/Home.route'),
             children: [
               {
+                // Over the history, on a screen wider than a phone.
+                path: READING_ROUTES_PATHS.NEW_MODAL,
+                lazy: () => import('@pages/Home/components/NewReadingModal/NewReadingModal.route'),
+              },
+              {
+                // Over the history: one reading's details, opened from its card.
+                path: READING_ROUTES_PATHS.details(),
+                lazy: () => import('@pages/Home/components/ReadingDetailsModal/ReadingDetailsModal.route'),
+              },
+              {
                 // Over the history, which stays in place behind it.
                 path: READING_ROUTES_PATHS.send(),
                 lazy: () => import('@pages/Home/components/SendReadingModal/SendReadingModal.route'),

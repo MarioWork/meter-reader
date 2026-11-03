@@ -22,7 +22,7 @@ const PASSKEY_ANSWER = {
 async function renderLogin() {
   setMockAuthState(AuthStateUtil.SIGNED_OUT);
   renderRoutes(routes, { initialEntries: [AUTH_ROUTES_PATHS.LOGIN] });
-  await screen.findByRole('heading', { name: 'Sign in' });
+  await screen.findByRole('heading', { name: 'Welcome back!' });
 }
 
 it('opens Home after a sign-in with the password', async () => {
@@ -49,7 +49,7 @@ it("shows the API's message and keeps the page when the password is wrong", asyn
   await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent("That password doesn't match. Try again.");
-  expect(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
 });
 
 it('says too many tries were made when the API slows sign-in down', async () => {

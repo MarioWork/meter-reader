@@ -28,6 +28,11 @@ const SAVED_ROW = {
   date: new Date('2026-10-31T00:00:00.000Z'),
   status: 'NOT_SENT' as const,
   sentAt: null,
+  sentFrom: null,
+  sentTo: null,
+  sentSubject: null,
+  sentBody: null,
+  sentWithPhoto: null,
   createdAt: new Date('2026-11-01T08:15:00.000Z'),
   photo: null,
 };
@@ -51,6 +56,7 @@ describe('addReading', () => {
       createdAt: '2026-11-01T08:15:00.000Z',
       photoId: null,
       sentAt: null,
+      sentEmail: null,
     });
   });
 
@@ -161,6 +167,24 @@ describe('sendReading', () => {
     finishSending();
     await expect(first).resolves.toMatchObject({ status: 'sent' });
     expect(sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it("emails the user's subject and body when they edited them in the preview", async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce(SAVED_ROW);
+    vi.mocked(readingsRepository.markSent).mockResolvedValueOnce({ ...SAVED_ROW, status: 'SENT', sentAt: new Date() });
+
+    await sendReading(7, { attachPhoto: false, subject: 'Meter reading', body: 'Hello, the meter shows 00123.' });
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ subject: 'Meter reading', body: 'Hello, the meter shows 00123.' }),
+    );
+    expect(readingsRepository.markSent).toHaveBeenCalledWith(7, expect.any(Date), {
+      from: 'me@hotmail.example',
+      to: expect.any(String) as string,
+      subject: 'Meter reading',
+      body: 'Hello, the meter shows 00123.',
+      withPhoto: false,
+    });
   });
 
   it('marks the reading failed with a 409 PHOTO_FILE_MISSING, sending nothing, when the photo file is gone', async () => {

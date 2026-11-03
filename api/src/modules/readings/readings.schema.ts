@@ -43,6 +43,16 @@ export const ListReadingsQuerySchema = PaginationQuerySchema.extend({
 
 export const ReadingParamsSchema = z.object({ id: z.coerce.number().int().positive() });
 
+// The email exactly as it went out, the user's edits included. `hasPhoto`: whether the photo was attached.
+export const SentEmailResponseSchema = z.object({
+  // The user's address as MAIL_FROM said when it went out; null when it was not set.
+  from: z.string().nullable(),
+  to: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  hasPhoto: z.boolean(),
+});
+
 export const ReadingResponseSchema = z
   .object({
     id: z.number().int(),
@@ -54,22 +64,43 @@ export const ReadingResponseSchema = z
     photoId: z.number().int().nullable(),
     // When the mail service accepted its email; null until it is sent.
     sentAt: z.iso.datetime().nullable(),
+    // Null until it is sent, and for readings sent before the email was kept.
+    sentEmail: SentEmailResponseSchema.nullable(),
   })
   .meta({ id: 'Reading' });
 
-// Whether the reading's photo goes with the email. Said every time, never assumed.
-export const SendReadingSchema = z.strictObject({ attachPhoto: z.boolean() });
+const SUBJECT_MAX_LENGTH = 200;
+const BODY_MAX_LENGTH = 5000;
+
+// Whether the reading's photo goes with the email, said every time, never assumed. The subject and body are the
+// user's edits of the preview; left out, the email uses the server's own (GET /readings/:id/email).
+export const SendReadingSchema = z.strictObject({
+  attachPhoto: z.boolean(),
+  subject: z.string().trim().min(1).max(SUBJECT_MAX_LENGTH).optional(),
+  body: z.string().trim().min(1).max(BODY_MAX_LENGTH).optional(),
+});
 
 // Exactly what POST /readings/:id/send emails: the provider's address, the subject, the body, and the photo that is
 // attached when the user asks for it (null when the reading has none).
 export const ReadingEmailResponseSchema = z
   .object({
+    // The user's own address (MAIL_FROM), display only; null when it is not set.
+    from: z.string().nullable(),
     to: z.string(),
     subject: z.string(),
     body: z.string(),
     attachment: z.object({ photoId: z.number().int(), name: z.string() }).nullable(),
   })
   .meta({ id: 'ReadingEmail' });
+
+// What every email starts with, before there is a reading to build its body from: the New reading form's preview.
+export const EmailDefaultsResponseSchema = z
+  .object({
+    from: z.string().nullable(),
+    to: z.string(),
+    subject: z.string(),
+  })
+  .meta({ id: 'EmailDefaults' });
 
 export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponseSchema);
 
@@ -78,6 +109,7 @@ export type ListReadingsQuery = z.infer<typeof ListReadingsQuerySchema>;
 export type ReadingParams = z.infer<typeof ReadingParamsSchema>;
 export type SendReading = z.infer<typeof SendReadingSchema>;
 export type ReadingEmailResponse = z.infer<typeof ReadingEmailResponseSchema>;
+export type EmailDefaultsResponse = z.infer<typeof EmailDefaultsResponseSchema>;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 export type ReadingResponse = z.infer<typeof ReadingResponseSchema>;
 export type ReadingListResponse = z.infer<typeof ReadingListResponseSchema>;

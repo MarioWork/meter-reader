@@ -37,7 +37,7 @@ test('a camera photo is shrunk to a JPEG of at most 2000 px and saved with its r
   expect(await readPhotoSize(page, uploaded)).toEqual({ width: 2000, height: 1500, isJpeg: true });
   const homePage = new HomePage(page);
   await homePage.openPhoto('31 Oct 2026');
-  await expect(homePage.photoDialog('Photo of 00600 on 31 Oct 2026').getByRole('img')).toBeVisible();
+  await expect(homePage.photoDialog('Photo of the 31 Oct 2026 reading').getByRole('img')).toBeVisible();
 });
 
 test('the number in a meter photo is read into the reading field, where it can still be changed', async ({ page }) => {

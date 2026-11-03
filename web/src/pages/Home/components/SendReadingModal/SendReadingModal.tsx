@@ -1,57 +1,65 @@
+import { SendIcon } from 'lucide-react';
 import ErrorAlert from '@components/ErrorAlert';
+import EmailAddresses from '@components/EmailAddresses';
 import { Button } from '@components/ui/button';
+import { Spinner } from '@components/ui/spinner';
+import EmailAttachment from './components/EmailAttachment';
+import EmailTextFields from './components/EmailTextFields';
+import MailNotConnectedNote from './components/MailNotConnectedNote';
 import ResponsiveDialog from '../ResponsiveDialog';
-import EmailPreview from './components/EmailPreview';
 import { useSendReading } from './hooks/useSendReading';
 
 const DIALOG_TITLE = 'Send this reading?';
-const CLOSE_LABEL = 'Close';
+const DESCRIPTION = 'Check the email and change anything you like before it goes.';
 const SEND_LABEL = 'Send';
 const SENDING_LABEL = 'Sending…';
-const MAIL_NOT_CONNECTED_TEXT = "Hotmail is not connected, so the reading can't be sent. Run";
-const MAIL_NOT_CONNECTED_COMMAND = 'yarn mail:connect';
-const MAIL_NOT_CONNECTED_END = 'on the server first.';
+// The footer's Send sits outside the form, so it names the form it submits.
+const FORM_ID = 'send-reading-form';
 
-// The email exactly as it will go out, and Send. Send stays off while Hotmail is not connected (ADR 0001). Open for
-// as long as its route is: closing it goes back to the history.
+// The email as it will go out, ready to edit: the subject, the message and the photo. Send stays off while Hotmail is
+// not connected (ADR 0001). Open for as long as its route is: closing it goes back to the history.
 function SendReadingModal() {
+  'use no memo';
+
   const {
     readingEmail,
+    register,
+    errors,
     isAttachingPhoto,
     setIsAttachingPhoto,
     isMailConnected,
     isSending,
     failureMessage,
     handleOpenChange,
-    closePreview,
     sendReading,
   } = useSendReading();
 
   const footer = (
-    <>
-      <Button variant="outline" disabled={isSending} onClick={closePreview}>
-        {CLOSE_LABEL}
-      </Button>
-      <Button disabled={isSending || !isMailConnected} onClick={sendReading}>
-        {isSending ? SENDING_LABEL : SEND_LABEL}
-      </Button>
-    </>
+    <Button type="submit" form={FORM_ID} disabled={isSending || !isMailConnected}>
+      {isSending ? <Spinner aria-hidden="true" /> : <SendIcon aria-hidden="true" />}
+      {isSending ? SENDING_LABEL : SEND_LABEL}
+    </Button>
   );
 
   return (
-    <ResponsiveDialog title={DIALOG_TITLE} isOpen onOpenChange={handleOpenChange} footer={footer}>
-      <EmailPreview
-        email={readingEmail}
-        isAttachingPhoto={isAttachingPhoto}
-        isDisabled={isSending}
-        onAttachingPhotoChange={setIsAttachingPhoto}
-      />
-      {!isMailConnected && (
-        <p className="text-warning">
-          {MAIL_NOT_CONNECTED_TEXT} <code className="font-mono">{MAIL_NOT_CONNECTED_COMMAND}</code>{' '}
-          {MAIL_NOT_CONNECTED_END}
-        </p>
-      )}
+    <ResponsiveDialog
+      title={DIALOG_TITLE}
+      description={DESCRIPTION}
+      isOpen
+      onOpenChange={handleOpenChange}
+      footer={footer}
+    >
+      <EmailAddresses from={readingEmail.from} to={readingEmail.to} className="rounded-lg border bg-muted/40 p-3" />
+      <form id={FORM_ID} noValidate onSubmit={(event) => void sendReading(event)} className="flex flex-col gap-5">
+        <EmailTextFields register={register} errors={errors} isDisabled={isSending} />
+        <EmailAttachment
+          attachment={readingEmail.attachment}
+          isAttachingPhoto={isAttachingPhoto}
+          isDisabled={isSending}
+          onAttachingPhotoChange={setIsAttachingPhoto}
+        />
+      </form>
+      {!isMailConnected && <MailNotConnectedNote />}
       {failureMessage && <ErrorAlert message={failureMessage} />}
     </ResponsiveDialog>
   );

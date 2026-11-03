@@ -20,6 +20,7 @@ export default (baseUrl: string) => [
       createdAt: MOCK_SAVED_AT,
       photoId: photoId ?? null,
       sentAt: null,
+      sentEmail: null,
     });
 
     return HttpResponse.json(saved, { status: 201 });

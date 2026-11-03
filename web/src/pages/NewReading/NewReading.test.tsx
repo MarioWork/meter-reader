@@ -10,6 +10,7 @@ import {
   screen,
   userEvent,
   waitFor,
+  within,
 } from '@test-utils';
 import { todayAsIsoDate } from '@utils/dateUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
@@ -57,6 +58,14 @@ beforeEach(() => {
   vi.mocked(readDigitsFromPhoto).mockResolvedValue('');
 });
 
+// A reading saved without a photo has no View photo in its "⋯" menu.
+async function expectNewestHasNoPhoto() {
+  await userEvent.click(within(newestHistoryRow()).getByRole('button', { name: /More actions/ }));
+
+  expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  expect(screen.queryByRole('menuitem', { name: 'View photo' })).not.toBeInTheDocument();
+}
+
 function newestHistoryRow() {
   return screen.getByRole('region', { name: 'Last reading' });
 }
@@ -80,6 +89,64 @@ it('saves the reading with its leading zeros and the chosen date, then shows it 
   expect(newest).toHaveTextContent('31 Oct 2026');
   expect(newest).toHaveTextContent(HIGHER_THAN_LAST);
   expect(await findNotification('Reading saved')).toBeVisible();
+});
+
+it('saves and sends the reading in one go with Send reading, then shows it as sent on Home', async () => {
+  await renderNewReading();
+
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  await userEvent.click(screen.getByRole('button', { name: 'Send reading' }));
+
+  await screen.findByRole('heading', { name: 'History' });
+  expect(await findNotification('Reading saved and sent')).toBeVisible();
+  expect(newestHistoryRow()).toHaveTextContent(HIGHER_THAN_LAST);
+  expect(newestHistoryRow()).toHaveTextContent(/sent/i);
+});
+
+it('shows who the email is from and to, with the subject ready to edit', async () => {
+  await renderNewReading();
+
+  const email = screen.getByRole('group', { name: 'Email' });
+  expect(email).toHaveTextContent('Fromme@hotmail.example');
+  expect(email).toHaveTextContent('Toreadings@water-provider.example');
+  expect(within(email).getByRole('textbox', { name: 'Subject' })).toHaveValue('test');
+  expect(within(email).getByRole('textbox', { name: 'Message' })).toHaveValue('');
+});
+
+it('sends with the edited subject and message, or the usual message when it is left empty', async () => {
+  const received: unknown[] = [];
+  server.use(
+    http.post(`${TEST_BASE_API_URL}/readings/:id/send`, async ({ request }) => {
+      received.push(await request.clone().json());
+    }),
+  );
+  await renderNewReading();
+
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  const subject = screen.getByRole('textbox', { name: 'Subject' });
+  await userEvent.clear(subject);
+  await userEvent.type(subject, 'Water meter reading');
+  await userEvent.click(screen.getByRole('button', { name: 'Send reading' }));
+
+  await screen.findByRole('heading', { name: 'History' });
+  expect(received).toEqual([{ attachPhoto: false, subject: 'Water meter reading' }]);
+});
+
+it('goes back Home without saving when the user cancels', async () => {
+  let isAnythingPosted = false;
+  server.use(
+    http.post(`${TEST_BASE_API_URL}/*`, () => {
+      isAnythingPosted = true;
+      return HttpResponse.json({}, { status: 201 });
+    }),
+  );
+  await renderNewReading();
+
+  await userEvent.type(readingField(), HIGHER_THAN_LAST);
+  await userEvent.click(screen.getByRole('link', { name: 'Cancel' }));
+
+  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
+  expect(isAnythingPosted).toBe(false);
 });
 
 it('warns when the reading is lower than the last one', async () => {
@@ -123,13 +190,21 @@ it('does not warn when there is no reading yet', async () => {
   expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
 });
 
-it('marks the field and sends nothing when the reading has something other than digits', async () => {
+it('keeps only the digits of what is typed in the reading field', async () => {
   await renderNewReading();
 
-  await userEvent.type(readingField(), '12.5');
+  await userEvent.type(readingField(), 'a0b0.5 2x9');
+
+  expect(readingField()).toHaveValue('00529');
+});
+
+it('marks the field and sends nothing when the reading is left empty', async () => {
+  await renderNewReading();
+
+  await userEvent.type(readingField(), 'abc');
   await save();
 
-  expect(readingField()).toHaveAccessibleDescription('Use digits only, as the meter shows them');
+  expect(readingField()).toHaveValue('');
   expect(readingField()).toBeInvalid();
   expect(screen.getByRole('heading', { name: 'New reading' })).toBeVisible();
 });
@@ -200,7 +275,7 @@ it('saves the reading without a photo once the photo is removed', async () => {
   await save();
 
   await screen.findByRole('heading', { name: 'History' });
-  expect(newestHistoryRow()).toHaveTextContent('No photo');
+  await expectNewestHasNoPhoto();
 });
 
 it('says why a file cannot be used and still saves the reading without it', async () => {
@@ -216,7 +291,7 @@ it('says why a file cannot be used and still saves the reading without it', asyn
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
   await save();
   await screen.findByRole('heading', { name: 'History' });
-  expect(newestHistoryRow()).toHaveTextContent('No photo');
+  await expectNewestHasNoPhoto();
 });
 
 it('reads the number from the picked photo into the reading field, saying so while it works', async () => {

@@ -1,14 +1,14 @@
-<!-- The app logo: an odometer window reading 0427, the last wheel in lilac. Drawn on a 32 px grid so it stays sharp at
+<!-- The app logo: an odometer window reading 0427, the last wheel in aqua. Drawn on a 32 px grid so it stays sharp at
      16 and 32 px; width/height of 512 make the PWA icon generator render it large instead of scaling up a 32 px image.
-     The colours are the meterpallet palette (see src/index.css), written out because a favicon cannot read CSS
-     variables; the grey rim keeps the dark window visible on the dark theme's background. -->
+     The colours are the Ocean Blue Serenity palette (see src/index.css), written out because a favicon cannot read CSS
+     variables. One drawing for both themes: the blue rim keeps the navy window visible on the dark theme's background. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512">
-  <rect x="1" y="4" width="30" height="24" rx="4" fill="#373F3C" stroke="#5E5F61" stroke-width="1.5"/>
-  <rect x="22.1" y="6" width="7.8" height="20" rx="2" fill="#BFB1C9"/>
-  <g fill="none" stroke="#D6D6D6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="1" y="4" width="30" height="24" rx="4" fill="#03045E" stroke="#0077B6" stroke-width="1.5"/>
+  <rect x="22.1" y="6" width="7.8" height="20" rx="2" fill="#48CAE4"/>
+  <g fill="none" stroke="#CAF0F8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3.4" y="8" width="4" height="16" rx="2"/>
     <path d="M12.78 24V8L9.9 18.88H13.9"/>
     <path d="M16.4 11.68Q16.4 8 18.4 8Q20.4 8 20.4 11.68Q20.4 15.36 16.4 24H20.4"/>
-    <path d="M24 8H28L25.28 24" stroke="#373F3C"/>
+    <path d="M24 8H28L25.28 24" stroke="#03045E"/>
   </g>
 </svg>

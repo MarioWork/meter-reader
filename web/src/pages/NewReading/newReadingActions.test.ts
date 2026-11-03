@@ -30,7 +30,7 @@ it('uploads the photo first, then saves the reading with its id and goes Home', 
     }),
   );
 
-  const result = await submit({ reading: READING, photo: SHRUNK_PHOTO });
+  const result = await submit({ intent: 'save', reading: READING, photo: SHRUNK_PHOTO });
 
   expect([...uploadedBytes]).toEqual([0xff, 0xd8, 0xff, 0xd9]);
   expect(savedReading).toEqual({ ...READING, photoId: UPLOADED_PHOTO.id });
@@ -48,7 +48,7 @@ it('saves the reading without a photo id when no photo was picked', async () => 
     }),
   );
 
-  await submit({ reading: READING });
+  await submit({ intent: 'save', reading: READING });
 
   expect(savedReading).toEqual(READING);
 });
@@ -88,4 +88,57 @@ it('sends nothing when the photo is not a JPEG', async () => {
 
   expect(result).toEqual({ success: false });
   expect(isAnythingPosted).toBe(false);
+});
+
+it('sends the saved reading with its photo straight away when the user picks Send, then goes Home', async () => {
+  let sentPath = '';
+  let sentFields: unknown;
+  server.use(
+    http.post(`${API}/photos`, () => HttpResponse.json(UPLOADED_PHOTO, { status: 201 })),
+    http.post(`${API}/readings`, () =>
+      HttpResponse.json({ id: 42, ...READING, photoId: UPLOADED_PHOTO.id }, { status: 201 }),
+    ),
+    http.post(`${API}/readings/:id/send`, async ({ request, params }) => {
+      sentPath = String(params.id);
+      sentFields = await request.json();
+      return HttpResponse.json({});
+    }),
+  );
+
+  const result = await submit({ intent: 'send', reading: READING, photo: SHRUNK_PHOTO });
+
+  expect(sentPath).toBe('42');
+  expect(sentFields).toEqual({ attachPhoto: true });
+  expect((result as Response).headers.get('Location')).toBe(BASE_ROUTES_PATHS.HOME);
+});
+
+it('still goes Home when the send fails, since the reading is already saved', async () => {
+  server.use(
+    http.post(`${API}/readings`, () => HttpResponse.json({ id: 42, ...READING, photoId: null }, { status: 201 })),
+    http.post(`${API}/readings/:id/send`, () =>
+      HttpResponse.json({ code: 'MAIL_FAILED', message: 'The mail service refused it' }, { status: 502 }),
+    ),
+  );
+
+  const result = await submit({ intent: 'send', reading: READING });
+
+  expect((result as Response).headers.get('Location')).toBe(BASE_ROUTES_PATHS.HOME);
+});
+
+it('sends nothing when the save fails', async () => {
+  let isSendPosted = false;
+  server.use(
+    http.post(`${API}/readings`, () =>
+      HttpResponse.json({ code: 'INTERNAL_ERROR', message: 'Something went wrong' }, { status: 500 }),
+    ),
+    http.post(`${API}/readings/:id/send`, () => {
+      isSendPosted = true;
+      return HttpResponse.json({});
+    }),
+  );
+
+  const result = await submit({ intent: 'send', reading: READING });
+
+  expect(result).toMatchObject({ success: false });
+  expect(isSendPosted).toBe(false);
 });

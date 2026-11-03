@@ -116,16 +116,23 @@ enum ReadingStatus {
 
 // One reading of the meter, kept exactly as read: text, never a number, so leading zeros survive.
 model Reading {
-  id        Int           @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   // Digits only, leading zeros kept ("00123").
-  digits    String
+  digits        String
   // The day the meter showed these digits. A calendar day, no time and no time zone.
-  date      DateTime      @db.Date
-  status    ReadingStatus @default(NOT_SENT)
+  date          DateTime      @db.Date
+  status        ReadingStatus @default(NOT_SENT)
   // When the mail service accepted its email; null until it is sent.
-  sentAt    DateTime?     @map("sent_at") @db.Timestamptz(3)
-  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sentAt        DateTime?     @map("sent_at") @db.Timestamptz(3)
+  // The email exactly as it went out, the user's edits included; null until it is sent, and for readings sent before
+  // these were kept.
+  sentFrom      String?       @map("sent_from")
+  sentTo        String?       @map("sent_to")
+  sentSubject   String?       @map("sent_subject")
+  sentBody      String?       @map("sent_body")
+  sentWithPhoto Boolean?      @map("sent_with_photo")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   photo Photo?
 

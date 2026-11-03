@@ -25,8 +25,12 @@ export const HOME_SEARCH_PARAMS = {
 };
 
 export const READING_ROUTES_PATHS = {
+  // A phone gets New reading as its own page; a wider screen gets it as a routed modal over the history.
   NEW: '/readings/new',
+  NEW_MODAL: `${BASE_ROUTES_PATHS.HOME}/readings/new`,
   delete: (readingId?: string) => (readingId ? `/readings/${readingId}/delete` : '/readings/:readingId/delete'),
+  // A routed modal over the history: everything about one reading.
+  details: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}`,
   // A routed modal over the history: the email preview, and the send.
   send: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/send`,
 };
