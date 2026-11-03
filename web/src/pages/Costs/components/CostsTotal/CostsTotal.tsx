@@ -5,6 +5,7 @@ import { formatCost } from '@utils/costUtils';
 type Props = {
   totalCostCents: number;
   costCount: number;
+  className?: string;
 };
 
 const TITLE = 'Total';
@@ -26,11 +27,11 @@ function costCountLabel(costCount: number): string {
 
 // The sum of the Costs shown, and how many readings it adds up: those with a Cost, not those with only a Bill. A
 // region named by its heading, so it can be found.
-function CostsTotal({ totalCostCents, costCount }: Props) {
+function CostsTotal({ totalCostCents, costCount, className }: Props) {
   const titleId = useId();
 
   return (
-    <Card role="region" aria-labelledby={titleId}>
+    <Card role="region" aria-labelledby={titleId} className={className}>
       <CardHeader>
         <CardTitle>
           <h2 id={titleId}>{TITLE}</h2>

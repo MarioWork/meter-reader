@@ -13,13 +13,16 @@ import NoCosts from './components/NoCosts';
 import type { loader } from './costsLoader';
 
 const PAGE_TITLE = 'Water Readings Costs';
+const SUMMARY_LABEL = 'Summary';
 
 // Costs filters by day only.
 const FILTERS_OPTIONS = { hasStatusFilter: false };
 
 // What the readings cost: the sum, a bar per reading over time, and the same readings as a list, which is also the
 // chart's text alternative. The list also holds the readings with only a Bill, which get no bar and add nothing to the
-// sum. Narrowed by the same day range as Home's history, kept in the url, and exported for it.
+// sum. Narrowed by the same day range as Home's history, kept in the url, and exported for it. A phone stacks them in
+// one narrow column; from `lg`, with room beside the sidebar, the page takes the shell's full column, the total and a
+// taller chart share the top row, and the list runs under them.
 function Costs() {
   const { costs } = useLoaderData<LoaderDataUtil<typeof loader>>();
   const { filters, isFiltered, clearFilters } = useHistoryFilters(FILTERS_OPTIONS);
@@ -36,7 +39,7 @@ function Costs() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6">
+    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 lg:max-w-none lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{PAGE_TITLE}</h1>
         {/* Only while readings are listed: an empty page has nothing to export. */}
@@ -53,8 +56,11 @@ function Costs() {
       >
         {hasListedReadings ? (
           <>
-            <CostsTotal totalCostCents={costs.totalCostCents} costCount={costCount} />
-            <CostsChart readings={costs.data} />
+            {/* The total takes a third of the row and the chart the rest; with no chart, the total fills it. */}
+            <div role="group" aria-label={SUMMARY_LABEL} className="flex flex-col gap-6 lg:flex-row">
+              <CostsTotal totalCostCents={costs.totalCostCents} costCount={costCount} className="lg:flex-1" />
+              <CostsChart readings={costs.data} className="min-w-0 lg:flex-2" />
+            </div>
             <CostList readings={costs.data} />
           </>
         ) : (
