@@ -2,6 +2,7 @@
 import type { Prisma } from '../../generated/prisma/client.ts';
 import { PRISMA_RECORD_NOT_FOUND, getPrismaErrorCode } from '../../lib/databaseErrors.ts';
 import type { SkipTake } from '../../lib/pagination.ts';
+import { AppError } from '../../lib/errors.ts';
 import { prisma } from '../../lib/prisma.ts';
 
 const READING_SELECT = {
@@ -19,6 +20,8 @@ const READING_SELECT = {
   createdAt: true,
   // The file name, so deleting a reading can remove its photo from the uploads folder too, and sending it can attach it.
   photo: { select: { id: true, fileName: true } },
+  // The file name too, so deleting the reading or replacing its bill can remove the old file from the uploads folder.
+  bill: { select: { id: true, fileName: true, fileType: true, sizeBytes: true } },
 } as const satisfies Prisma.ReadingSelect;
 
 // Newest first: the latest day on top, and on the same day the one saved last.
@@ -26,8 +29,18 @@ const NEWEST_FIRST = [{ date: 'desc' }, { id: 'desc' }] as const satisfies Prism
 
 export type NewReading = { digits: string; date: Date; photoId?: number };
 
-// What can change on a saved reading. A field left out stays as it is.
-export type ReadingChanges = { costCents?: number | null };
+// What can change on a saved reading. A field left out stays as it is. `billId` links an uploaded bill in place of the
+// reading's own, and null removes it.
+export type ReadingChanges = { costCents?: number | null; billId?: number | null };
+
+// How an update ended. `removedBillFileName` is the file of the bill it replaced or removed: its row is gone, and the
+// caller removes the file once the change is saved.
+export type ReadingUpdate =
+  | { outcome: 'updated'; row: ReadingRow; removedBillFileName: string | null }
+  | { outcome: 'notFound' }
+  | { outcome: 'billNotAvailable' };
+
+type CurrentBill = { id: number; fileName: string } | null;
 
 export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELECT }>;
 
@@ -66,8 +79,57 @@ function toSentEmailColumns({ from, to, subject, body, withPhoto }: SentEmail): 
   return { sentFrom: from, sentTo: to, sentSubject: subject, sentBody: body, sentWithPhoto: withPhoto };
 }
 
+// Thrown inside the update's transaction to undo it: the bill asked for is unknown or belongs to another reading.
+class BillNotAvailableError extends AppError {
+  constructor() {
+    super('The bill does not exist or already belongs to another reading', { code: 'BILL_NOT_AVAILABLE' });
+  }
+}
+
+type TransactionClient = Prisma.TransactionClient;
+
+// Links the bill, only while it belongs to no reading, after the reading's own bill row is deleted (one bill per
+// reading). Nothing to do when the bill asked for is the one it has.
+async function replaceBill(
+  tx: TransactionClient,
+  readingId: number,
+  current: CurrentBill,
+  billId: number | null,
+): Promise<string | null> {
+  const isSameBill = billId === (current?.id ?? null);
+
+  if (isSameBill) return null;
+
+  if (current) await tx.bill.deleteMany({ where: { id: current.id } });
+
+  if (billId !== null) {
+    const { count } = await tx.bill.updateMany({ where: { id: billId, readingId: null }, data: { readingId } });
+
+    if (count === 0) throw new BillNotAvailableError();
+  }
+
+  return current?.fileName ?? null;
+}
+
+// The cost and the bill change together or not at all.
+async function updateInTransaction(id: number, { costCents, billId }: ReadingChanges): Promise<ReadingUpdate> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.reading.findUnique({
+      where: { id },
+      select: { bill: { select: { id: true, fileName: true } } },
+    });
+
+    if (!current) return { outcome: 'notFound' };
+
+    const removedBillFileName = billId === undefined ? null : await replaceBill(tx, id, current.bill, billId);
+    const row = await tx.reading.update({ where: { id }, data: { costCents }, select: READING_SELECT });
+
+    return { outcome: 'updated', row, removedBillFileName };
+  });
+}
+
 // The updated row, or null when there is no reading with this id (or it was deleted meanwhile).
-async function updateReading(id: number, data: SendOutcome | ReadingChanges): Promise<ReadingRow | null> {
+async function updateReading(id: number, data: SendOutcome): Promise<ReadingRow | null> {
   try {
     return await prisma.reading.update({ where: { id }, data, select: READING_SELECT });
   } catch (error) {
@@ -121,8 +183,18 @@ export const readingsRepository = {
   findById: (id: number): Promise<ReadingRow | null> =>
     prisma.reading.findUnique({ where: { id }, select: READING_SELECT }),
 
-  // One statement, so a reading deleted meanwhile is null, never a database error.
-  update: (id: number, changes: ReadingChanges): Promise<ReadingRow | null> => updateReading(id, changes),
+  // One transaction: a bill that cannot be linked changes nothing, the cost included.
+  update: async (id: number, changes: ReadingChanges): Promise<ReadingUpdate> => {
+    try {
+      return await updateInTransaction(id, changes);
+    } catch (error: unknown) {
+      if (error instanceof BillNotAvailableError) return { outcome: 'billNotAvailable' };
+
+      if (getPrismaErrorCode(error) === PRISMA_RECORD_NOT_FOUND) return { outcome: 'notFound' };
+
+      throw error;
+    }
+  },
 
   markSent: (id: number, sentAt: Date, email: SentEmail): Promise<ReadingRow | null> =>
     updateReading(id, { status: 'SENT', sentAt, ...toSentEmailColumns(email) }),

@@ -42,7 +42,7 @@ Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service
 
 Logs: `docker compose logs -f api` (or `web`, `db`, `migrate`).
 
-Data: the Postgres files live in `./data/postgres` and the photos in `./data/uploads` (one JPEG per photo, named by the server). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
+Data: the Postgres files live in `./data/postgres` and the photos and bills in `./data/uploads` (one JPEG per photo, one PDF, JPEG or PNG per bill, all named by the server). Back up `./data`. Caddy's CA lives in the `caddy_data` volume; keep it, or every device has to trust a new certificate.
 
 ## First sign-in
 
@@ -68,7 +68,7 @@ A passkey belongs to the address it was made on (`meter.home.arpa`). Open the ap
 
 ## Resetting the login (`auth:reset`)
 
-Forgot the password and lost the passkey? Reset the login on the server. It removes the password, every passkey and every session, then prints a new setup link. Readings, photos and mail settings are kept.
+Forgot the password and lost the passkey? Reset the login on the server. It removes the password, every passkey and every session, then prints a new setup link. Readings, photos, bills and mail settings are kept.
 
 ```bash
 docker compose exec api node dist/cli/resetAuth.js

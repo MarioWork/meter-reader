@@ -30,6 +30,25 @@ function addReading(payload: InjectOptions['payload']) {
   return app.inject({ method: 'POST', url: '/readings', payload, ...withSession(token) });
 }
 
+const PDF_BILL = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(500, 0x20)]);
+const PNG_BILL = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+
+async function addBill(payload = PDF_BILL, contentType = 'application/pdf'): Promise<number> {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/bills',
+    headers: { 'content-type': contentType },
+    payload,
+    ...withSession(token),
+  });
+
+  return response.json<{ id: number }>().id;
+}
+
+async function billFileName(billId: number): Promise<string> {
+  return (await prisma.bill.findUniqueOrThrow({ where: { id: billId } })).fileName;
+}
+
 async function addPhoto(): Promise<number> {
   const response = await app.inject({
     method: 'POST',
@@ -139,6 +158,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await prisma.bill.deleteMany();
   await prisma.photo.deleteMany();
   await prisma.reading.deleteMany();
   await prisma.mailConnection.deleteMany();
@@ -158,6 +178,7 @@ describe('POST /readings', () => {
 
     expect(response.statusCode).toBe(201);
     expect(Object.keys(response.json<object>()).sort()).toEqual([
+      'bill',
       'costCents',
       'createdAt',
       'date',
@@ -643,6 +664,19 @@ describe('DELETE /readings/:id', () => {
     await expect(access(uploadPath(fileName))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('removes the bill and its file with the reading when the reading has a bill', async () => {
+    const readingId = await addReadingId('00123');
+    const billId = await addBill();
+    const fileName = await billFileName(billId);
+    await updateReading(readingId, { billId });
+
+    const response = await deleteReading(readingId);
+
+    expect(response.statusCode).toBe(204);
+    expect(await prisma.bill.count()).toBe(0);
+    await expect(access(uploadPath(fileName))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('returns 404 NOT_FOUND when the reading does not exist', async () => {
     const deletedId = await addReadingId('00100');
     await deleteReading(deletedId);
@@ -803,6 +837,103 @@ describe('PATCH /readings/:id', () => {
     expect((await getReading(readingId)).json()).toMatchObject({ costCents: 4210 });
   });
 
+  it('links the bill and answers it when the reading has none', async () => {
+    const readingId = await addReadingId('00123');
+    const billId = await addBill();
+
+    const response = await updateReading(readingId, { billId });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      bill: { id: billId, contentType: 'application/pdf', sizeBytes: PDF_BILL.length },
+      costCents: null,
+    });
+    expect((await getReading(readingId)).json()).toMatchObject({ bill: { id: billId } });
+  });
+
+  it('sets the cost and the bill together when both are sent', async () => {
+    const readingId = await addReadingId('00123');
+    const billId = await addBill();
+
+    const response = await updateReading(readingId, { costCents: 4210, billId });
+
+    expect(response.json()).toMatchObject({ costCents: 4210, bill: { id: billId } });
+  });
+
+  it('replaces the bill and deletes the old one and its file when another bill is sent', async () => {
+    const readingId = await addReadingId('00123');
+    const oldBillId = await addBill();
+    const oldFileName = await billFileName(oldBillId);
+    await updateReading(readingId, { billId: oldBillId });
+    const newBillId = await addBill(PNG_BILL, 'image/png');
+
+    const response = await updateReading(readingId, { billId: newBillId });
+
+    expect(response.json()).toMatchObject({ bill: { id: newBillId, contentType: 'image/png' } });
+    expect(await prisma.bill.findUnique({ where: { id: oldBillId } })).toBeNull();
+    await expect(access(uploadPath(oldFileName))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(access(uploadPath(await billFileName(newBillId)))).resolves.toBeUndefined();
+  });
+
+  it('removes the bill and its file when it is sent as null, and keeps the cost', async () => {
+    const readingId = await addReadingId('00123');
+    const billId = await addBill();
+    const fileName = await billFileName(billId);
+    await updateReading(readingId, { costCents: 4210, billId });
+
+    const response = await updateReading(readingId, { billId: null });
+
+    expect(response.json()).toMatchObject({ bill: null, costCents: 4210 });
+    expect(await prisma.bill.count()).toBe(0);
+    await expect(access(uploadPath(fileName))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('keeps the bill and its file when the body leaves it out or sends the same bill', async () => {
+    const readingId = await addReadingId('00123');
+    const billId = await addBill();
+    await updateReading(readingId, { billId });
+
+    await updateReading(readingId, { costCents: 4210 });
+    const response = await updateReading(readingId, { billId });
+
+    expect(response.json()).toMatchObject({ bill: { id: billId }, costCents: 4210 });
+    await expect(access(uploadPath(await billFileName(billId)))).resolves.toBeUndefined();
+  });
+
+  it('returns 409 BILL_NOT_AVAILABLE and changes nothing when no bill has the id', async () => {
+    const readingId = await addReadingId('00123');
+    const billId = await addBill();
+    await updateReading(readingId, { billId });
+
+    const response = await updateReading(readingId, { costCents: 4210, billId: 999_999 });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'BILL_NOT_AVAILABLE' });
+    expect((await getReading(readingId)).json()).toMatchObject({ costCents: null, bill: { id: billId } });
+  });
+
+  it('returns 409 BILL_NOT_AVAILABLE and keeps the first link when the bill belongs to another reading', async () => {
+    const firstId = await addReadingId('00123');
+    const secondId = await addReadingId('00456');
+    const billId = await addBill();
+    await updateReading(firstId, { billId });
+
+    const response = await updateReading(secondId, { billId });
+
+    expect(response.statusCode).toBe(409);
+    expect((await getReading(firstId)).json()).toMatchObject({ bill: { id: billId } });
+    expect((await getReading(secondId)).json()).toMatchObject({ bill: null });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the bill id is not a whole number', async () => {
+    const readingId = await addReadingId('00123');
+
+    const response = await updateReading(readingId, { billId: 'bill.pdf' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
   it('returns 400 VALIDATION_ERROR when the body has an unknown field', async () => {
     const readingId = await addReadingId('00123');
 
@@ -884,6 +1015,15 @@ describe('GET /readings/:id/email', () => {
     expect(response.json()).toMatchObject({ subject: '00123 on 31 October 2026', body: 'Reading 00123, 00123' });
   });
 
+  it('answers no attachment when the reading has a bill but no photo', async () => {
+    const readingId = await addReadingId('00123');
+    await updateReading(readingId, { billId: await addBill() });
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ attachment: null });
+  });
+
   it('answers no attachment when the reading has no photo', async () => {
     const readingId = await addReadingId('000045');
 
@@ -960,6 +1100,19 @@ describe('POST /readings/:id/send', () => {
 
     expect(response.json()).toMatchObject({ status: 'sent', costCents: 4210 });
     expect(JSON.stringify(received[0]?.body)).not.toMatch(/42[.,]10|4210/);
+  });
+
+  it('never attaches the bill, even with the photo asked for, when the reading has one', async () => {
+    await connectHotmail();
+    const readingId = await addReadingWithPhotoId();
+    await updateReading(readingId, { billId: await addBill() });
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId, { attachPhoto: true });
+
+    expect(response.statusCode).toBe(200);
+    expect(attachmentsOf(received[0])).toEqual([expect.objectContaining({ name: 'meter-2026-10-31.jpg' })]);
+    expect(JSON.stringify(received[0]?.body)).not.toContain(PDF_BILL.toString('base64'));
   });
 
   it("emails the user's own subject and body when they edited the preview", async () => {

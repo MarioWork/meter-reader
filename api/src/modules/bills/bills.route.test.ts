@@ -1,0 +1,190 @@
+import { readdir } from 'node:fs/promises';
+import { env } from '../../config/env.ts';
+import { buildApp, type App } from '../../app.ts';
+import { prisma } from '../../lib/prisma.ts';
+import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
+import { BILL_MAX_BYTES } from './bills.schema.ts';
+
+let app: App;
+let token: string;
+
+const PDF = 'application/pdf';
+const PDF_BILL = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(1000, 0x20)]);
+const JPEG_BILL = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const PNG_BILL = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+
+function addBill(payload: Buffer, contentType = PDF) {
+  return app.inject({
+    method: 'POST',
+    url: '/bills',
+    headers: { 'content-type': contentType },
+    payload,
+    ...withSession(token),
+  });
+}
+
+function getBill(id: number | string, query = '') {
+  return app.inject({ method: 'GET', url: `/bills/${id}${query}`, ...withSession(token) });
+}
+
+async function addBillId(payload = PDF_BILL, contentType = PDF): Promise<number> {
+  return (await addBill(payload, contentType)).json<{ id: number }>().id;
+}
+
+async function storedFileNames(): Promise<string[]> {
+  const names = await readdir(env.UPLOADS_DIR);
+
+  return names.filter((name) => !name.endsWith('.partial'));
+}
+
+beforeAll(async () => {
+  app = await buildApp();
+});
+
+afterAll(async () => {
+  await app.close();
+});
+
+beforeEach(async () => {
+  await prisma.bill.deleteMany();
+  await prisma.reading.deleteMany();
+  await resetAuthTables();
+  token = await setUpWithPassword(app);
+});
+
+describe('POST /bills', () => {
+  it('keeps the PDF in the uploads folder under a name the server chose and answers the bill when the file is a PDF', async () => {
+    const response = await addBill(PDF_BILL);
+
+    expect(response.statusCode).toBe(201);
+    expect(Object.keys(response.json<object>()).sort()).toEqual(['contentType', 'createdAt', 'id', 'sizeBytes']);
+    expect(response.json()).toMatchObject({ contentType: PDF, sizeBytes: PDF_BILL.length });
+    const row = await prisma.bill.findUniqueOrThrow({ where: { id: response.json<{ id: number }>().id } });
+    expect(row).toMatchObject({ fileType: 'PDF', sizeBytes: PDF_BILL.length, readingId: null });
+    expect(row.fileName).toMatch(/^[0-9a-f-]{36}\.pdf$/);
+    expect(await storedFileNames()).toContain(row.fileName);
+  });
+
+  it.each([
+    ['a JPEG', JPEG_BILL, 'image/jpeg', 'JPEG', '.jpg'],
+    ['a PNG', PNG_BILL, 'image/png', 'PNG', '.png'],
+  ])('keeps the bill when it is %s', async (_scenario, payload, contentType, fileType, extension) => {
+    const response = await addBill(payload, contentType);
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ contentType });
+    const row = await prisma.bill.findUniqueOrThrow({ where: { id: response.json<{ id: number }>().id } });
+    expect(row.fileType).toBe(fileType);
+    expect(row.fileName.endsWith(extension)).toBe(true);
+  });
+
+  it('keeps the bill as a PNG when the client says it is a PDF but the bytes are a PNG', async () => {
+    const response = await addBill(PNG_BILL, PDF);
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ contentType: 'image/png' });
+  });
+
+  it.each([
+    ['a GIF', Buffer.from('GIF89a......'), 'image/gif'],
+    ['text sent as a PDF', Buffer.from('not a bill'), PDF],
+    ['a Word document', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]), 'application/msword'],
+  ])(
+    'returns 400 BILL_NOT_SUPPORTED with the reason and keeps nothing when it is %s',
+    async (_scenario, payload, type) => {
+      const response = await addBill(payload, type);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ code: 'BILL_NOT_SUPPORTED', message: 'The bill must be a PDF, JPEG or PNG' });
+      expect(await prisma.bill.count()).toBe(0);
+    },
+  );
+
+  it('returns 400 BILL_NOT_SUPPORTED and keeps nothing when the file is empty', async () => {
+    const response = await addBill(Buffer.alloc(0));
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'BILL_NOT_SUPPORTED' });
+    expect(await prisma.bill.count()).toBe(0);
+  });
+
+  it('keeps the bill when the file is exactly 10 MB', async () => {
+    const payload = Buffer.concat([PDF_BILL, Buffer.alloc(BILL_MAX_BYTES - PDF_BILL.length, 0x20)]);
+
+    const response = await addBill(payload);
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('returns 413 BILL_TOO_LARGE with the reason and keeps nothing when the file is over 10 MB', async () => {
+    const payload = Buffer.concat([PDF_BILL, Buffer.alloc(BILL_MAX_BYTES, 0x20)]);
+
+    const response = await addBill(payload);
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toEqual({ code: 'BILL_TOO_LARGE', message: 'The bill must be at most 10 MB' });
+    expect(await prisma.bill.count()).toBe(0);
+  });
+
+  it('returns 401 and keeps nothing when the browser is not signed in', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/bills',
+      headers: { 'content-type': PDF },
+      payload: PDF_BILL,
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(await prisma.bill.count()).toBe(0);
+  });
+});
+
+describe('GET /bills/:id', () => {
+  it('answers the file to open in the browser, named after its reading’s day, when the bill exists', async () => {
+    const billId = await addBillId();
+    const reading = await prisma.reading.create({ data: { digits: '00123', date: new Date('2026-10-31T00:00:00Z') } });
+    await prisma.bill.update({ where: { id: billId }, data: { readingId: reading.id } });
+
+    const response = await getBill(billId);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe(PDF);
+    expect(response.headers['content-disposition']).toBe('inline; filename="bill-2026-10-31.pdf"');
+    expect(response.headers['cache-control']).toBe('private, max-age=31536000, immutable');
+    expect(response.headers['content-security-policy']).toBeUndefined();
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.rawPayload).toEqual(PDF_BILL);
+  });
+
+  it('answers the file to save when download=true', async () => {
+    const billId = await addBillId(PNG_BILL, 'image/png');
+
+    const response = await getBill(billId, '?download=true');
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('image/png');
+    expect(response.headers['content-disposition']).toBe('attachment; filename="bill.png"');
+  });
+
+  it('returns 404 NOT_FOUND when no bill has this id', async () => {
+    const response = await getBill(999_999);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
+    const response = await getBill('abc');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const billId = await addBillId();
+
+    const response = await app.inject({ method: 'GET', url: `/bills/${billId}` });
+
+    expect(response.statusCode).toBe(401);
+  });
+});

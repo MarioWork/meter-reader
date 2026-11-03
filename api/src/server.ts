@@ -4,6 +4,7 @@ import { env } from './config/env.ts';
 import { logger } from './lib/logger.ts';
 import { assertUploadsWritable } from './lib/uploads.ts';
 import { addSetupCode, getSetupLink } from './modules/auth/setup/setup.service.ts';
+import { deleteUnlinkedBills } from './modules/bills/bills.service.ts';
 import { deleteUnlinkedPhotos } from './modules/photos/photos.service.ts';
 import { refreshMailToken } from './modules/mail/mail.service.ts';
 
@@ -23,13 +24,14 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// A photo that cannot be written should stop the start, not fail later in front of the user.
+// A photo or a bill that cannot be written should stop the start, not fail later in front of the user.
 await assertUploadsWritable();
 
 const app = await buildApp();
 
-// Photos uploaded for a reading that was never saved.
+// Photos uploaded for a reading that was never saved, and bills for a reading that was never updated with them.
 await deleteUnlinkedPhotos();
+await deleteUnlinkedBills();
 
 // Until the app is set up, each start prints a fresh one-time setup link (ADR 0002). It is a secret, so it goes to
 // stdout as plain text, never into the structured log a log shipper might keep.

@@ -1,4 +1,4 @@
-import { costTextSchema, toCostCents, toCostText } from './costAndBillFormUtils';
+import { costTextSchema, toCostCents, toCostText, toSaveFailure } from './costAndBillFormUtils';
 
 describe('toCostCents', () => {
   it.each([
@@ -49,5 +49,31 @@ describe('toCostText', () => {
 
   it('is empty when there is no cost', () => {
     expect(toCostText(null)).toBe('');
+  });
+});
+
+describe('toSaveFailure', () => {
+  const FALLBACK = 'The cost and bill could not be saved. Please try again.';
+
+  it.each([
+    ['BILL_NOT_SUPPORTED', 400, 'The bill must be a PDF, JPEG or PNG'],
+    ['BILL_TOO_LARGE', 413, 'The bill must be at most 10 MB'],
+    ['FST_ERR_CTP_BODY_TOO_LARGE', 413, 'Request body is too large'],
+  ])("puts the server's %s reason on the Bill field", (code, statusCode, message) => {
+    expect(toSaveFailure({ success: false, error: { code, statusCode, message } }, FALLBACK)).toEqual({
+      billError: message,
+    });
+  });
+
+  it("puts any other failure in the form's alert, or the fallback when the server sent no reason", () => {
+    const serverError = { code: 'INTERNAL_ERROR', statusCode: 500, message: 'Something went wrong' };
+
+    expect(toSaveFailure({ success: false, error: serverError }, FALLBACK)).toEqual({ formError: serverError.message });
+    expect(toSaveFailure({ success: false }, FALLBACK)).toEqual({ formError: FALLBACK });
+  });
+
+  it('is empty before a save and after a success', () => {
+    expect(toSaveFailure(undefined, FALLBACK)).toEqual({});
+    expect(toSaveFailure({ success: true }, FALLBACK)).toEqual({});
   });
 });

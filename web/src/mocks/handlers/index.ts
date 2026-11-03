@@ -1,4 +1,5 @@
 import { authMockHandlers } from './auth';
+import { billMockHandlers } from './bill';
 import { photoMockHandlers } from './photo';
 import { readingMockHandlers } from './reading';
 import { mailMockHandlers } from './mail';
@@ -11,6 +12,7 @@ export const getHandlers = (baseUrl: string) => [
   ...authMockHandlers(baseUrl),
   ...readingMockHandlers(baseUrl),
   ...photoMockHandlers(baseUrl),
+  ...billMockHandlers(baseUrl),
   ...mailMockHandlers(baseUrl),
   ...settingsMockHandlers(baseUrl),
 ];

@@ -1,4 +1,4 @@
-// The files the app keeps on disk (the photos), in UPLOADS_DIR. Domain-free: callers decide what a file is for.
+// The files the app keeps on disk (the photos and the bills), in UPLOADS_DIR. Domain-free: callers decide what a file is for.
 import { randomUUID } from 'node:crypto';
 import type { ReadStream } from 'node:fs';
 import { access, constants, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';

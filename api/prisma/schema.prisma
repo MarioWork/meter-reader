@@ -138,6 +138,7 @@ model Reading {
   updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   photo Photo?
+  bill  Bill?
 
   // The history reads newest first: by date, then by the order it was saved.
   @@index([date(sort: Desc), id(sort: Desc)], map: "readings_date_id_idx")
@@ -175,6 +176,32 @@ model Photo {
   reading Reading? @relation(fields: [readingId], references: [id], onDelete: Cascade)
 
   @@map("photos")
+}
+
+// What kind of file a bill is. The server reads it from the file's first bytes, never from what the client says.
+enum BillFileType {
+  PDF
+  JPEG
+  PNG
+}
+
+// The provider's bill for one reading (docs/GLOSSARY.md: Bill): a PDF, JPEG or PNG of at most 10 MB, kept as a file in
+// UPLOADS_DIR beside the photos. It is uploaded first and linked when its reading is updated with its id; until then
+// readingId is null. Never part of the reading's email.
+model Bill {
+  id        Int          @id @default(autoincrement())
+  // The file's name in UPLOADS_DIR, chosen by the server (a random UUID and the type's extension), never by the client.
+  fileName  String       @unique(map: "bills_file_name_uidx") @map("file_name")
+  fileType  BillFileType @map("file_type")
+  sizeBytes Int          @map("size_bytes")
+  readingId Int?         @unique(map: "bills_reading_id_uidx") @map("reading_id")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Deleting a reading deletes its bill row; the file itself is removed by the code that deletes the reading.
+  reading Reading? @relation(fields: [readingId], references: [id], onDelete: Cascade)
+
+  @@map("bills")
 }
 
 // The app's own settings, set on the Settings page (ADR 0003). One row at most, id 1, made the first time the user

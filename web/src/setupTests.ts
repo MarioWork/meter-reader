@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import axios from 'axios';
 import { resetMockAuthState } from './mocks/handlers/auth/authMockState';
+import { resetMockBills } from './mocks/handlers/bill/billMockState';
 import { resetMockPhotos } from './mocks/handlers/photo/photoMockState';
 import { resetMockReadings } from './mocks/handlers/reading/readingMockState';
 import { resetMockSettings } from './mocks/handlers/settings/settingsMockState';
@@ -46,6 +47,7 @@ afterEach(() => {
   resetMockAuthState();
   resetMockReadings();
   resetMockPhotos();
+  resetMockBills();
   resetMockSettings();
 });
 afterAll(() => server.close());

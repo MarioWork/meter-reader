@@ -1,4 +1,5 @@
 import type { ReadingStatusUtil } from '@app-types/utility';
+import type { ReadingBillApiModel } from './readingBillApiModel.type';
 import type { PhotoId } from './photoApiModel.type';
 import type { SentEmailApiModel } from './sentEmailApiModel.type';
 
@@ -7,6 +8,7 @@ import type { SentEmailApiModel } from './sentEmailApiModel.type';
 // `sentAt` is when the mail service accepted its email (an ISO timestamp), null until it is sent. `sentEmail` is that
 // email as it went out; null until it is sent, and for readings sent before the API kept it. `costCents` is what the
 // reading cost (docs/GLOSSARY.md: Cost) in euro cents, a whole number (4210 is €42.10); null until the user adds one.
+// `bill` is the provider's bill for it (docs/GLOSSARY.md: Bill); null until the user adds one. Never part of its email.
 export interface ReadingApiModel {
   id: number;
   digits: string;
@@ -17,6 +19,7 @@ export interface ReadingApiModel {
   sentAt: string | null;
   sentEmail: SentEmailApiModel | null;
   costCents: number | null;
+  bill: ReadingBillApiModel | null;
 }
 
 export type ReadingId = ReadingApiModel['id'];

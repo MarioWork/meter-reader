@@ -22,6 +22,7 @@ export default (baseUrl: string) => [
       sentAt: null,
       sentEmail: null,
       costCents: null,
+      bill: null,
     });
 
     return HttpResponse.json(saved, { status: 201 });
