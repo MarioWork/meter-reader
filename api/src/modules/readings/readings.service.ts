@@ -16,8 +16,10 @@ import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import { getProviderEmail, requireProviderEmail } from '../settings/settings.service.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
+import { readingsSpreadsheetFileName, toReadingsSpreadsheet, type ReadingSheetLine } from './readings.spreadsheet.ts';
 import type {
   CreateReading,
+  ExportReadingsQuery,
   ListReadingsQuery,
   ReadingEmailResponse,
   ReadingListResponse,
@@ -57,6 +59,12 @@ const SEND_FAILURE_ERRORS: Record<string, (message: string, code: string) => Htt
 // The readings whose email is going out right now, so a double tap cannot send one twice. The api is one process,
 // so this set sees every send.
 const readingsBeingSent = new Set<number>();
+
+// The filters alone, whichever query carries them.
+type ReadingFilterQuery = Pick<ListReadingsQuery, 'from' | 'to' | 'status'>;
+
+// The spreadsheet's bytes, and the name the download saves it under.
+export type ReadingsSpreadsheet = { fileName: string; content: Buffer };
 
 const STATUS_MAP: Record<ReadingRow['status'], ReadingStatus> = {
   NOT_SENT: 'notSent',
@@ -164,7 +172,7 @@ export async function updateReading(id: number, { costCents }: UpdateReading): P
   return toResponse(row);
 }
 
-function toFilter({ from, to, status }: ListReadingsQuery): ReadingFilter {
+function toFilter({ from, to, status }: ReadingFilterQuery): ReadingFilter {
   return {
     from: from === undefined ? undefined : toDate(from),
     to: to === undefined ? undefined : toDate(to),
@@ -176,6 +184,20 @@ export async function getReadings(query: ListReadingsQuery): Promise<ReadingList
   const { rows, total } = await readingsRepository.findPage(toSkipTake(query), toFilter(query));
 
   return { data: rows.map(toResponse), totalResultNumber: total, currentPage: query.page };
+}
+
+function toSheetLine(row: ReadingRow): ReadingSheetLine {
+  return { date: row.date, digits: row.digits, status: STATUS_MAP[row.status], sentAt: row.sentAt };
+}
+
+// Every reading Home's filters match, not only the pages it has loaded, newest first, as an .xlsx file named
+// after the filters.
+export async function getReadingsSpreadsheet(query: ExportReadingsQuery): Promise<ReadingsSpreadsheet> {
+  const rows = await readingsRepository.findAll(toFilter(query));
+  const content = await toReadingsSpreadsheet(rows.map(toSheetLine), query.timeZone);
+  const fileName = readingsSpreadsheetFileName(query);
+
+  return { fileName, content };
 }
 
 // Deleting the reading already deleted its photo row (cascade); this removes the file from the uploads folder. The

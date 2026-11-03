@@ -12,6 +12,7 @@ import {
 import type { CreateReading, SendReading, UpdateReading } from './readingService.type';
 
 const BASE_READINGS_URL = '/readings';
+const READINGS_SPREADSHEET_SEGMENT = 'export.xlsx';
 // The API takes several statuses in one param, the way it takes several sorting fields.
 const STATUS_SEPARATOR = ',';
 
@@ -24,11 +25,27 @@ type GetReadingsFields = {
   statuses?: ReadingStatusUtil[];
 };
 
+// The spreadsheet takes the history's filters, no page: it holds every reading they match. `timeZone` is where the
+// user is (an IANA name), so the sent times read as their own clock showed them.
+type GetReadingsSpreadsheetFields = {
+  dateFrom?: string;
+  dateTo?: string;
+  statuses?: ReadingStatusUtil[];
+  timeZone: string;
+};
+
 // Undefined when no status is asked for, so the param stays off the wire.
 function toStatusParam(statuses: ReadingStatusUtil[] = []): string | undefined {
   if (statuses.length === 0) return undefined;
 
   return statuses.join(STATUS_SEPARATOR);
+}
+
+// The search params with every unset value left out, the way axios leaves them out of a request.
+function toSearchParams(params: Record<string, string | undefined>): URLSearchParams {
+  const setParams = Object.entries(params).filter((param): param is [string, string] => param[1] !== undefined);
+
+  return new URLSearchParams(setParams);
 }
 
 export default {
@@ -49,6 +66,19 @@ export default {
     });
 
     return response.data;
+  },
+
+  // A plain download: the browser follows this link with the session cookie, no axios call is involved. Built from
+  // the service's path and the url's checked filters only.
+  getReadingsSpreadsheetUrl: ({ dateFrom, dateTo, statuses, timeZone }: GetReadingsSpreadsheetFields): string => {
+    const searchParams = toSearchParams({
+      [ApiUrlParamsUtil.dateFrom]: dateFrom,
+      [ApiUrlParamsUtil.dateTo]: dateTo,
+      [ReadingApiSearchFields.STATUS]: toStatusParam(statuses),
+      [ReadingApiExportParams.TIME_ZONE]: timeZone,
+    });
+
+    return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
   },
 
   // What a new reading's email starts with, before the reading is saved.
@@ -90,3 +120,9 @@ export const ReadingApiSearchFields = {
   STATUS: 'status',
 } as const;
 export type ReadingApiSearchFields = (typeof ReadingApiSearchFields)[keyof typeof ReadingApiSearchFields];
+
+// The spreadsheet's own params, beside the filters it shares with the history.
+export const ReadingApiExportParams = {
+  TIME_ZONE: 'timeZone',
+} as const;
+export type ReadingApiExportParams = (typeof ReadingApiExportParams)[keyof typeof ReadingApiExportParams];

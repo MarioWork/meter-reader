@@ -1,5 +1,5 @@
 import { ApiUrlParamsUtil, SortingDirectionUtil } from '@app-types/utility';
-import { anyOf, paginateMockList } from './mockListUtils';
+import { anyOf, narrowMockList, paginateMockList } from './mockListUtils';
 
 type Row = {
   name: string;
@@ -289,5 +289,21 @@ describe('anyOf', () => {
 
   it('reads an empty list as an empty string', () => {
     expect(anyOf([], (tag: { label: string }) => tag.label)).toBe('');
+  });
+});
+
+describe('narrowMockList', () => {
+  it('keeps every matching row, past one page and in the order given, ignoring the page params', () => {
+    const items = Array.from({ length: 12 }, (_, index) => row({ name: `Row ${index}`, size: index % 2 }));
+
+    const narrowed = narrowMockList(requestWith({ size: '1', page: '3' }), items, {
+      choices: { parity: (item) => item.size },
+    });
+    const narrowedEven = narrowMockList(requestWith({ parity: '0' }), items, {
+      choices: { parity: (item) => item.size },
+    });
+
+    expect(narrowed).toEqual(items);
+    expect(narrowedEven.map((item) => item.name)).toEqual(['Row 0', 'Row 2', 'Row 4', 'Row 6', 'Row 8', 'Row 10']);
   });
 });

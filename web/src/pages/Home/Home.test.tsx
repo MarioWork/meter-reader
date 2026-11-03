@@ -1171,3 +1171,38 @@ describe('filtering the history', () => {
     expect(activeFilters().map((chip) => chip.textContent)).toEqual(['Sent']);
   });
 });
+
+describe('exporting the history', () => {
+  const EXPORT_LINK_NAME = 'Export readings as a spreadsheet';
+
+  function exportUrl() {
+    return new URL(screen.getByRole('link', { name: EXPORT_LINK_NAME }).getAttribute('href') ?? '');
+  }
+
+  it("downloads every reading as a spreadsheet, with the user's time zone, when no filter is on", async () => {
+    await renderHome();
+
+    const url = exportUrl();
+
+    expect(screen.getByRole('link', { name: EXPORT_LINK_NAME })).toHaveAttribute('download');
+    expect(`${url.origin}${url.pathname}`).toBe(`${TEST_BASE_API_URL}/readings/export.xlsx`);
+    expect([...url.searchParams.keys()]).toEqual(['timeZone']);
+    expect(url.searchParams.get('timeZone')).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  });
+
+  it("downloads only the readings Home's filters match when filters are on", async () => {
+    await renderHome(`${BASE_ROUTES_PATHS.HOME}?from=2026-01-01&to=2026-06-30&status=failed,notSent`);
+
+    const url = exportUrl();
+
+    expect(url.searchParams.get('from')).toBe('2026-01-01');
+    expect(url.searchParams.get('to')).toBe('2026-06-30');
+    expect(url.searchParams.get('status')).toBe('notSent,failed');
+  });
+
+  it('is not offered when no reading matches the filters', async () => {
+    await renderHome(`${BASE_ROUTES_PATHS.HOME}?from=2020-01-01&to=2020-01-31`);
+
+    expect(screen.queryByRole('link', { name: EXPORT_LINK_NAME })).not.toBeInTheDocument();
+  });
+});

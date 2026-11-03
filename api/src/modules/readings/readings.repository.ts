@@ -33,7 +33,7 @@ export type ReadingRow = Prisma.ReadingGetPayload<{ select: typeof READING_SELEC
 
 export type ReadingPage = { rows: ReadingRow[]; total: number };
 
-// Which readings a page is taken from. Every part is optional; the days are inclusive.
+// Which readings a page or the spreadsheet is taken from. Every part is optional; the days are inclusive.
 export type ReadingFilter = { from?: Date; to?: Date; statuses?: ReadingRow['status'][] };
 
 // The email as it went out, kept on the reading once it is sent.
@@ -57,6 +57,10 @@ const NO_SENT_EMAIL: SentEmailColumns = {
   sentBody: null,
   sentWithPhoto: null,
 };
+
+function toWhere({ from, to, statuses }: ReadingFilter): Prisma.ReadingWhereInput {
+  return { date: { gte: from, lte: to }, status: statuses ? { in: statuses } : undefined };
+}
 
 function toSentEmailColumns({ from, to, subject, body, withPhoto }: SentEmail): SentEmailColumns {
   return { sentFrom: from, sentTo: to, sentSubject: subject, sentBody: body, sentWithPhoto: withPhoto };
@@ -89,11 +93,8 @@ export const readingsRepository = {
   },
 
   // The page and the total in one transaction, so the total matches the page. Both count the filtered rows only.
-  findPage: async ({ skip, take }: SkipTake, { from, to, statuses }: ReadingFilter): Promise<ReadingPage> => {
-    const where = {
-      date: { gte: from, lte: to },
-      status: statuses ? { in: statuses } : undefined,
-    } satisfies Prisma.ReadingWhereInput;
+  findPage: async ({ skip, take }: SkipTake, filter: ReadingFilter): Promise<ReadingPage> => {
+    const where = toWhere(filter);
 
     const [rows, total] = await prisma.$transaction([
       prisma.reading.findMany({ where, orderBy: [...NEWEST_FIRST], skip, take, select: READING_SELECT }),
@@ -102,6 +103,11 @@ export const readingsRepository = {
 
     return { rows, total };
   },
+
+  // Every row the filter matches, newest first, for the spreadsheet. No page: one meter read about once a month
+  // makes a dozen rows a year, so the whole history is small.
+  findAll: (filter: ReadingFilter): Promise<ReadingRow[]> =>
+    prisma.reading.findMany({ where: toWhere(filter), orderBy: [...NEWEST_FIRST], select: READING_SELECT }),
 
   findById: (id: number): Promise<ReadingRow | null> =>
     prisma.reading.findUnique({ where: { id }, select: READING_SELECT }),

@@ -1,14 +1,17 @@
 import type { FastifyPluginAsyncZod } from '@fastify/type-provider-zod';
 import { z } from 'zod';
 import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
+import { XLSX_CONTENT_TYPE } from '../../lib/spreadsheet.ts';
 import {
   CreateReadingSchema,
+  ExportReadingsQuerySchema,
   ListReadingsQuerySchema,
   EmailDefaultsResponseSchema,
   ReadingEmailResponseSchema,
   ReadingListResponseSchema,
   ReadingParamsSchema,
   ReadingResponseSchema,
+  ReadingsSpreadsheetResponseSchema,
   SendReadingSchema,
   UpdateReadingSchema,
 } from './readings.schema.ts';
@@ -19,11 +22,17 @@ import {
   getReading,
   getReadingEmail,
   getReadings,
+  getReadingsSpreadsheet,
   sendReading,
   updateReading,
 } from './readings.service.ts';
 
 const TAGS = ['readings'];
+
+// Saved under this name, never shown in the browser.
+function attachment(fileName: string): string {
+  return `attachment; filename="${fileName}"`;
+}
 
 // Every route needs a session: the auth plugin locks every route that is not marked public (ADR 0002).
 export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -38,6 +47,25 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request) => getReadings(request.query),
+  );
+
+  // Static, so it wins over /:id.
+  app.get(
+    '/export.xlsx',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'Every reading the filters match (not a page) as an .xlsx spreadsheet, newest first',
+        querystring: ExportReadingsQuerySchema,
+        produces: [XLSX_CONTENT_TYPE],
+        response: { 200: ReadingsSpreadsheetResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const { fileName, content } = await getReadingsSpreadsheet(request.query);
+
+      return reply.type(XLSX_CONTENT_TYPE).header('content-disposition', attachment(fileName)).send(content);
+    },
   );
 
   app.post(

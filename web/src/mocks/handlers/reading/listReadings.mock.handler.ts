@@ -4,8 +4,8 @@ import type { ReadingApiModel } from '@app-types/models';
 import { ApiUrlParamsUtil, type ResponseWithPaginationUtil } from '@app-types/utility';
 import { paginateMockList } from '@mocks/mockListUtils';
 import { MOCK_DELAY } from '@mocks/handlers';
-import { ReadingApiSearchFields } from '@services/readingService/readingService';
 import { createReadingValidationErrorMockModel, type ReadingErrorMockModel } from './models/readingErrorMockModel.mock';
+import { ReadingApiSearchFields } from '@services/readingService/readingService';
 import { getMockReadings } from './readingMockState';
 
 const BAD_REQUEST = 400;

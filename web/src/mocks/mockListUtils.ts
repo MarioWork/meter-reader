@@ -32,12 +32,16 @@ const compare = (value: ReturnType<FieldReader<unknown>>, other: ReturnType<Fiel
 // Joined into one string, so the row matches when any one of its values does.
 export const anyOf = <T, V>(values: T[], read: (value: T) => V) => values.map(read).join(' ');
 
-// A field the handler does not name is ignored, as the real endpoint ignores it.
-export function paginateMockList<T>(
+type MockNarrowing<T> = Pick<MockListOptions<T>, 'filters' | 'choices' | 'ranges'>;
+
+// The rows the request's filters, choices and ranges match, in the order given: what a list mock pages, and what a
+// download of every match (a spreadsheet) holds. A field the handler does not name is ignored, as the endpoint
+// ignores it.
+export function narrowMockList<T>(
   request: Request,
   items: T[],
-  { filters = {}, choices = {}, ranges = [], sorts = {} }: MockListOptions<T> = {},
-): ResponseWithPaginationUtil<T> {
+  { filters = {}, choices = {}, ranges = [] }: MockNarrowing<T> = {},
+): T[] {
   const params = new URL(request.url).searchParams;
 
   const matched = Object.entries(filters).reduce((rows, [field, read]) => {
@@ -57,7 +61,7 @@ export function paginateMockList<T>(
   }, matched);
 
   // Compared as text: the endpoints carry both ends as ISO timestamps or days, which sort that way.
-  const narrowed = ranges.reduce((rows, { from, to, read }) => {
+  return ranges.reduce((rows, { from, to, read }) => {
     const after = params.get(from);
     const before = params.get(to);
 
@@ -68,6 +72,17 @@ export function paginateMockList<T>(
       return isAfterStart && isBeforeEnd;
     });
   }, chosen);
+}
+
+// A field the handler does not name is ignored, as the real endpoint ignores it.
+export function paginateMockList<T>(
+  request: Request,
+  items: T[],
+  { sorts = {}, ...narrowing }: MockListOptions<T> = {},
+): ResponseWithPaginationUtil<T> {
+  const params = new URL(request.url).searchParams;
+
+  const narrowed = narrowMockList(request, items, narrowing);
 
   // Comma-separated: a second field breaks ties on the first.
   const sortReaders = (params.get(ApiUrlParamsUtil.sorting_fields) ?? '')
