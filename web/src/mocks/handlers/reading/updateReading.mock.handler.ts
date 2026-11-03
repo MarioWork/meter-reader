@@ -18,9 +18,9 @@ function toReadingBill(billId: number | null): ReadingBillApiModel | null | unde
 
   if (!uploaded) return undefined;
 
-  const { id, contentType, sizeBytes } = uploaded.bill;
+  const { id, name, contentType, sizeBytes } = uploaded.bill;
 
-  return { id, contentType, sizeBytes };
+  return { id, name, contentType, sizeBytes };
 }
 
 // Like the API: sets, changes or removes (null) the reading's cost and its bill, and answers the reading as it is

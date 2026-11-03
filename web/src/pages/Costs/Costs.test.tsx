@@ -35,11 +35,11 @@ function costItems() {
 }
 
 // A bill saved on the mock reading, as the API answers the reading once updated with one. Its id, for the link.
-function saveMockBill(readingId: number): number {
+function saveMockBill(readingId: number, name = createBillMockModel().name): number {
   const { contentType, sizeBytes } = createBillMockModel();
-  const { id } = addMockBill(new Blob([new Uint8Array(sizeBytes)]), contentType);
+  const { id } = addMockBill(new Blob([new Uint8Array(sizeBytes)]), contentType, name);
 
-  updateMockReading(readingId, { bill: { id, contentType, sizeBytes } });
+  updateMockReading(readingId, { bill: { id, name, contentType, sizeBytes } });
 
   return id;
 }
@@ -100,17 +100,22 @@ describe('readings with a bill', () => {
     ).toBeVisible();
   });
 
-  it('links each row with a bill to it, in a new tab, and the rows without one to nothing', async () => {
-    const onlyBillId = saveMockBill(NO_COST_READING_ID);
-    const costedBillId = saveMockBill(COSTED_READING_ID);
+  it("links each row with a bill to it by the file's name, in a new tab, and the rows without one to nothing", async () => {
+    const onlyBillId = saveMockBill(NO_COST_READING_ID, 'september.pdf');
+    const costedBillId = saveMockBill(COSTED_READING_ID, 'august.pdf');
 
     await renderCosts();
 
-    const onlyBill = within(costItems()[0]).getByRole('link', { name: 'Bill of 1 Sept 2026, opens in a new tab' });
+    const onlyBill = within(costItems()[0]).getByRole('link', {
+      name: 'september.pdf, opens the bill of 1 Sept 2026 in a new tab',
+    });
+    expect(onlyBill).toHaveTextContent('september.pdf');
     expect(onlyBill).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${onlyBillId}`);
     expect(onlyBill).toHaveAttribute('target', '_blank');
     expect(onlyBill).toHaveAttribute('rel', 'noopener noreferrer');
-    const costedBill = within(costItems()[1]).getByRole('link', { name: 'Bill of 1 Aug 2026, opens in a new tab' });
+    const costedBill = within(costItems()[1]).getByRole('link', {
+      name: 'august.pdf, opens the bill of 1 Aug 2026 in a new tab',
+    });
     expect(costedBill).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${costedBillId}`);
     expect(costItems()[1]).toHaveTextContent('€39.05');
     expect(within(costItems()[2]).queryByRole('link')).not.toBeInTheDocument();

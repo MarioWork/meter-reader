@@ -112,9 +112,11 @@ const COST_CENTS_MAX = 2_147_483_647;
 // A Cost (docs/GLOSSARY.md) in euro cents: a whole number, so 42,10 € is 4210 and never a rounded float. 0 or more.
 const CostCentsSchema = z.number().int().min(0).max(COST_CENTS_MAX);
 
-// The reading's Bill (docs/GLOSSARY.md): GET /bills/:id serves it. `contentType` says what kind of file it is.
+// The reading's Bill (docs/GLOSSARY.md): GET /bills/:id serves it. `name` is what the app shows: the name the file had
+// on the user's device, or "bill-<the reading's day>" and its extension. `contentType` says what kind of file it is.
 const ReadingBillSchema = z.object({
   id: z.number().int(),
+  name: z.string(),
   contentType: z.enum(BILL_CONTENT_TYPES),
   sizeBytes: z.number().int(),
 });

@@ -1,7 +1,12 @@
 import { render, screen } from '@test-utils';
 import BillField from './BillField';
 
-const SAVED_BILL = { id: 1, contentType: 'application/pdf' as const, sizeBytes: 184_320 };
+const SAVED_BILL = {
+  id: 1,
+  name: 'water-bill-october-2026.pdf',
+  contentType: 'application/pdf' as const,
+  sizeBytes: 184_320,
+};
 
 function renderBillField(error?: string) {
   render(

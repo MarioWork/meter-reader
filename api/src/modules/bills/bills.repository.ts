@@ -6,13 +6,14 @@ const BILL_SELECT = {
   id: true,
   fileName: true,
   fileType: true,
+  originalName: true,
   sizeBytes: true,
   createdAt: true,
-  // The reading's day names the file when it is downloaded.
+  // The reading's day names the file when it has no name of its own.
   reading: { select: { date: true } },
 } as const satisfies Prisma.BillSelect;
 
-export type NewBill = { fileName: string; fileType: BillFileType; sizeBytes: number };
+export type NewBill = { fileName: string; fileType: BillFileType; originalName: string | null; sizeBytes: number };
 
 type DeletedBill = { fileName: string };
 

@@ -18,6 +18,7 @@ const SAVED_ROW = {
   id: 9,
   fileName: FILE_NAME,
   fileType: 'PDF' as const,
+  originalName: null,
   sizeBytes: PDF_BILL.length,
   createdAt: new Date('2026-11-03T09:00:00.000Z'),
   reading: null,
@@ -34,14 +35,49 @@ describe('addBill', () => {
     expect(billsRepository.create).toHaveBeenCalledWith({
       fileName: FILE_NAME,
       fileType: 'PDF',
+      originalName: null,
       sizeBytes: PDF_BILL.length,
     });
     expect(saved).toEqual({
       id: 9,
+      name: 'bill.pdf',
       contentType: 'application/pdf',
       sizeBytes: PDF_BILL.length,
       createdAt: '2026-11-03T09:00:00.000Z',
     });
+  });
+
+  // What is kept of the name the client sent (percent-encoded): its own name only, cleaned, never a path.
+  it.each([
+    ['a plain name', 'october.pdf', 'october.pdf'],
+    ['letters outside ASCII', 'Fatura de Março ü.pdf', 'Fatura de Março ü.pdf'],
+    ['a Unix path', '/home/me/../bills/october.pdf', 'october.pdf'],
+    ['a Windows path', 'C:\\Users\\me\\october.pdf', 'october.pdf'],
+    ['a right-to-left override that hides the real extension', 'bill\u202Efdp.exe', 'billfdp.exe'],
+    ['control characters', 'oct\u0000ober\u0007.pdf', 'october.pdf'],
+    ['an invisible character between two spaces', 'my \u200B bill.pdf', 'my bill.pdf'],
+    ['tabs, line breaks and runs of spaces', '  my\t\nbill   2026.pdf  ', 'my bill 2026.pdf'],
+    ['a name made of dots only', '..', null],
+    ['a name made of spaces only', '   ', null],
+    ['an empty name', '', null],
+  ])('keeps the cleaned name when the client sends %s', async (_scenario, sentName, keptName) => {
+    vi.mocked(saveUpload).mockResolvedValueOnce(FILE_NAME);
+    vi.mocked(billsRepository.create).mockResolvedValueOnce(SAVED_ROW);
+
+    await addBill(PDF_BILL, encodeURIComponent(sentName));
+
+    expect(billsRepository.create).toHaveBeenCalledWith(expect.objectContaining({ originalName: keptName }));
+  });
+
+  it('keeps 200 characters, the extension among them, when the name is longer', async () => {
+    vi.mocked(saveUpload).mockResolvedValueOnce(FILE_NAME);
+    vi.mocked(billsRepository.create).mockResolvedValueOnce(SAVED_ROW);
+
+    await addBill(PDF_BILL, encodeURIComponent(`${'ü'.repeat(250)}.pdf`));
+
+    expect(billsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ originalName: `${'ü'.repeat(196)}.pdf` }),
+    );
   });
 
   it('removes the file again when its row cannot be saved', async () => {

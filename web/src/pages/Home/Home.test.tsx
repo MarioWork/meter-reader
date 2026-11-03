@@ -946,15 +946,21 @@ describe("a reading's bill", () => {
   // The newest reading is reading 14 in the mock history.
   const NEWEST_ID = 14;
   const PDF_BYTES = 184_320;
+  const BILL_NAME = 'Fatura de Outubro.pdf';
+  const BILL_LINK_NAME = `${BILL_NAME}, opens the bill in a new tab`;
   const PNG_BILL = new File([new Uint8Array(2_400_000)], 'october-bill.png', { type: 'image/png' });
 
   // The newest reading with a bill already saved, as the API answers it once updated with one. (A bill picked in the
   // dialog cannot go through the router in jsdom: its File is not the kind the router's Request reads. The upload
   // itself is covered in costAndBillModalActions.test.ts.)
   function saveMockBill() {
-    const { id, contentType, sizeBytes } = addMockBill(new Blob([new Uint8Array(PDF_BYTES)]), 'application/pdf');
+    const { id, name, contentType, sizeBytes } = addMockBill(
+      new Blob([new Uint8Array(PDF_BYTES)]),
+      'application/pdf',
+      BILL_NAME,
+    );
 
-    updateMockReading(NEWEST_ID, { bill: { id, contentType, sizeBytes } });
+    updateMockReading(NEWEST_ID, { bill: { id, name, contentType, sizeBytes } });
 
     return id;
   }
@@ -989,21 +995,20 @@ describe("a reading's bill", () => {
     return received;
   }
 
-  it('shows the bill in the details, with Open in a new tab and Download', async () => {
+  it('shows the bill in the details as one link, named after its file, that opens it in a new tab', async () => {
     const billId = saveMockBill();
     await renderHome();
 
     const details = await openDetails();
 
     expect(within(details).getByText('Bill')).toBeVisible();
+    const link = within(details).getByRole('link', { name: BILL_LINK_NAME });
+    expect(link).toHaveTextContent(BILL_NAME);
+    expect(link).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${billId}`);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(within(details).getByText('PDF, 184.3 KB')).toBeVisible();
-    const open = within(details).getByRole('link', { name: 'Open the bill in a new tab' });
-    expect(open).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${billId}`);
-    expect(open).toHaveAttribute('target', '_blank');
-    expect(open).toHaveAttribute('rel', 'noopener noreferrer');
-    const download = within(details).getByRole('link', { name: 'Download the bill' });
-    expect(download).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${billId}?download=true`);
-    expect(download).toHaveAttribute('download');
+    expect(within(details).queryByRole('link', { name: /^(Open|Download)/ })).not.toBeInTheDocument();
   });
 
   it('shows no bill in the details while the reading has none', async () => {
@@ -1031,14 +1036,19 @@ describe("a reading's bill", () => {
     expect(within(dialog).queryByRole('button', { name: 'Remove bill' })).not.toBeInTheDocument();
   });
 
-  it('shows the saved bill, and says a new file replaces it', async () => {
-    saveMockBill();
+  it('shows the saved bill as a link to it, and says a new file replaces it', async () => {
+    const billId = saveMockBill();
     await renderHome();
 
     const dialog = await openBillDialog();
     await userEvent.upload(billField(dialog), PNG_BILL);
 
-    expect(within(dialog).getByText('Saved bill: PDF, 184.3 KB')).toBeVisible();
+    expect(within(dialog).getByText('Saved bill:')).toBeVisible();
+    expect(within(dialog).getByRole('link', { name: BILL_LINK_NAME })).toHaveAttribute(
+      'href',
+      `${TEST_BASE_API_URL}/bills/${billId}`,
+    );
+    expect(within(dialog).getByText('PDF, 184.3 KB')).toBeVisible();
     expect(billField(dialog)).toHaveAccessibleDescription(/It replaces the saved bill/);
   });
 
@@ -1050,8 +1060,9 @@ describe("a reading's bill", () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Remove bill' }));
     expect(within(dialog).getByText('The saved bill is removed when you save.')).toBeVisible();
+    expect(within(dialog).queryByRole('link', { name: BILL_LINK_NAME })).not.toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Keep bill' }));
-    expect(within(dialog).getByText('Saved bill: PDF, 184.3 KB')).toBeVisible();
+    expect(within(dialog).getByRole('link', { name: BILL_LINK_NAME })).toBeVisible();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Remove bill' }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 

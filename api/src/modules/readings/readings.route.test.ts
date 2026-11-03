@@ -1,6 +1,7 @@
 import { access } from 'node:fs/promises';
 import type { InjectOptions } from 'fastify';
 import { readSheet } from 'read-excel-file/node';
+import { BILL_NAME_HEADER } from '../bills/bills.schema.ts';
 import { buildApp, type App } from '../../app.ts';
 import { APP_API_URL } from '../../lib/appOrigin.ts';
 import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
@@ -39,11 +40,13 @@ function addReading(payload: InjectOptions['payload']) {
 const PDF_BILL = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(500, 0x20)]);
 const PNG_BILL = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 
-async function addBill(payload = PDF_BILL, contentType = 'application/pdf'): Promise<number> {
+async function addBill(payload = PDF_BILL, contentType = 'application/pdf', sentName?: string): Promise<number> {
+  const nameHeader = sentName === undefined ? {} : { [BILL_NAME_HEADER]: encodeURIComponent(sentName) };
+
   const response = await app.inject({
     method: 'POST',
     url: '/bills',
-    headers: { 'content-type': contentType },
+    headers: { 'content-type': contentType, ...nameHeader },
     payload,
     ...withSession(token),
   });
@@ -1009,18 +1012,29 @@ describe('PATCH /readings/:id', () => {
     expect((await getReading(readingId)).json()).toMatchObject({ costCents: 4210 });
   });
 
-  it('links the bill and answers it when the reading has none', async () => {
+  it('links the bill and answers it, under the name it had on the device, when the reading has none', async () => {
     const readingId = await addReadingId('00123');
-    const billId = await addBill();
+    const billId = await addBill(PDF_BILL, 'application/pdf', 'Fatura de Outubro.pdf');
 
     const response = await updateReading(readingId, { billId });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({
-      bill: { id: billId, contentType: 'application/pdf', sizeBytes: PDF_BILL.length },
-      costCents: null,
-    });
+    expect(response.json()).toEqual(
+      expect.objectContaining({
+        bill: { id: billId, name: 'Fatura de Outubro.pdf', contentType: 'application/pdf', sizeBytes: PDF_BILL.length },
+        costCents: null,
+      }),
+    );
     expect((await getReading(readingId)).json()).toMatchObject({ bill: { id: billId } });
+  });
+
+  it("names the bill after the reading's day when it came with no name", async () => {
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31' })).json<{ id: number }>().id;
+    const billId = await addBill();
+
+    const response = await updateReading(readingId, { billId });
+
+    expect(response.json()).toMatchObject({ bill: { id: billId, name: 'bill-2026-10-31.pdf' } });
   });
 
   it('sets the cost and the bill together when both are sent', async () => {
