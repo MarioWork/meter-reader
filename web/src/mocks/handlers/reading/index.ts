@@ -1,5 +1,6 @@
 import addReadingHandler from './addReading.mock.handler';
 import deleteReadingHandler from './deleteReading.mock.handler';
+import getCostsSpreadsheetHandler from './getCostsSpreadsheet.mock.handler';
 import getEmailDefaultsHandler from './getEmailDefaults.mock.handler';
 import getReadingHandler from './getReading.mock.handler';
 import getReadingEmailHandler from './getReadingEmail.mock.handler';
@@ -16,6 +17,7 @@ export const readingMockHandlers = (baseUrl: string) => [
   ...listReadingsHandler(baseUrl),
   ...getReadingsSpreadsheetHandler(baseUrl),
   ...listCostsHandler(baseUrl),
+  ...getCostsSpreadsheetHandler(baseUrl),
   // Before /readings/:id, which would take "backup.json" for an id.
   ...getReadingsBackupHandler(baseUrl),
   ...getReadingsBackupCsvHandler(baseUrl),

@@ -140,6 +140,37 @@ describe('getReadingsSpreadsheetUrl', () => {
   });
 });
 
+describe('getCostsSpreadsheetUrl', () => {
+  it('points at the costs spreadsheet under the API base url, the days under their wire names', () => {
+    const url = new URL(readingService.getCostsSpreadsheetUrl({ dateFrom: '2026-01-01', dateTo: '2026-03-31' }));
+
+    expect(`${url.origin}${url.pathname}`).toBe(`${API}/readings/costs/export.xlsx`);
+    expect(url.searchParams.get('from')).toBe('2026-01-01');
+    expect(url.searchParams.get('to')).toBe('2026-03-31');
+  });
+
+  it('leaves out the days when none is set', () => {
+    const url = new URL(readingService.getCostsSpreadsheetUrl({}));
+
+    expect([...url.searchParams.keys()]).toEqual([]);
+  });
+
+  it('downloads an .xlsx file named after the days when followed', async () => {
+    const response = await fetch(
+      readingService.getCostsSpreadsheetUrl({ dateFrom: '2026-01-01', dateTo: '2026-03-31' }),
+    );
+    await response.arrayBuffer();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    expect(response.headers.get('content-disposition')).toBe(
+      'attachment; filename="water-costs-2026-01-01-to-2026-03-31.xlsx"',
+    );
+  });
+});
+
 describe('getReadingsBackupJsonUrl', () => {
   it('points at the JSON backup under the API base url, with no filter', () => {
     expect(readingService.getReadingsBackupJsonUrl()).toBe(`${API}/readings/backup.json`);

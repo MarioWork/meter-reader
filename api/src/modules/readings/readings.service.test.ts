@@ -20,7 +20,7 @@ vi.mock('./readings.repository.ts', () => ({
     create: vi.fn(),
     findPage: vi.fn(),
     findAll: vi.fn(),
-    findWithCost: vi.fn(),
+    findWithCostOrBill: vi.fn(),
     findById: vi.fn(),
     update: vi.fn(),
     markSent: vi.fn(),
@@ -144,19 +144,33 @@ describe('getReadings', () => {
 
 describe('getCosts', () => {
   it('asks for the days as midnight UTC and answers the rows with their sum when a day range is given', async () => {
-    vi.mocked(readingsRepository.findWithCost).mockResolvedValueOnce([
+    vi.mocked(readingsRepository.findWithCostOrBill).mockResolvedValueOnce([
       { ...SAVED_ROW, id: 8, costCents: 3990 },
       { ...SAVED_ROW, id: 7, costCents: 4210 },
     ]);
 
     const costs = await getCosts({ from: '2026-09-01', to: '2026-09-30' });
 
-    expect(readingsRepository.findWithCost).toHaveBeenCalledWith({
+    expect(readingsRepository.findWithCostOrBill).toHaveBeenCalledWith({
       from: new Date('2026-09-01T00:00:00.000Z'),
       to: new Date('2026-09-30T00:00:00.000Z'),
       statuses: undefined,
     });
     expect(costs).toMatchObject({ totalCostCents: 8200, data: [{ id: 8, costCents: 3990 }, { id: 7 }] });
+  });
+
+  it('answers a reading with only a bill but adds nothing to the sum for it', async () => {
+    vi.mocked(readingsRepository.findWithCostOrBill).mockResolvedValueOnce([
+      { ...SAVED_ROW, id: 8, costCents: null, bill: BILL },
+      { ...SAVED_ROW, id: 7, costCents: 4210 },
+    ]);
+
+    const costs = await getCosts({});
+
+    expect(costs).toMatchObject({
+      totalCostCents: 4210,
+      data: [{ id: 8, costCents: null, bill: { id: 9 } }, { id: 7 }],
+    });
   });
 });
 

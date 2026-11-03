@@ -1,4 +1,5 @@
 import { readSheet } from 'read-excel-file/node';
+import { sheetFormulas, sheetLinks } from './spreadsheet.fixture.ts';
 import { toSpreadsheet, toSpreadsheetTime, type SpreadsheetColumn } from './spreadsheet.ts';
 
 type Meter = { serial: string; litres: number; installedOn: Date; note: string | null };
@@ -29,6 +30,103 @@ describe('toSpreadsheet', () => {
     const rows = await readSheet(await toSpreadsheet({ sheetName: 'Meters', columns: COLUMNS, items: [] }));
 
     expect(rows).toEqual([HEADER]);
+  });
+});
+
+describe('toSpreadsheet with links', () => {
+  type Bill = { label: string; url: string | null };
+
+  const LINK_COLUMNS: SpreadsheetColumn<Bill>[] = [
+    { title: 'Bill', width: 10, valueOf: (bill) => bill.label, linkOf: (bill) => bill.url },
+  ];
+
+  it('links each cell to its url and keeps the cell text, when a column has links', async () => {
+    const items = [
+      { label: 'Open', url: 'https://meter.example/api/bills/7' },
+      { label: 'Open', url: 'https://meter.example/api/bills/9' },
+    ];
+
+    const xlsx = await toSpreadsheet({ sheetName: 'Bills', columns: LINK_COLUMNS, items });
+
+    expect(await readSheet(xlsx)).toEqual([['Bill'], ['Open'], ['Open']]);
+    expect(sheetLinks(xlsx)).toEqual({
+      A2: 'https://meter.example/api/bills/7',
+      A3: 'https://meter.example/api/bills/9',
+    });
+  });
+
+  it('leaves a cell plain when its item has no url', async () => {
+    const items = [
+      { label: 'Plain', url: null },
+      { label: 'Open', url: 'https://meter.example/api/bills/9' },
+    ];
+
+    const xlsx = await toSpreadsheet({ sheetName: 'Bills', columns: LINK_COLUMNS, items });
+
+    expect(sheetLinks(xlsx)).toEqual({ A3: 'https://meter.example/api/bills/9' });
+  });
+
+  it('writes no links when no cell has one', async () => {
+    const xlsx = await toSpreadsheet({ sheetName: 'Meters', columns: COLUMNS, items: [] });
+
+    expect(sheetLinks(xlsx)).toEqual({});
+  });
+});
+
+describe('toSpreadsheet with a sum row', () => {
+  const SUMMED_COLUMNS = COLUMNS.map((column) => ({ ...column, isSummed: column.title === 'Litres' }));
+  const meter = (serial: string, litres: number) => ({ serial, litres, installedOn: INSTALLED_ON, note: null });
+
+  it('adds a row below the data with the label and the sum of the summed column, when asked for one', async () => {
+    const items = [meter('00123', 412), meter('00456', 7)];
+
+    const xlsx = await toSpreadsheet({ sheetName: 'Meters', columns: SUMMED_COLUMNS, items, sumRowLabel: 'Total' });
+
+    expect((await readSheet(xlsx)).at(-1)).toEqual(['Total', 419, null, null]);
+    expect(sheetFormulas(xlsx)).toEqual({ B4: 'SUM(B2:B3)' });
+  });
+
+  it('adds up only the numbers when some cells of the summed column are empty', async () => {
+    const columns: SpreadsheetColumn<{ litres: number | null }>[] = [
+      { title: 'Name', width: 10, valueOf: () => 'Meter' },
+      { title: 'Litres', width: 8, valueOf: (item) => item.litres, isSummed: true },
+    ];
+    const items = [{ litres: 5 }, { litres: null }, { litres: 2 }];
+
+    const xlsx = await toSpreadsheet({ sheetName: 'Meters', columns, items, sumRowLabel: 'Total' });
+
+    expect((await readSheet(xlsx)).at(-1)).toEqual(['Total', 7]);
+    expect(sheetFormulas(xlsx)).toEqual({ B5: 'SUM(B2:B4)' });
+  });
+
+  it('keeps the sum free of floating-point noise when the numbers have decimals', async () => {
+    const columns: SpreadsheetColumn<{ euros: number }>[] = [
+      { title: 'Name', width: 10, valueOf: () => 'Bill' },
+      { title: 'Euros', width: 8, valueOf: (item) => item.euros, isSummed: true },
+    ];
+
+    const xlsx = await toSpreadsheet({
+      sheetName: 'Bills',
+      columns,
+      items: [{ euros: 0.1 }, { euros: 0.2 }],
+      sumRowLabel: 'Total',
+    });
+
+    expect((await readSheet(xlsx)).at(-1)).toEqual(['Total', 0.3]);
+  });
+
+  it('writes a sum of 0, and no formula, when there are no items', async () => {
+    const xlsx = await toSpreadsheet({ sheetName: 'Meters', columns: SUMMED_COLUMNS, items: [], sumRowLabel: 'Total' });
+
+    expect(await readSheet(xlsx)).toEqual([HEADER, ['Total', 0, null, null]]);
+    expect(sheetFormulas(xlsx)).toEqual({});
+  });
+
+  it('writes no sum row when the table asks for none', async () => {
+    const xlsx = await toSpreadsheet({ sheetName: 'Meters', columns: SUMMED_COLUMNS, items: [meter('00123', 412)] });
+
+    expect(await readSheet(xlsx)).toHaveLength(2);
+    expect(sheetFormulas(xlsx)).toEqual({});
   });
 });
 

@@ -19,6 +19,7 @@ import type { CreateReading, SendReading, UpdateReading } from './readingService
 
 const BASE_READINGS_URL = '/readings';
 const READINGS_SPREADSHEET_SEGMENT = 'export.xlsx';
+const COSTS_SEGMENT = 'costs';
 const READINGS_BACKUP_JSON_SEGMENT = 'backup.json';
 const READINGS_BACKUP_CSV_SEGMENT = 'backup.csv';
 const READINGS_BACKUP_ZIP_SEGMENT = 'backup.zip';
@@ -57,7 +58,8 @@ function toSearchParams(params: Record<string, string | undefined>): URLSearchPa
   return new URLSearchParams(setParams);
 }
 
-// The Costs page's day range, either end open. Not paged: the API answers every reading with a Cost in it.
+// The Costs page's day range, either end open. Not paged: the API answers every reading with a Cost or a Bill in it.
+// Its spreadsheet takes the same range, and so holds the same readings.
 type GetCostsFields = {
   dateFrom?: string;
   dateTo?: string;
@@ -107,9 +109,9 @@ export default {
   getReadingsBackupZipUrl: (): string =>
     `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_BACKUP_ZIP_SEGMENT}`,
 
-  // The readings that have a Cost, newest first, and the sum of their costs.
+  // The readings that have a Cost or a Bill, newest first, and the sum of their costs.
   getCosts: async ({ dateFrom, dateTo }: GetCostsFields): Promise<CostListApiModel> => {
-    const response = await axios.get<CostListApiModel>(`${BASE_READINGS_URL}/costs`, {
+    const response = await axios.get<CostListApiModel>(`${BASE_READINGS_URL}/${COSTS_SEGMENT}`, {
       params: {
         [ApiUrlParamsUtil.dateFrom]: dateFrom,
         [ApiUrlParamsUtil.dateTo]: dateTo,
@@ -117,6 +119,17 @@ export default {
     });
 
     return response.data;
+  },
+
+  // The Costs page's readings as a spreadsheet, a plain download like the readings one. Built from the service's path
+  // and the url's checked days only.
+  getCostsSpreadsheetUrl: ({ dateFrom, dateTo }: GetCostsFields): string => {
+    const searchParams = toSearchParams({
+      [ApiUrlParamsUtil.dateFrom]: dateFrom,
+      [ApiUrlParamsUtil.dateTo]: dateTo,
+    });
+
+    return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${COSTS_SEGMENT}/${READINGS_SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
   },
 
   // What a new reading's email starts with, before the reading is saved.

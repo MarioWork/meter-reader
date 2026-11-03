@@ -1,6 +1,5 @@
 // Filter arrows on a sheet's header row: a feature write-excel-file leaves to its users ("features": raw access to
 // the .xlsx XML). Excel reads the sheet's <autoFilter>; LibreOffice also needs the workbook's hidden name for it.
-import type writeExcelFile from 'write-excel-file/node';
 import {
   appendMarkupInsideElement,
   findElement,
@@ -13,11 +12,8 @@ import {
   replaceElement,
   sanitizeTextContent,
 } from 'write-excel-file/utility';
+import { insertIntoWorksheet, WORKSHEET_FILE, type NodeFeature } from './spreadsheetFeature.ts';
 
-// The library's Feature type, with the Node build's own file-content type filled in.
-type NodeFeature = NonNullable<NonNullable<Parameters<typeof writeExcelFile>[1]>['features']>[number];
-
-const WORKSHEET_FILE = 'xl/worksheets/sheet{id}.xml';
 const WORKBOOK_FILE = 'xl/workbook.xml';
 // Excel names a sheet's filter range with this hidden defined name; LibreOffice needs it to show the arrows.
 const FILTER_DATABASE_NAME = '_xlnm._FilterDatabase';
@@ -47,12 +43,6 @@ function absoluteRange(filter: SheetFilter): string {
   const quotedName = `'${filter.sheetName.replaceAll("'", "''")}'`;
 
   return `${quotedName}!${toAbsoluteAddress(firstCell)}:${toAbsoluteAddress(lastCell)}`;
-}
-
-function insertIntoWorksheet(xml: string, markup: string): string {
-  const order = getOrderOfSiblings(WORKSHEET_FILE, 'worksheet') ?? [];
-
-  return insertElementMarkupAccordingToOrderOfSiblings(xml, markup, order, 'worksheet');
 }
 
 function definedNameElements(filters: SheetFilter[]): string {
