@@ -7,7 +7,7 @@ import { Spinner } from '@components/ui/spinner';
 import EmailAttachment from './components/EmailAttachment';
 import EmailTextFields from './components/EmailTextFields';
 import MailNotConnectedNote from './components/MailNotConnectedNote';
-import ResponsiveDialog from '../ResponsiveDialog';
+import ResponsiveDialog from '@components/ResponsiveDialog';
 import { useSendReading } from './hooks/useSendReading';
 
 const DIALOG_TITLE = 'Send this reading?';

@@ -1,7 +1,7 @@
 import type { ReadingStatusUtil } from '@app-types/utility';
 import { FieldLegend, FieldSet } from '@components/ui/field';
 import { ToggleGroup } from '@components/ui/toggle-group';
-import { READING_STATUS_LABELS, READING_STATUSES } from '../../../readingStatusLabels';
+import { READING_STATUS_LABELS, READING_STATUSES } from '@utils/readingStatusUtils';
 import ChoiceToggle from './ChoiceToggle';
 
 type Props = {

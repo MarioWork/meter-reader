@@ -15,6 +15,10 @@ const FILLS = ['primary', 'secondary', 'accent', 'destructive', 'success', 'warn
 // Edges that must stand out from the surface they sit on.
 const EDGES = ['input', 'ring'];
 
+// Chart marks, against the card every chart is drawn on.
+const CHART_MARKS = ['chart-1'];
+const CHART_SURFACE = 'card';
+
 const THEME_SELECTORS = { light: ':root', dark: '.dark' };
 
 // The sRGB relative luminance formula (WCAG 2.2, "relative luminance").
@@ -68,7 +72,9 @@ function contrastPairs(): ContrastPair[] {
     SURFACES.map((surface) => ({ text: edge, surface, minimum: NON_TEXT_CONTRAST })),
   );
 
-  return [...textOnSurfaces, ...textOnFills, ...edges];
+  const chartMarks = CHART_MARKS.map((mark) => ({ text: mark, surface: CHART_SURFACE, minimum: NON_TEXT_CONTRAST }));
+
+  return [...textOnSurfaces, ...textOnFills, ...edges, ...chartMarks];
 }
 
 describe.each(Object.entries(THEME_SELECTORS))('the %s theme', (_theme, selector) => {

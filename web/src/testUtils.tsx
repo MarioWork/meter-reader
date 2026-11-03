@@ -84,6 +84,19 @@ export function renderRoutes(routes: RouteObject[], { initialEntries = ['/'], ..
   return { ...renderWithProviders(<RouterProvider router={router} />, options), router };
 }
 
+// A wide screen for this test: every min-width query matches, so the pages lay out as on a laptop.
+export function mockWideScreen() {
+  vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query) =>
+      ({
+        matches: query.includes('min-width'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }) as unknown as MediaQueryList,
+  );
+}
+
 // fireEvent only for what a user cannot do, such as an image finishing or failing to load.
 export {
   act,

@@ -1,6 +1,6 @@
 import { XIcon } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import type { HistoryFilterChip } from '../../../types';
+import type { HistoryFilterChip } from '../types';
 
 type Props = {
   chip: HistoryFilterChip;

@@ -7,6 +7,7 @@ import type * as SettingsService from '../settings/settings.service.ts';
 import {
   addReading,
   deleteReading,
+  getCosts,
   getReadings,
   getReadingsBackup,
   getReadingsBackupCsv,
@@ -19,6 +20,7 @@ vi.mock('./readings.repository.ts', () => ({
     create: vi.fn(),
     findPage: vi.fn(),
     findAll: vi.fn(),
+    findWithCost: vi.fn(),
     findById: vi.fn(),
     update: vi.fn(),
     markSent: vi.fn(),
@@ -122,6 +124,24 @@ describe('getReadings', () => {
         statuses: ['NOT_SENT', 'FAILED'],
       },
     );
+  });
+});
+
+describe('getCosts', () => {
+  it('asks for the days as midnight UTC and answers the rows with their sum when a day range is given', async () => {
+    vi.mocked(readingsRepository.findWithCost).mockResolvedValueOnce([
+      { ...SAVED_ROW, id: 8, costCents: 3990 },
+      { ...SAVED_ROW, id: 7, costCents: 4210 },
+    ]);
+
+    const costs = await getCosts({ from: '2026-09-01', to: '2026-09-30' });
+
+    expect(readingsRepository.findWithCost).toHaveBeenCalledWith({
+      from: new Date('2026-09-01T00:00:00.000Z'),
+      to: new Date('2026-09-30T00:00:00.000Z'),
+      statuses: undefined,
+    });
+    expect(costs).toMatchObject({ totalCostCents: 8200, data: [{ id: 8, costCents: 3990 }, { id: 7 }] });
   });
 });
 

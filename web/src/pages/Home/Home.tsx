@@ -3,14 +3,14 @@ import { Outlet, useLoaderData } from 'react-router';
 import type { LoaderDataUtil } from '@app-types/utility';
 import EmptyHistory from './components/EmptyHistory';
 import ExportReadingsLink from './components/ExportReadingsLink';
-import HistoryFilters from './components/HistoryFilters';
 import LoadMoreHistory from './components/LoadMoreHistory';
 import NewReadingBar from './components/NewReadingBar';
 import NoMatchingReadings from './components/NoMatchingReadings';
 import ReadingHistory from './components/ReadingHistory';
 import { loader } from './homeLoader';
-import { useHistoryFilters } from './hooks/useHistoryFilters';
-import { useIsFilteringHistory } from './hooks/useIsFilteringHistory';
+import HistoryFilters from '@components/HistoryFilters';
+import { useHistoryFilters } from '@hooks/useHistoryFilters';
+import { useIsFilteringHistory } from '@hooks/useIsFilteringHistory';
 import { cn } from '@utils/classNameUtils';
 
 // Phone first: the filters, the last reading on top, the earlier ones as cards below it, more as the user scrolls,

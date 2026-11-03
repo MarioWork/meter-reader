@@ -4,7 +4,7 @@ import { Button } from '@components/ui/button';
 import { Spinner } from '@components/ui/spinner';
 import { formatIsoDate } from '@utils/dateUtils';
 import { getCostAndBillLabel } from '@pages/Home/costAndBillUtils';
-import ResponsiveDialog from '../ResponsiveDialog';
+import ResponsiveDialog from '@components/ResponsiveDialog';
 import CostField from './components/CostField';
 import { useCostAndBill } from './hooks/useCostAndBill';
 

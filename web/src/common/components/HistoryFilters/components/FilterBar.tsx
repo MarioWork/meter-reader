@@ -7,15 +7,16 @@ import {
   historyFilterDraft,
   historyFiltersFromDraft,
   isRangeBackwards,
-} from '../../../historyFilterUtils';
-import type { DatePreset, HistoryFilterValues } from '../../../types';
-import { DatePreset as DatePresets } from '../../../types/datePreset.type';
+} from '@utils/historyFilterUtils';
+import type { DatePreset, HistoryFilterValues } from '../types';
+import { DatePreset as DatePresets } from '../types/datePreset.type';
 import CustomRangeFields from './CustomRangeFields';
 import DatePresetField from './DatePresetField';
 import StatusField from './StatusField';
 
 type Props = {
   filters: HistoryFilterValues;
+  hasStatusFilter: boolean;
   onApply: (filters: HistoryFilterValues) => void;
   // A change made from the filters as they are when it lands, for the choices that keep the others.
   onUpdate: (makeFilters: (currentFilters: HistoryFilterValues) => HistoryFilterValues) => void;
@@ -32,7 +33,7 @@ const CLEAR_LABEL = 'Clear all';
 // it is pressed; Custom shows its months and applies them with Apply, so a half-picked range never runs. What is
 // pressed comes from the applied filters, so the bar stays as it is (focus included) while the list reloads; only
 // Custom being open and its months are its own.
-function FilterBar({ filters, onApply, onUpdate }: Props) {
+function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
   const applied = historyFilterDraft(filters);
   const isCustomApplied = applied.datePreset === DatePresets.CUSTOM;
   const [isCustomOpen, setIsCustomOpen] = useState(isCustomApplied);
@@ -51,6 +52,8 @@ function FilterBar({ filters, onApply, onUpdate }: Props) {
     if (!isFiltered) setIsCustomOpen(false);
   }
 
+  // Costs has no statuses: its bottom row is there only while Clear all is.
+  const hasBottomRow = hasStatusFilter || isFiltered;
   const shownPreset = isCustomOpen ? DatePresets.CUSTOM : applied.datePreset;
   const isCustomBackwards = isRangeBackwards({ dateFrom: customMonths.customFrom, dateTo: customMonths.customTo });
 
@@ -103,18 +106,22 @@ function FilterBar({ filters, onApply, onUpdate }: Props) {
           </Button>
         </div>
       </SmoothReveal>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <StatusField
-          statuses={filters.statuses}
-          onChange={(statuses) => onUpdate((currentFilters) => ({ ...currentFilters, statuses }))}
-        />
-        {isFiltered && (
-          <Button variant="ghost" size="sm" onClick={clearAll}>
-            <XIcon aria-hidden="true" />
-            {CLEAR_LABEL}
-          </Button>
-        )}
-      </div>
+      {hasBottomRow && (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          {hasStatusFilter && (
+            <StatusField
+              statuses={filters.statuses}
+              onChange={(statuses) => onUpdate((currentFilters) => ({ ...currentFilters, statuses }))}
+            />
+          )}
+          {isFiltered && (
+            <Button variant="ghost" size="sm" onClick={clearAll}>
+              <XIcon aria-hidden="true" />
+              {CLEAR_LABEL}
+            </Button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

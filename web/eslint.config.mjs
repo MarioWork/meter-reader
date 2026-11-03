@@ -154,6 +154,18 @@ export default defineConfig([
     },
   },
   {
+    // shadcn's chart, kept as the CLI writes it (see above). Recharts types a tooltip's payload as `any`, which the
+    // type-checked rules then follow through every line that reads it.
+    files: ['src/common/components/ui/chart.tsx'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+    },
+  },
+  {
     files: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     plugins: {
       'testing-library': testingLibrary,

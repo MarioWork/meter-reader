@@ -4,8 +4,8 @@ import readingService from '@services/readingService/readingService';
 import type { ReadingApiModel } from '@app-types/models';
 import { HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
 import { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from '@app-types/utility';
-import { readHistoryFilters } from './historyFilterUtils';
-import type { HistoryFilterValues } from './types';
+import { readHistoryFilters } from '@utils/historyFilterUtils';
+import type { HistoryFilterValues } from '@components/HistoryFilters/types';
 
 const FIRST_PAGE = Number(DEFAULT_FIRST_PAGE);
 

@@ -55,6 +55,12 @@ export const ListReadingsQuerySchema = PaginationQuerySchema.extend(READING_FILT
   RANGE_IN_ORDER_RULE,
 );
 
+// The Costs page's readings narrowed to calendar days (both inclusive), with no status. Not paged: see
+// CostListResponseSchema.
+export const ListCostsQuerySchema = z
+  .object({ from: READING_FILTER_SHAPE.from, to: READING_FILTER_SHAPE.to })
+  .refine(isRangeInOrder, RANGE_IN_ORDER_RULE);
+
 // A time zone the runtime knows (an IANA name such as Europe/Lisbon): Intl refuses any other.
 function isKnownTimeZone(timeZone: string): boolean {
   try {
@@ -166,6 +172,15 @@ export const EmailDefaultsResponseSchema = z
 
 export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponseSchema);
 
+// Every reading with a Cost in the range, newest first, and the sum of those costs in euro cents. Not paged: the
+// chart needs every bar in the range, and one meter read about monthly makes a dozen readings a year.
+export const CostListResponseSchema = z
+  .object({
+    data: z.array(ReadingResponseSchema),
+    totalCostCents: z.number().int().min(0),
+  })
+  .meta({ id: 'CostList' });
+
 // The .xlsx file. Binary: a Buffer goes out as is (Fastify never serialises one); the schema documents it as a file.
 export const ReadingsSpreadsheetResponseSchema = z.instanceof(Buffer).meta({ type: 'string', format: 'binary' });
 
@@ -196,6 +211,7 @@ export const ReadingsBackupResponseSchema = z
 export type CreateReading = z.infer<typeof CreateReadingSchema>;
 export type ListReadingsQuery = z.infer<typeof ListReadingsQuerySchema>;
 export type ExportReadingsQuery = z.infer<typeof ExportReadingsQuerySchema>;
+export type ListCostsQuery = z.infer<typeof ListCostsQuerySchema>;
 export type ReadingParams = z.infer<typeof ReadingParamsSchema>;
 export type SendReading = z.infer<typeof SendReadingSchema>;
 export type UpdateReading = z.infer<typeof UpdateReadingSchema>;
@@ -204,5 +220,6 @@ export type EmailDefaultsResponse = z.infer<typeof EmailDefaultsResponseSchema>;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 export type ReadingResponse = z.infer<typeof ReadingResponseSchema>;
 export type ReadingListResponse = z.infer<typeof ReadingListResponseSchema>;
+export type CostListResponse = z.infer<typeof CostListResponseSchema>;
 export type BackupReading = z.infer<typeof BackupReadingSchema>;
 export type ReadingsBackupResponse = z.infer<typeof ReadingsBackupResponseSchema>;

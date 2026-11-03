@@ -1,11 +1,12 @@
 import { ReadingStatusUtil } from '@app-types/utility';
-import { DatePreset } from './types/datePreset.type';
+import { DatePreset } from '@components/HistoryFilters/types/datePreset.type';
 import {
   datePresetRange,
   historyFilterChips,
   historyFiltersFromDraft,
   historyFilterDraft,
   isRangeBackwards,
+  readDateFilters,
   readHistoryFilters,
   withHistoryFilters,
 } from './historyFilterUtils';
@@ -51,6 +52,18 @@ describe('readHistoryFilters', () => {
     const searchParams = new URLSearchParams('from=2026-03-31&to=2026-01-01');
 
     expect(readHistoryFilters(searchParams)).toEqual(NO_FILTERS);
+  });
+});
+
+describe('readDateFilters', () => {
+  it('reads the day range and leaves out the statuses in the url', () => {
+    const searchParams = new URLSearchParams('from=2026-01-01&to=2026-03-31&status=sent');
+
+    expect(readDateFilters(searchParams)).toEqual({ dateFrom: '2026-01-01', dateTo: '2026-03-31', statuses: [] });
+  });
+
+  it('reads no day range when it ends before it starts', () => {
+    expect(readDateFilters(new URLSearchParams('from=2026-03-01&to=2026-01-31'))).toEqual(NO_FILTERS);
   });
 });
 

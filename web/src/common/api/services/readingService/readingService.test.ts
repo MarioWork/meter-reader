@@ -22,6 +22,30 @@ function captureListQuery(): { query: URLSearchParams } {
 
 const API = TEST_BASE_API_URL;
 
+describe('getCosts', () => {
+  it('sends the day range under its wire names', async () => {
+    let receivedQuery = new URLSearchParams();
+    server.use(
+      http.get(`${API}/readings/costs`, ({ request }) => {
+        receivedQuery = new URL(request.url).searchParams;
+        return HttpResponse.json({ data: [], totalCostCents: 0 });
+      }),
+    );
+
+    await readingService.getCosts({ dateFrom: '2026-01-01', dateTo: '2026-03-31' });
+
+    expect(receivedQuery.get('from')).toBe('2026-01-01');
+    expect(receivedQuery.get('to')).toBe('2026-03-31');
+  });
+
+  it('returns the readings with a cost and their sum as the API sent them', async () => {
+    const costs = await readingService.getCosts({ dateFrom: '2026-01-01', dateTo: '2026-03-31' });
+
+    expect(costs.data.map((reading) => reading.costCents)).toEqual([3775, 4410]);
+    expect(costs.totalCostCents).toBe(8185);
+  });
+});
+
 describe('getReadings', () => {
   it('sends the page and the size under their wire names', async () => {
     let receivedQuery = new URLSearchParams();

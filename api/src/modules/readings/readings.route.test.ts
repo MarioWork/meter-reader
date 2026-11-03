@@ -78,6 +78,17 @@ function updateReading(id: number | string, payload: InjectOptions['payload']) {
   return app.inject({ method: 'PATCH', url: `/readings/${id}`, payload, ...withSession(token) });
 }
 
+function getCosts(query = '') {
+  return app.inject({ method: 'GET', url: `/readings/costs${query}`, ...withSession(token) });
+}
+
+// A reading with a Cost, set the way the cost & bill dialog sets it.
+async function addReadingWithCost(digits: string, date: string, costCents: number): Promise<void> {
+  const id = (await addReading({ digits, date })).json<{ id: number }>().id;
+
+  await updateReading(id, { costCents });
+}
+
 function getReadingEmail(id: number | string) {
   return app.inject({ method: 'GET', url: `/readings/${id}/email`, ...withSession(token) });
 }
@@ -526,6 +537,83 @@ describe('GET /readings/export.xlsx', () => {
 
   it('returns 401 when the browser is not signed in', async () => {
     const response = await app.inject({ method: 'GET', url: '/readings/export.xlsx' });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('GET /readings/costs', () => {
+  it('lists only the readings with a cost, newest first, with their sum, when some readings have none', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 4210);
+    await addReading({ digits: '00200', date: '2026-09-01' });
+    await addReadingWithCost('00300', '2026-10-01', 3990);
+
+    const response = await getCosts();
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      totalCostCents: 8200,
+      data: [
+        { digits: '00300', costCents: 3990 },
+        { digits: '00100', costCents: 4210 },
+      ],
+    });
+  });
+
+  it('counts a cost of 0 as a cost when a reading cost nothing', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 0);
+
+    const response = await getCosts();
+
+    expect(response.json()).toMatchObject({ totalCostCents: 0, data: [{ digits: '00100', costCents: 0 }] });
+  });
+
+  it('lists and sums only the readings in the day range when from and to are given', async () => {
+    await addReadingWithCost('00100', '2026-08-31', 1000);
+    await addReadingWithCost('00200', '2026-09-01', 2000);
+    await addReadingWithCost('00300', '2026-09-30', 3000);
+    await addReadingWithCost('00400', '2026-10-01', 4000);
+
+    const response = await getCosts('?from=2026-09-01&to=2026-09-30');
+
+    expect(response.json()).toMatchObject({
+      totalCostCents: 5000,
+      data: [{ digits: '00300' }, { digits: '00200' }],
+    });
+  });
+
+  it('answers an empty list and a sum of 0 when no reading has a cost', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+
+    const response = await getCosts();
+
+    expect(response.json()).toEqual({ totalCostCents: 0, data: [] });
+  });
+
+  it('treats an empty day as no filter when a param is sent empty', async () => {
+    await addReadingWithCost('00100', '2026-09-01', 1000);
+
+    const response = await getCosts('?from=&to=');
+
+    expect(response.json()).toMatchObject({ totalCostCents: 1000 });
+  });
+
+  it('returns 400 VALIDATION_ERROR when from is later than to', async () => {
+    const response = await getCosts('?from=2026-10-01&to=2026-09-01');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when a day is not a calendar date', async () => {
+    const response = await getCosts('?to=2026-02-30');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const response = await app.inject({ method: 'GET', url: '/readings/costs' });
 
     expect(response.statusCode).toBe(401);
   });

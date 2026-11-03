@@ -1,7 +1,7 @@
 import { DownloadIcon } from 'lucide-react';
 import readingService from '@services/readingService/readingService';
 import { buttonVariants } from '@components/ui/button';
-import type { HistoryFilterValues } from '../../types';
+import type { HistoryFilterValues } from '@components/HistoryFilters/types';
 
 type Props = {
   filters: HistoryFilterValues;
