@@ -7,12 +7,15 @@ import { NewReadingPage } from '../pages/NewReadingPage.page';
 const CAMERA_WIDTH = 4032;
 const CAMERA_HEIGHT = 3024;
 const PHOTO_MAX_BYTES = 2_500_000;
+// A reading is saved as today's, so today is fixed: 31 October 2026.
+const TODAY = new Date(2026, 9, 31, 12);
 
 test('a reading typed in by hand tops the history with its leading zeros', async ({ page }) => {
+  await page.clock.setFixedTime(TODAY);
   const newReadingPage = new NewReadingPage(page);
   await newReadingPage.goto();
 
-  await newReadingPage.save('00600', '2026-10-31');
+  await newReadingPage.save('00600');
 
   const newest = new HomePage(page).lastReadingCard;
   await expect(newest).toContainText('31 Oct 2026');
@@ -24,13 +27,14 @@ test('a reading typed in by hand tops the history with its leading zeros', async
 });
 
 test('a camera photo is shrunk to a JPEG of at most 2000 px and saved with its reading', async ({ page }) => {
+  await page.clock.setFixedTime(TODAY);
   const newReadingPage = new NewReadingPage(page);
   await newReadingPage.goto();
   const cameraPhoto = await makeCameraPhoto(page, CAMERA_WIDTH, CAMERA_HEIGHT);
   const upload = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/photos'));
 
   await newReadingPage.takePhoto(cameraPhoto);
-  await newReadingPage.save('00600', '2026-10-31');
+  await newReadingPage.save('00600');
 
   const uploaded = (await upload).postDataBuffer() ?? Buffer.alloc(0);
   expect(uploaded.length).toBeLessThan(PHOTO_MAX_BYTES);

@@ -427,7 +427,12 @@ describe('GET /readings/email-defaults', () => {
     const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ from: 'me@hotmail.example', to: PROVIDER_EMAIL, subject: 'test' });
+    expect(response.json()).toEqual({
+      from: 'me@hotmail.example',
+      to: PROVIDER_EMAIL,
+      subject: 'test',
+      bodyTemplate: 'Date: {date}\nReading: {reading}',
+    });
   });
 
   it('returns 401 when the browser is not signed in', async () => {

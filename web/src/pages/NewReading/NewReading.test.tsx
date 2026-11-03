@@ -12,7 +12,7 @@ import {
   waitFor,
   within,
 } from '@test-utils';
-import { todayAsIsoDate } from '@utils/dateUtils';
+import { formatIsoDate, todayAsIsoDate } from '@utils/dateUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
 import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
 
@@ -37,6 +37,10 @@ const HIGHER_THAN_LAST = '00600';
 const WARNING = /lower than your last reading/;
 const READING_IN_PHOTO = '00612';
 const MISREAD_IN_PHOTO = '00812';
+// Today as the email spells it: "3 November 2026".
+const TODAY_IN_EMAIL = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(
+  new Date(),
+);
 const FINDING_DIGITS_STATUS = 'Reading the number from the photo…';
 const NOTHING_FOUND_STATUS = 'No number found in the photo. Type it in.';
 
@@ -70,23 +74,21 @@ function newestHistoryRow() {
   return screen.getByRole('region', { name: 'Last reading' });
 }
 
-it('starts the date on today', async () => {
+it("has no date to pick: a reading is always today's", async () => {
   await renderNewReading();
 
-  expect(screen.getByLabelText('Date')).toHaveValue(todayAsIsoDate());
+  expect(screen.queryByLabelText('Date')).not.toBeInTheDocument();
 });
 
-it('saves the reading with its leading zeros and the chosen date, then shows it on Home', async () => {
+it("saves the reading with its leading zeros as today's, then shows it on Home", async () => {
   await renderNewReading();
 
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
-  await userEvent.clear(screen.getByLabelText('Date'));
-  await userEvent.type(screen.getByLabelText('Date'), '2026-10-31');
   await save();
 
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   const newest = newestHistoryRow();
-  expect(newest).toHaveTextContent('31 Oct 2026');
+  expect(newest).toHaveTextContent(formatIsoDate(todayAsIsoDate()));
   expect(newest).toHaveTextContent(HIGHER_THAN_LAST);
   expect(await findNotification('Reading saved')).toBeVisible();
 });
@@ -97,7 +99,7 @@ it('saves and sends the reading in one go with Send reading, then shows it as se
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
   await userEvent.click(screen.getByRole('button', { name: 'Send reading' }));
 
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   expect(await findNotification('Reading saved and sent')).toBeVisible();
   expect(newestHistoryRow()).toHaveTextContent(HIGHER_THAN_LAST);
   expect(newestHistoryRow()).toHaveTextContent(/sent/i);
@@ -110,10 +112,10 @@ it('shows who the email is from and to, with the subject ready to edit', async (
   expect(email).toHaveTextContent('Fromme@hotmail.example');
   expect(email).toHaveTextContent('Toreadings@water-provider.example');
   expect(within(email).getByRole('textbox', { name: 'Subject' })).toHaveValue('test');
-  expect(within(email).getByRole('textbox', { name: 'Message' })).toHaveValue('');
+  expect(within(email).getByRole('textbox', { name: 'Message' })).toHaveValue(`Date: ${TODAY_IN_EMAIL}\nReading: `);
 });
 
-it('sends with the edited subject and message, or the usual message when it is left empty', async () => {
+it('fills the message with the reading as it is typed, and sends the edited subject with it', async () => {
   const received: unknown[] = [];
   server.use(
     http.post(`${TEST_BASE_API_URL}/readings/:id/send`, async ({ request }) => {
@@ -128,8 +130,27 @@ it('sends with the edited subject and message, or the usual message when it is l
   await userEvent.type(subject, 'Water meter reading');
   await userEvent.click(screen.getByRole('button', { name: 'Send reading' }));
 
-  await screen.findByRole('heading', { name: 'History' });
-  expect(received).toEqual([{ attachPhoto: false, subject: 'Water meter reading' }]);
+  await screen.findByRole('heading', { name: 'Water Readings' });
+  expect(received).toEqual([
+    {
+      attachPhoto: false,
+      subject: 'Water meter reading',
+      body: `Date: ${TODAY_IN_EMAIL}\nReading: ${HIGHER_THAN_LAST}`,
+    },
+  ]);
+});
+
+it('keeps a message the user edited, even when the reading changes', async () => {
+  await renderNewReading();
+  const message = screen.getByRole('textbox', { name: 'Message' });
+
+  await userEvent.type(readingField(), '00');
+  expect(message).toHaveValue(`Date: ${TODAY_IN_EMAIL}\nReading: 00`);
+  await userEvent.clear(message);
+  await userEvent.type(message, 'Hello');
+  await userEvent.type(readingField(), '600');
+
+  expect(message).toHaveValue('Hello');
 });
 
 it('goes back Home without saving when the user cancels', async () => {
@@ -145,7 +166,7 @@ it('goes back Home without saving when the user cancels', async () => {
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
   await userEvent.click(screen.getByRole('link', { name: 'Cancel' }));
 
-  expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'Water Readings' })).toBeVisible();
   expect(isAnythingPosted).toBe(false);
 });
 
@@ -165,7 +186,7 @@ it('still saves a reading lower than the last one', async () => {
   await userEvent.type(readingField(), LOWER_THAN_LAST);
   await save();
 
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   expect(screen.getByRole('main')).toHaveTextContent(LOWER_THAN_LAST);
 });
 
@@ -226,18 +247,6 @@ it("shows the API's message and keeps the input when the save fails", async () =
   expect(queryAllNotifications()).toHaveLength(0);
 });
 
-it('marks the date and sends nothing when the day has not happened yet', async () => {
-  await renderNewReading();
-
-  await userEvent.type(readingField(), HIGHER_THAN_LAST);
-  await userEvent.clear(screen.getByLabelText('Date'));
-  await userEvent.type(screen.getByLabelText('Date'), '2999-01-01');
-  await save();
-
-  expect(screen.getByLabelText('Date')).toHaveAccessibleDescription('Pick today or a day before it');
-  expect(screen.getByRole('heading', { name: 'New reading' })).toBeVisible();
-});
-
 it('puts the cursor in the reading field when the user skips the photo', async () => {
   await renderNewReading();
 
@@ -274,7 +283,7 @@ it('saves the reading without a photo once the photo is removed', async () => {
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
   await save();
 
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   await expectNewestHasNoPhoto();
 });
 
@@ -290,7 +299,7 @@ it('says why a file cannot be used and still saves the reading without it', asyn
   expect(screen.getByLabelText('Choose a photo')).toBeInvalid();
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
   await save();
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   await expectNewestHasNoPhoto();
 });
 
