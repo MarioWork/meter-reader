@@ -4,7 +4,9 @@ import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
 import { ContentTooLargeError } from '../../lib/httpErrors.ts';
 import {
   AddBillBodySchema,
+  AddBillHeadersSchema,
   BILL_MAX_BYTES,
+  BILL_NAME_HEADER,
   BillFileQuerySchema,
   BillFileSchema,
   BillParamsSchema,
@@ -24,12 +26,27 @@ const ATTACHMENT = 'attachment';
 // Helmet's page policy is for HTML. A bill is never HTML (its type is fixed and nosniff is on), and a policy on it
 // can leave a browser's built-in PDF viewer (Safari's, Firefox's pdf.js) blank, so a bill goes without one.
 const CONTENT_SECURITY_POLICY_HEADER = 'content-security-policy';
+// The characters encodeURIComponent leaves as they are but an RFC 8187 header value may not hold.
+const NOT_ALLOWED_IN_HEADER_VALUE = /['()*]/g;
+const HEX = 16;
 
 // Said before the body is read, in the user's words: Fastify's own body limit would answer a bare "too large".
 async function refuseTooLarge(request: FastifyRequest): Promise<void> {
   const declaredBytes = Number(request.headers['content-length'] ?? 0);
 
   if (declaredBytes > BILL_MAX_BYTES) throw new ContentTooLargeError(TOO_LARGE_MESSAGE, 'BILL_TOO_LARGE');
+}
+
+function percentEncode(character: string): string {
+  return `%${character.charCodeAt(0).toString(HEX).toUpperCase()}`;
+}
+
+// RFC 6266: `filename` for the browsers that read only ASCII, `filename*` (UTF-8, percent-encoded) for the rest, so
+// "Fatura de Março.pdf" keeps its name. Encoded, a name can never end the header or add another.
+function toContentDisposition(disposition: string, name: string, asciiName: string): string {
+  const encodedName = encodeURIComponent(name).replace(NOT_ALLOWED_IN_HEADER_VALUE, percentEncode);
+
+  return `${disposition}; filename="${asciiName}"; filename*=UTF-8''${encodedName}`;
 }
 
 // Both routes need a session: the auth plugin locks every route that is not marked public (ADR 0002).
@@ -50,6 +67,7 @@ export const billsRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: TAGS,
         summary: "Upload a reading's bill (a PDF, JPEG or PNG), before the reading is updated with its id",
         consumes: [...BILL_CONTENT_TYPES],
+        headers: AddBillHeadersSchema,
         body: AddBillBodySchema,
         response: {
           201: BillResponseSchema,
@@ -60,7 +78,7 @@ export const billsRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      const bill = await addBill(request.body);
+      const bill = await addBill(request.body, request.headers[BILL_NAME_HEADER]);
 
       return reply.code(201).send(bill);
     },
@@ -71,7 +89,7 @@ export const billsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'The bill itself, to open in the browser or, with download=true, to save',
+        summary: 'The bill itself, under its name, to open in the browser or, with download=true, to save',
         produces: [...BILL_CONTENT_TYPES],
         params: BillParamsSchema,
         querystring: BillFileQuerySchema,
@@ -84,7 +102,7 @@ export const billsRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      const { stream, sizeBytes, contentType, downloadName } = await getBillFile(request.params.id);
+      const { stream, sizeBytes, contentType, name, downloadName } = await getBillFile(request.params.id);
       const disposition = request.query.download ? ATTACHMENT : INLINE;
 
       // Helmet writes its headers straight onto the raw response, before this handler runs.
@@ -93,7 +111,7 @@ export const billsRoutes: FastifyPluginAsyncZod = async (app) => {
       return reply
         .type(contentType)
         .header('content-length', sizeBytes)
-        .header('content-disposition', `${disposition}; filename="${downloadName}"`)
+        .header('content-disposition', toContentDisposition(disposition, name, downloadName))
         .header('cache-control', BILL_CACHE_CONTROL)
         .send(stream);
     },

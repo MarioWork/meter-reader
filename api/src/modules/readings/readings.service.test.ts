@@ -54,6 +54,7 @@ const BILL = {
   id: 9,
   fileName: '0c7d2e4a-8b1f-4e3c-a6d5-9f2b1c0e8a74.pdf',
   fileType: 'PDF' as const,
+  originalName: null,
   sizeBytes: 52_000,
 };
 const REPLACED_BILL_FILE_NAME = '3e9a6b2c-1d4f-4a8e-b7c5-6f0d2e1a9b83.png';
@@ -213,7 +214,12 @@ describe('updateReading', () => {
     const reading = await updateReading(7, { billId: 9 });
 
     expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: undefined, billId: 9 });
-    expect(reading.bill).toEqual({ id: 9, contentType: 'application/pdf', sizeBytes: 52_000 });
+    expect(reading.bill).toEqual({
+      id: 9,
+      name: 'bill-2026-10-31.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 52_000,
+    });
     expect(removeUpload).not.toHaveBeenCalled();
   });
 

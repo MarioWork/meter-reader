@@ -189,14 +189,17 @@ enum BillFileType {
 // UPLOADS_DIR beside the photos. It is uploaded first and linked when its reading is updated with its id; until then
 // readingId is null. Never part of the reading's email.
 model Bill {
-  id        Int          @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   // The file's name in UPLOADS_DIR, chosen by the server (a random UUID and the type's extension), never by the client.
-  fileName  String       @unique(map: "bills_file_name_uidx") @map("file_name")
-  fileType  BillFileType @map("file_type")
-  sizeBytes Int          @map("size_bytes")
-  readingId Int?         @unique(map: "bills_reading_id_uidx") @map("reading_id")
-  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  fileName     String       @unique(map: "bills_file_name_uidx") @map("file_name")
+  fileType     BillFileType @map("file_type")
+  // The name the file had on the user's device, cleaned by the server, for the app to show. Never a path on disk.
+  // Null for the bills kept before it was, and when the client sent none.
+  originalName String?      @map("original_name")
+  sizeBytes    Int          @map("size_bytes")
+  readingId    Int?         @unique(map: "bills_reading_id_uidx") @map("reading_id")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   // Deleting a reading deletes its bill row; the file itself is removed by the code that deletes the reading.
   reading Reading? @relation(fields: [readingId], references: [id], onDelete: Cascade)

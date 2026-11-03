@@ -2,8 +2,6 @@ import axios from 'axios';
 import type { BillContentType, BillId, ReadingBillApiModel } from '@app-types/models';
 import { BASE_BILLS_URL } from '@services/billService/billService';
 
-// Asks the API to send the file to be saved, not opened.
-const DOWNLOAD_QUERY = '?download=true';
 const BYTES_PER_KILOBYTE = 1000;
 const BYTES_PER_MEGABYTE = 1_000_000;
 const DISPLAY_LOCALE = 'en-GB';
@@ -20,11 +18,6 @@ const BILL_FILE_LABELS: Record<BillContentType, string> = {
 // path and a numeric id only, never from text the API sent.
 export function getBillUrl(billId: BillId): string {
   return `${axios.defaults.baseURL ?? ''}${BASE_BILLS_URL}/${billId}`;
-}
-
-// Where a saved bill downloads from, under a name the API gives it.
-export function getBillDownloadUrl(billId: BillId): string {
-  return `${getBillUrl(billId)}${DOWNLOAD_QUERY}`;
 }
 
 // 1000 bytes to the kilobyte, as phones and Finder count: "180 KB", "2.4 MB".

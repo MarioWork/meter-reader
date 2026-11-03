@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw/http';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
+import { BILL_NAME_HEADER } from '@services/billService/billService';
 import { createFormData } from '@utils/formDataUtils';
 import { updateCostAndBillAction } from './costAndBillModalActions';
 
@@ -38,10 +39,12 @@ function recordUpdateRequests() {
 
 it('uploads the bill first, then links it to the reading with its id and goes back to the history', async () => {
   let uploadedType: string | null = null;
+  let uploadedName: string | null = null;
   let uploadedBytes = new Uint8Array();
   server.use(
     http.post(`${API}/bills`, async ({ request }) => {
       uploadedType = request.headers.get('content-type');
+      uploadedName = request.headers.get(BILL_NAME_HEADER);
       uploadedBytes = new Uint8Array(await request.clone().arrayBuffer());
     }),
   );
@@ -50,6 +53,7 @@ it('uploads the bill first, then links it to the reading with its id and goes ba
   const result = await submit({ changes: { costCents: 4210 }, bill: PDF_BILL });
 
   expect(uploadedType).toBe('application/pdf');
+  expect(uploadedName).toBe('october-bill.pdf');
   expect([...uploadedBytes]).toEqual(PDF_BYTES);
   expect(received).toEqual([{ costCents: 4210, billId: 1 }]);
   expect(result).toBeInstanceOf(Response);

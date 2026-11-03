@@ -21,7 +21,7 @@ const READING_SELECT = {
   // The file name, so deleting a reading can remove its photo from the uploads folder too, and sending it can attach it.
   photo: { select: { id: true, fileName: true } },
   // The file name too, so deleting the reading or replacing its bill can remove the old file from the uploads folder.
-  bill: { select: { id: true, fileName: true, fileType: true, sizeBytes: true } },
+  bill: { select: { id: true, fileName: true, fileType: true, originalName: true, sizeBytes: true } },
 } as const satisfies Prisma.ReadingSelect;
 
 // Newest first: the latest day on top, and on the same day the one saved last.

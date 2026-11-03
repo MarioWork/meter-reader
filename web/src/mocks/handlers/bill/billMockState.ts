@@ -1,4 +1,4 @@
-// The bills uploaded in the demo, kept so a reading updated with one can show it, open it and download it.
+// The bills uploaded in the demo, kept so a reading updated with one can show it and open it.
 import type { BillApiModel, BillContentType, BillId } from '@app-types/models';
 import { createBillMockModel } from './models/billMockModel.mock';
 
@@ -8,8 +8,8 @@ const FIRST_UPLOADED_ID = 1;
 
 let bills = new Map<BillId, MockBill>();
 
-export function addMockBill(file: Blob, contentType: BillContentType): BillApiModel {
-  const bill = createBillMockModel({ id: FIRST_UPLOADED_ID + bills.size, contentType, sizeBytes: file.size });
+export function addMockBill(file: Blob, contentType: BillContentType, name: string): BillApiModel {
+  const bill = createBillMockModel({ id: FIRST_UPLOADED_ID + bills.size, name, contentType, sizeBytes: file.size });
 
   bills = new Map(bills).set(bill.id, { bill, file });
 

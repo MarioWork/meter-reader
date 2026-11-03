@@ -14,7 +14,7 @@ import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { openUpload, readUpload, removeUpload } from '../../lib/uploads.ts';
 import { toZipStream, ZIP_EXTENSION, type ZipEntry } from '../../lib/zip.ts';
-import { toBillContentType, toBillUrl } from '../bills/bills.service.ts';
+import { toBillContentType, toBillName, toBillUrl } from '../bills/bills.service.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import {
   fillMessageTemplate,
@@ -127,10 +127,15 @@ function toSentEmailResponse(row: ReadingRow): ReadingResponse['sentEmail'] {
   return { from: sentFrom, to: sentTo, subject: sentSubject, body: sentBody, hasPhoto: sentWithPhoto };
 }
 
-function toBillResponse({ bill }: ReadingRow): ReadingResponse['bill'] {
+function toBillResponse({ bill, date }: ReadingRow): ReadingResponse['bill'] {
   if (!bill) return null;
 
-  return { id: bill.id, contentType: toBillContentType(bill.fileType), sizeBytes: bill.sizeBytes };
+  return {
+    id: bill.id,
+    name: toBillName(bill, date),
+    contentType: toBillContentType(bill.fileType),
+    sizeBytes: bill.sizeBytes,
+  };
 }
 
 function toResponse(row: ReadingRow): ReadingResponse {

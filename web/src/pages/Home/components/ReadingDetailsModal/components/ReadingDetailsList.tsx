@@ -2,7 +2,7 @@ import type { ReadingApiModel } from '@app-types/models';
 import { formatCost } from '@utils/costUtils';
 import { formatIsoDate, formatTimestamp } from '@utils/dateUtils';
 import ReadingSendStatus from '../../ReadingSendStatus';
-import BillLinks from './BillLinks';
+import ReadingDetailsBill from './ReadingDetailsBill';
 
 type Props = {
   reading: ReadingApiModel;
@@ -46,7 +46,7 @@ function ReadingDetailsList({ reading }: Props) {
         <>
           <dt className={LABEL_CLASSES}>Bill</dt>
           <dd>
-            <BillLinks bill={reading.bill} />
+            <ReadingDetailsBill bill={reading.bill} />
           </dd>
         </>
       )}

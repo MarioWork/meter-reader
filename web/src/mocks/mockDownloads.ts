@@ -1,3 +1,5 @@
+import { apiLinkUrl, apiPrefixOf } from './mockApiLinks';
+
 // Mock mode only. A download link (<a href download>) makes the browser fetch the file itself, outside the page's
 // own requests, so the mock network never sees it and the download is cancelled. Here a click on a download link
 // into the API is turned into a fetch (which the mocks answer) and the answer is saved under its own file name.
@@ -35,25 +37,14 @@ async function downloadThroughMocks(url: string): Promise<void> {
 }
 
 // Only links into the mocked API are taken over; any other download keeps the browser's own behaviour.
-function apiDownloadUrl(event: MouseEvent, apiPrefix: string): string | undefined {
-  const link = event.target instanceof Element ? event.target.closest(DOWNLOAD_LINK_SELECTOR) : null;
-
-  if (!(link instanceof HTMLAnchorElement)) return undefined;
-
-  const url = new URL(link.href, window.location.href);
-  const isApiLink = url.origin === window.location.origin && url.pathname.startsWith(apiPrefix);
-
-  return isApiLink ? url.toString() : undefined;
-}
-
 export function interceptMockDownloads(baseApiUrl: string): void {
-  const apiPrefix = new URL(baseApiUrl, window.location.href).pathname;
+  const apiPrefix = apiPrefixOf(baseApiUrl);
 
   // Capture phase: runs before the link's default action and before React's own handlers.
   document.addEventListener(
     'click',
     (event) => {
-      const url = apiDownloadUrl(event, apiPrefix);
+      const url = apiLinkUrl(event, DOWNLOAD_LINK_SELECTOR, apiPrefix);
 
       if (!url) return;
 
