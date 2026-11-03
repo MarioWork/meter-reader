@@ -16,6 +16,7 @@ import { env } from './config/env.ts';
 import { errorHandler, notFoundHandler } from './lib/errorHandler.ts';
 import { logger } from './lib/logger.ts';
 import { authRoutes } from './modules/auth/auth.route.ts';
+import { backupRoutes } from './modules/backup/backup.route.ts';
 import { healthRoutes } from './modules/health/health.route.ts';
 import { photosRoutes } from './modules/photos/photos.route.ts';
 import { readingsRoutes } from './modules/readings/readings.route.ts';
@@ -33,6 +34,7 @@ const READINGS_ROUTE_PREFIX = '/readings';
 const MAIL_ROUTE_PREFIX = '/mail';
 const PHOTOS_ROUTE_PREFIX = '/photos';
 const SETTINGS_ROUTE_PREFIX = '/settings';
+const BACKUP_ROUTE_PREFIX = '/backup';
 const REQUEST_LOG_MESSAGE = 'request';
 // A request no route matched (a 404) has no pattern to log.
 const UNMATCHED_ROUTE = '(no route)';
@@ -89,6 +91,7 @@ export async function buildApp() {
   await app.register(mailRoutes, { prefix: MAIL_ROUTE_PREFIX });
   await app.register(photosRoutes, { prefix: PHOTOS_ROUTE_PREFIX });
   await app.register(settingsRoutes, { prefix: SETTINGS_ROUTE_PREFIX });
+  await app.register(backupRoutes, { prefix: BACKUP_ROUTE_PREFIX });
 
   return app;
 }

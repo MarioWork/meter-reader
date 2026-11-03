@@ -3,7 +3,7 @@ import routes from '@application/routes';
 import { SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { getMockSettings, updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { findNotification, renderRoutes, screen, userEvent } from '@test-utils';
+import { findNotification, renderRoutes, screen, userEvent, within } from '@test-utils';
 
 const SAVED_ADDRESS = 'readings@water-provider.example';
 const NEW_ADDRESS = 'meter@other-provider.example';
@@ -198,4 +198,23 @@ it("marks the template the server refuses with the server's reason", async () =>
   expect(bodyTemplateField()).toHaveAttribute('aria-invalid', 'true');
   expect(bodyTemplateField()).toHaveAccessibleDescription(expect.stringContaining(reason));
   expect(toField()).not.toHaveAttribute('aria-invalid', 'true');
+});
+
+it('has one main heading', async () => {
+  await renderSettings();
+
+  expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+});
+
+it.each([
+  ['Export everything (JSON)', `${TEST_BASE_API_URL}/backup/readings.json`],
+  ['Export everything (CSV)', `${TEST_BASE_API_URL}/backup/readings.csv`],
+])('offers %s as a download of every reading under Data', async (name, href) => {
+  await renderSettings();
+
+  const data = screen.getByRole('region', { name: 'Data' });
+  const link = within(data).getByRole('link', { name });
+
+  expect(link).toHaveAttribute('href', href);
+  expect(link).toHaveAttribute('download');
 });

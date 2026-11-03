@@ -1,6 +1,7 @@
 import { useLoaderData } from 'react-router';
 import type { LoaderDataUtil } from '@app-types/utility';
 import { Card, CardContent } from '@components/ui/card';
+import DataBackup from './components/DataBackup';
 import SettingsForm from './components/SettingsForm';
 import type { loader } from './settingsLoader';
 
@@ -16,6 +17,7 @@ function Settings() {
           <SettingsForm settings={settings} />
         </CardContent>
       </Card>
+      <DataBackup />
     </main>
   );
 }
