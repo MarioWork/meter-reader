@@ -45,12 +45,15 @@
     "pino": "^10",
     "prisma": "^7",
     "write-excel-file": "^4",
+    "yazl": "^3",
     "zod": "^4.6"
   },
   "devDependencies": {
     "@eslint/js": "^10",
     "@types/node": "^26",
     "@types/pg": "^8",
+    "@types/yauzl": "^3",
+    "@types/yazl": "^3",
     "eslint": "^10",
     "eslint-config-prettier": "^10",
     "msw": "^3",
@@ -60,6 +63,7 @@
     "typescript": "~6.0",
     "typescript-eslint": "^8.72",
     "vite": "^8",
-    "vitest": "^5"
+    "vitest": "^5",
+    "yauzl": "^3"
   }
 }

@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from '@fastify/type-provider-zod';
 import { z } from 'zod';
 import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
 import { XLSX_CONTENT_TYPE } from '../../lib/spreadsheet.ts';
+import { ZIP_CONTENT_TYPE } from '../../lib/zip.ts';
 import {
   CostListResponseSchema,
   CreateReadingSchema,
@@ -14,6 +15,7 @@ import {
   ReadingParamsSchema,
   ReadingResponseSchema,
   ReadingsBackupResponseSchema,
+  ReadingsFilesBackupResponseSchema,
   ReadingsSpreadsheetResponseSchema,
   SendReadingSchema,
   UpdateReadingSchema,
@@ -28,6 +30,7 @@ import {
   getReadings,
   getReadingsBackup,
   getReadingsBackupCsv,
+  getReadingsFilesBackup,
   getReadingsSpreadsheet,
   sendReading,
   updateReading,
@@ -119,6 +122,26 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
       const { fileName, content } = await getReadingsBackupCsv();
 
       return reply.type(CSV_CONTENT_TYPE).header('content-disposition', attachment(fileName)).send(content);
+    },
+  );
+
+  // Streamed: the files are read one at a time while the zip goes out.
+  app.get(
+    '/backup.zip',
+    {
+      schema: {
+        tags: TAGS,
+        summary:
+          'Every Photo in photos/ and every Bill in bills/ as one zip download, under the file names the JSON and CSV ' +
+          'backups list',
+        produces: [ZIP_CONTENT_TYPE],
+        response: { 200: ReadingsFilesBackupResponseSchema, 401: ErrorResponseSchema },
+      },
+    },
+    async (_request, reply) => {
+      const { fileName, content } = await getReadingsFilesBackup();
+
+      return reply.type(ZIP_CONTENT_TYPE).header('content-disposition', attachment(fileName)).send(content);
     },
   );
 

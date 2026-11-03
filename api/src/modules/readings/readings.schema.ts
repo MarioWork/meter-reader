@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { PaginationQuerySchema, paginatedResponseSchema } from '../../lib/pagination.ts';
 import { BILL_CONTENT_TYPES } from '../bills/bills.type.ts';
@@ -198,8 +199,11 @@ export const CostListResponseSchema = z
 // The .xlsx file. Binary: a Buffer goes out as is (Fastify never serialises one); the schema documents it as a file.
 export const ReadingsSpreadsheetResponseSchema = z.instanceof(Buffer).meta({ type: 'string', format: 'binary' });
 
-// One reading in the backup, with everything kept about it. A new field (Cost, Bill) is one more key here, in
-// readings.service.ts's toBackupReading and in readings.backup.ts's CSV columns.
+// The files zip, streamed: Fastify sends a stream as it is (never serialised); the schema documents it as a file.
+export const ReadingsFilesBackupResponseSchema = z.instanceof(Readable).meta({ type: 'string', format: 'binary' });
+
+// One reading in the backup, with everything kept about it. A new field is one more key here, in readings.service.ts's
+// toBackupReading and in readings.backup.ts's CSV columns.
 export const BackupReadingSchema = z.object({
   id: z.number().int(),
   // Text, never a number: "00123" stays "00123".
@@ -212,6 +216,11 @@ export const BackupReadingSchema = z.object({
   sentEmail: SentEmailResponseSchema.nullable(),
   // The photo's file name in UPLOADS_DIR, where the file itself is; null when the reading was saved without one.
   photoFileName: z.string().nullable(),
+  // What it cost (docs/GLOSSARY.md: Cost), in euros with exactly 2 decimals ("42.10"): text, so the decimals are
+  // kept as they are. Null when it has none.
+  costEuros: z.string().nullable(),
+  // The bill's file name in UPLOADS_DIR, as in the files zip's bills/ folder; null when it has none.
+  billFileName: z.string().nullable(),
 });
 
 // The JSON backup: every reading, newest first, whatever Home is filtered to.

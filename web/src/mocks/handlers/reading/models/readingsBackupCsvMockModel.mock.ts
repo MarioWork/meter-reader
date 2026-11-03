@@ -22,6 +22,8 @@ const CSV_COLUMNS: Record<string, (reading: BackupReadingApiModel) => CsvCell> =
   sent_body: (reading) => reading.sentEmail?.body ?? null,
   sent_with_photo: (reading) => reading.sentEmail?.hasPhoto ?? null,
   photo_file_name: (reading) => reading.photoFileName,
+  cost_euros: (reading) => reading.costEuros,
+  bill_file_name: (reading) => reading.billFileName,
 };
 
 function toCsvCell(value: CsvCell): string {
