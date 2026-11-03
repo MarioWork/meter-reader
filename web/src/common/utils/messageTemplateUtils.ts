@@ -1,4 +1,5 @@
 import { string } from 'yup';
+import { formatEmailDate, todayAsIsoDate } from '@utils/dateUtils';
 
 // The subject and body templates (docs/GLOSSARY.md: Template, Placeholder), with the same rules as the API's
 // (api/src/modules/settings/settings.template.ts). Only {reading} and {date} exist, in the subject and in the body.
@@ -33,6 +34,23 @@ export function fillMessageTemplate(template: string, { reading, date }: Message
   };
 
   return template.replace(PLACEHOLDER_PATTERN, (placeholder) => valueByPlaceholder[placeholder] ?? placeholder);
+}
+
+// The two templates an email starts from, as Settings saves them.
+export type MessageTemplates = { subjectTemplate: string; bodyTemplate: string };
+
+// A subject and a body, filled in.
+export type FilledEmail = { subject: string; body: string };
+
+// The subject and body the templates make for a reading taken today, with {date} spelled as the API spells it:
+// exactly the email a send would go out with.
+export function fillTodaysEmail({ subjectTemplate, bodyTemplate }: MessageTemplates, reading: string): FilledEmail {
+  const values = { reading: reading.trim(), date: formatEmailDate(todayAsIsoDate()) };
+
+  return {
+    subject: fillMessageTemplate(subjectTemplate, values),
+    body: fillMessageTemplate(bodyTemplate, values),
+  };
 }
 
 // The first placeholder that is not {reading} or {date} (a typo like {readng}); undefined when there is none.

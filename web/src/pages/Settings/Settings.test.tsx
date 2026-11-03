@@ -4,10 +4,12 @@ import { SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { getMockSettings, updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { findNotification, renderRoutes, screen, userEvent, within } from '@test-utils';
+import { formatEmailDate, todayAsIsoDate } from '@utils/dateUtils';
 
 const SAVED_ADDRESS = 'readings@water-provider.example';
 const NEW_ADDRESS = 'meter@other-provider.example';
 const INVALID_ADDRESS_ERROR = /Type a valid email address/;
+const SAMPLE_READING = '00123';
 
 async function renderSettings() {
   renderRoutes(routes, { initialEntries: [SETTINGS_ROUTES_PATHS.BASE] });
@@ -37,6 +39,23 @@ async function typeAddress(address: string) {
   await userEvent.type(toField(), address);
 }
 
+function preview() {
+  return screen.getByRole('region', { name: 'Preview' });
+}
+
+// The preview's value for one row (From, To, Subject, Body): the definition paired with the term of that label.
+function previewRow(label: string) {
+  const terms = within(preview()).getAllByRole('term');
+  const definitions = within(preview()).getAllByRole('definition');
+  const rowIndex = terms.findIndex((term) => term.textContent === label);
+
+  return definitions[rowIndex];
+}
+
+function today() {
+  return formatEmailDate(todayAsIsoDate());
+}
+
 async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 }
@@ -45,7 +64,7 @@ it("shows the saved provider's address ready to edit, and From as text that cann
   await renderSettings();
 
   expect(toField()).toHaveValue(SAVED_ADDRESS);
-  expect(screen.getByText('me@hotmail.example')).toBeVisible();
+  expect(within(screen.getByRole('group', { name: 'Email' })).getByText('me@hotmail.example')).toBeVisible();
   expect(screen.queryByRole('textbox', { name: 'From' })).not.toBeInTheDocument();
 });
 
@@ -217,4 +236,42 @@ it.each([
 
   expect(link).toHaveAttribute('href', href);
   expect(link).toHaveAttribute('download');
+});
+
+it('previews the email with the saved settings, a sample reading and today', async () => {
+  await renderSettings();
+
+  expect(previewRow('From')).toHaveTextContent('me@hotmail.example');
+  expect(previewRow('To')).toHaveTextContent(SAVED_ADDRESS);
+  expect(previewRow('Subject')).toHaveTextContent(`Meter reading ${today()}`);
+  expect(previewRow('Body')).toHaveTextContent(`Date: ${today()} Reading: ${SAMPLE_READING}`);
+});
+
+it('updates the preview while typing, before saving', async () => {
+  await renderSettings();
+
+  await typeAddress(NEW_ADDRESS);
+  await typeTemplate(subjectTemplateField(), 'Leitura {reading}');
+  await typeTemplate(bodyTemplateField(), 'Leitura - {reading} - {date}');
+
+  expect(previewRow('To')).toHaveTextContent(NEW_ADDRESS);
+  expect(previewRow('Subject')).toHaveTextContent(`Leitura ${SAMPLE_READING}`);
+  expect(previewRow('Body')).toHaveTextContent(`Leitura - ${SAMPLE_READING} - ${today()}`);
+  expect(getMockSettings().subjectTemplate).toBe('Meter reading {date}');
+});
+
+it('keeps an unknown placeholder in the preview as typed', async () => {
+  await renderSettings();
+
+  await typeTemplate(subjectTemplateField(), 'Leitura {readng}');
+
+  expect(previewRow('Subject')).toHaveTextContent('Leitura {readng}');
+});
+
+it('previews To as not set while the address is empty', async () => {
+  await renderSettings();
+
+  await userEvent.clear(toField());
+
+  expect(previewRow('To')).toHaveTextContent('Not set');
 });

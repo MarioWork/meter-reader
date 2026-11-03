@@ -9,6 +9,7 @@ import { Button } from '@components/ui/button';
 import { FieldDescription, FieldLegend, FieldSet } from '@components/ui/field';
 import { Spinner } from '@components/ui/spinner';
 import { createFormData } from '@utils/formDataUtils';
+import EmailPreview from './components/EmailPreview';
 import FromAddress from './components/FromAddress';
 import MessageTemplatesFields from './components/MessageTemplatesFields';
 import ToAddressField from './components/ToAddressField';
@@ -33,7 +34,7 @@ function SettingsForm({ settings }: Props) {
   // The React Compiler would memoize that spread, so the input would stop reaching the form state.
   'use no memo';
 
-  const { register, handleSubmit, formState } = useForm<UpdateSettings>({
+  const { register, control, handleSubmit, formState } = useForm<UpdateSettings>({
     defaultValues: toFormValues(settings),
     resolver: yupResolver(UpdateSettingsSchema),
   });
@@ -61,6 +62,7 @@ function SettingsForm({ settings }: Props) {
         <ToAddressField error={toError} registration={register('to')} />
       </FieldSet>
       <MessageTemplatesFields register={register} errors={templateErrors} />
+      <EmailPreview control={control} from={settings.from} />
       {formError && <ErrorAlert message={formError} />}
       <Button type="submit" size="lg" disabled={isSaving} className="self-end">
         {isSaving && <Spinner aria-hidden="true" />}

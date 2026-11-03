@@ -1,6 +1,7 @@
 import { PaperclipIcon } from 'lucide-react';
 import type { SentEmailApiModel } from '@app-types/models';
 import EmailAddresses from '@components/EmailAddresses';
+import EmailFrame from '@components/EmailFrame';
 import type { DetailsPhoto } from '../readingDetailsUtils';
 import PhotoReveal from './PhotoReveal';
 
@@ -19,7 +20,7 @@ function SentEmail({ sentEmail, photo }: Props) {
   const canShowPhoto = sentEmail.hasPhoto && photo !== undefined;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-3 text-sm">
+    <EmailFrame>
       <EmailAddresses from={sentEmail.from} to={sentEmail.to} />
       <p className="font-medium">{sentEmail.subject}</p>
       <p className="border-t pt-3 font-mono whitespace-pre-wrap">{sentEmail.body}</p>
@@ -36,7 +37,7 @@ function SentEmail({ sentEmail, photo }: Props) {
           {sentEmail.hasPhoto ? PHOTO_ATTACHED_LABEL : NO_PHOTO_LABEL}
         </p>
       )}
-    </div>
+    </EmailFrame>
   );
 }
 
