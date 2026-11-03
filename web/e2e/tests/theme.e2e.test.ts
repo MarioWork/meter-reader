@@ -12,7 +12,7 @@ test('follows the device, and switches when the device switches', async ({ page 
   await page.goto(BASE_ROUTES_PATHS.HOME);
 
   const html = pageRoot(page);
-  await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Water Readings' })).toBeVisible();
   await expect(html).not.toHaveClass(DARK_CLASS);
 
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -26,7 +26,7 @@ test('keeps the stored choice over the device setting, browser theme colour incl
 
   await page.goto(BASE_ROUTES_PATHS.HOME);
 
-  await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Water Readings' })).toBeVisible();
   await expect(pageRoot(page)).toHaveClass(DARK_CLASS);
 
   // Both tags, the light-device one included: the stored choice wins there too.

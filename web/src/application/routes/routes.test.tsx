@@ -23,7 +23,7 @@ describe('an unknown page', () => {
 
     await userEvent.click(await screen.findByRole('link', { name: 'Back to home' }));
 
-    expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Water Readings' })).toBeVisible();
   });
 });
 
@@ -48,7 +48,7 @@ describe('signed-in pages', () => {
   it('opens the page when the browser is signed in', async () => {
     renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
 
-    expect(await screen.findByRole('heading', { name: 'History' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Water Readings' })).toBeVisible();
   });
 
   it('sends a signed-out browser to the login page', async () => {
@@ -69,7 +69,7 @@ describe('signed-in pages', () => {
 
   it('sends the browser to the login page when the session ends while the app is open', async () => {
     renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
-    await screen.findByRole('heading', { name: 'History' });
+    await screen.findByRole('heading', { name: 'Water Readings' });
     // The session ends (it expired, or auth:reset ran): from now on the API refuses the reads.
     setMockAuthState(AuthStateUtil.SIGNED_OUT);
     server.use(

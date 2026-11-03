@@ -87,36 +87,26 @@ describe('datePresetRange', () => {
     expect(datePresetRange(DatePreset.THIS_MONTH, NOW)).toEqual({ dateFrom: '2026-10-01', dateTo: '2026-10-15' });
   });
 
-  it('gives this month and the two before it, up to today', () => {
-    expect(datePresetRange(DatePreset.LAST_THREE_MONTHS, NOW)).toEqual({
-      dateFrom: '2026-08-01',
-      dateTo: '2026-10-15',
-    });
-  });
-
-  it('goes back into last year for the last 3 months in January', () => {
-    expect(datePresetRange(DatePreset.LAST_THREE_MONTHS, new Date(2026, 0, 20))).toEqual({
-      dateFrom: '2025-11-01',
-      dateTo: '2026-01-20',
-    });
-  });
-
   it('gives this year up to today', () => {
     expect(datePresetRange(DatePreset.THIS_YEAR, NOW)).toEqual({ dateFrom: '2026-01-01', dateTo: '2026-10-15' });
+  });
+
+  it('gives all of last calendar year for Last year', () => {
+    expect(datePresetRange(DatePreset.LAST_YEAR, NOW)).toEqual({ dateFrom: '2025-01-01', dateTo: '2025-12-31' });
   });
 });
 
 describe('historyFilterChips', () => {
   it('names a preset range by its preset, and each status on its own', () => {
     const filters = {
-      dateFrom: '2026-08-01',
+      dateFrom: '2026-01-01',
       dateTo: '2026-10-15',
       statuses: [ReadingStatusUtil.SENT, ReadingStatusUtil.FAILED],
     };
 
     const chips = historyFilterChips(filters, NOW);
 
-    expect(chips.map((chip) => chip.label)).toEqual(['Last 3 months', 'Sent', 'Failed']);
+    expect(chips.map((chip) => chip.label)).toEqual(['This year', 'Sent', 'Failed']);
   });
 
   it('gives the filters left once a chip is removed', () => {
@@ -128,7 +118,13 @@ describe('historyFilterChips', () => {
     expect(sentChip.remainingFilters).toEqual({ dateFrom: '2026-10-01', dateTo: '2026-10-15', statuses: [] });
   });
 
-  it('shows a custom range as its days', () => {
+  it('shows a custom range of whole months as its months', () => {
+    const filters = { dateFrom: '2026-03-01', dateTo: '2026-05-31', statuses: [] };
+
+    expect(historyFilterChips(filters, NOW)[0].label).toBe('Mar 2026 – May 2026');
+  });
+
+  it('shows any other range, from an older url, as its days', () => {
     const filters = { dateFrom: '2026-01-10', dateTo: '2026-02-20', statuses: [] };
 
     expect(historyFilterChips(filters, NOW)[0].label).toBe('10 Jan 2026 – 20 Feb 2026');
@@ -154,12 +150,12 @@ describe('historyFilterDraft', () => {
     expect(draft.datePreset).toBe(DatePreset.THIS_YEAR);
   });
 
-  it('picks Custom with its days for any other range', () => {
+  it('picks Custom with its months for any other range', () => {
     const draft = historyFilterDraft({ dateFrom: '2026-01-10', statuses: [ReadingStatusUtil.FAILED] }, NOW);
 
     expect(draft).toEqual({
       datePreset: DatePreset.CUSTOM,
-      customFrom: '2026-01-10',
+      customFrom: '2026-01',
       customTo: '',
       statuses: [ReadingStatusUtil.FAILED],
     });
@@ -177,10 +173,16 @@ describe('historyFiltersFromDraft', () => {
     expect(historyFiltersFromDraft(draft, NOW)).toEqual({ dateFrom: '2026-10-01', dateTo: '2026-10-15', statuses: [] });
   });
 
-  it('keeps the custom days that were picked', () => {
-    const draft = { datePreset: DatePreset.CUSTOM, customFrom: '', customTo: '2026-02-20', statuses: [] };
+  it('turns the custom months into days: From on the first, To on the last', () => {
+    const draft = { datePreset: DatePreset.CUSTOM, customFrom: '2026-01', customTo: '2026-02', statuses: [] };
 
-    expect(historyFiltersFromDraft(draft, NOW)).toEqual({ dateTo: '2026-02-20', statuses: [] });
+    expect(historyFiltersFromDraft(draft, NOW)).toEqual({ dateFrom: '2026-01-01', dateTo: '2026-02-28', statuses: [] });
+  });
+
+  it('leaves an end with no month open', () => {
+    const draft = { datePreset: DatePreset.CUSTOM, customFrom: '', customTo: '2026-02', statuses: [] };
+
+    expect(historyFiltersFromDraft(draft, NOW)).toEqual({ dateTo: '2026-02-28', statuses: [] });
   });
 
   it('drops the custom days when no preset is picked, and orders the statuses', () => {

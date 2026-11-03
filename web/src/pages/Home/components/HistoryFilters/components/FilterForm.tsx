@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import SmoothReveal from '@components/SmoothReveal';
 import { FieldGroup } from '@components/ui/field';
 import { historyFiltersFromDraft } from '../../../historyFilterUtils';
 import type { HistoryFilterValues } from '../../../types';
@@ -18,7 +19,7 @@ type Props = {
 // goes to the To day, which says why.
 function FilterForm({ id, filters, onApply }: Props) {
   const { draft, isCustomRange, isRangeBackwards, updateDraft } = useFilterDraft(filters);
-  const customToRef = useRef<HTMLInputElement>(null);
+  const customToRef = useRef<HTMLSelectElement>(null);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,7 +37,7 @@ function FilterForm({ id, filters, onApply }: Props) {
     <form id={id} noValidate onSubmit={handleSubmit}>
       <FieldGroup>
         <DatePresetField datePreset={draft.datePreset} onChange={(datePreset) => updateDraft({ datePreset })} />
-        {isCustomRange && (
+        <SmoothReveal isOpen={isCustomRange}>
           <CustomRangeFields
             customFrom={draft.customFrom}
             customTo={draft.customTo}
@@ -45,7 +46,7 @@ function FilterForm({ id, filters, onApply }: Props) {
             onFromChange={(customFrom) => updateDraft({ customFrom })}
             onToChange={(customTo) => updateDraft({ customTo })}
           />
-        )}
+        </SmoothReveal>
         <StatusField statuses={draft.statuses} onChange={(statuses) => updateDraft({ statuses })} />
       </FieldGroup>
     </form>

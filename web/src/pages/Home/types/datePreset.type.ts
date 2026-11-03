@@ -1,9 +1,10 @@
-// The day ranges the filter sheet offers. Each one ends today; Custom is whatever days the user picks. A value set,
+// The day ranges the filters offer. Each one ends today, except Last year, which is all of last calendar year;
+// Custom is whatever days the user picks. A value set,
 // not a TypeScript enum: erasableSyntaxOnly bans `enum`.
 export const DatePreset = {
   THIS_MONTH: 'thisMonth',
-  LAST_THREE_MONTHS: 'lastThreeMonths',
   THIS_YEAR: 'thisYear',
+  LAST_YEAR: 'lastYear',
   CUSTOM: 'custom',
 } as const;
 

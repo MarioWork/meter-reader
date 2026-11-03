@@ -14,7 +14,7 @@ function answerMailStatus(state: MailStateUtil) {
 
 async function renderHomeAndOpenMenu() {
   renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
 
   await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
   await screen.findByRole('menu');
@@ -30,7 +30,7 @@ it('shows how to connect Hotmail when the server cannot send mail', async () => 
 
   renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
 
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   expect(screen.getByRole('status')).toHaveTextContent(/Hotmail not connected.*yarn mail:connect/);
 });
 
@@ -39,7 +39,7 @@ it('shows no Hotmail banner when Hotmail is connected', async () => {
 
   renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
 
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 

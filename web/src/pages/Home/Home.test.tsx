@@ -23,7 +23,7 @@ const SERVER_ERROR = 500;
 
 async function renderHome(path = BASE_ROUTES_PATHS.HOME) {
   const { router } = renderRoutes(routes, { initialEntries: [path] });
-  await screen.findByRole('heading', { name: 'History' });
+  await screen.findByRole('heading', { name: 'Water Readings' });
 
   return router;
 }
@@ -715,7 +715,7 @@ describe('sending a reading', () => {
 
 describe('filtering the history', () => {
   const THIS_MONTH = `${BASE_ROUTES_PATHS.HOME}?from=2026-10-01&to=2026-10-15`;
-  const LAST_THREE_MONTHS = 'from=2026-08-01&to=2026-10-15';
+  const AUGUST_TO_MID_OCTOBER = 'from=2026-08-01&to=2026-10-15';
 
   beforeEach(() => {
     // 15 October 2026: "This month" is 1–15 Oct, which holds the mock history's newest reading only.
@@ -821,14 +821,14 @@ describe('filtering the history', () => {
   });
 
   it('removes one filter with its chip and keeps the others', async () => {
-    const router = await renderHome(`${BASE_ROUTES_PATHS.HOME}?${LAST_THREE_MONTHS}&status=sent`);
+    const router = await renderHome(`${BASE_ROUTES_PATHS.HOME}?${AUGUST_TO_MID_OCTOBER}&status=sent`);
     expect(matchingCards()).toHaveLength(1);
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove filter: Sent' }));
 
     await waitFor(() => expect(matchingCards()).toHaveLength(3));
-    expect(router.state.location.search).toBe(`?${LAST_THREE_MONTHS}`);
-    expect(activeFilters().map((chip) => chip.textContent)).toEqual(['Last 3 months']);
+    expect(router.state.location.search).toBe(`?${AUGUST_TO_MID_OCTOBER}`);
+    expect(activeFilters().map((chip) => chip.textContent)).toEqual(['1 Aug 2026 – 15 Oct 2026']);
     expect(screen.getByRole('button', { name: 'Filter' })).toHaveFocus();
   });
 
@@ -854,27 +854,92 @@ describe('filtering the history', () => {
     expect(screen.getByRole('button', { name: 'Filter' })).toHaveFocus();
   });
 
-  it('filters by custom days, and refuses a range that ends before it starts', async () => {
+  it('filters by custom months, and refuses a range that ends before it starts', async () => {
     const router = await renderHome();
 
     const sheet = await openFilterSheet();
     await userEvent.click(within(sheet).getByRole('button', { name: 'Custom' }));
-    await userEvent.type(within(sheet).getByLabelText('From'), '2026-03-01');
-    await userEvent.type(within(sheet).getByLabelText('To'), '2026-01-01');
+    await userEvent.selectOptions(within(sheet).getByRole('combobox', { name: 'From month' }), 'Mar');
+    await userEvent.selectOptions(within(sheet).getByRole('combobox', { name: 'From year' }), '2026');
+    const toMonth = within(sheet).getByRole('combobox', { name: 'To month' });
+    await userEvent.selectOptions(toMonth, 'Jan');
+    await userEvent.selectOptions(within(sheet).getByRole('combobox', { name: 'To year' }), '2026');
     await showReadings();
 
-    const toField = within(sheet).getByLabelText('To');
-    expect(within(sheet).getByRole('alert')).toHaveTextContent('Pick a To day on or after the From day');
-    expect(toField).toHaveAccessibleDescription('Pick a To day on or after the From day');
-    expect(toField).toHaveFocus();
+    expect(within(sheet).getByRole('alert')).toHaveTextContent('Pick a To month on or after the From month');
+    expect(toMonth).toHaveAccessibleDescription('Pick a To month on or after the From month');
+    expect(toMonth).toHaveFocus();
     expect(router.state.location.search).toBe('');
 
-    await userEvent.clear(toField);
-    await userEvent.type(toField, '2026-05-01');
+    await userEvent.selectOptions(toMonth, 'May');
     await showReadings();
 
     await waitFor(() => expect(matchingCards()).toHaveLength(3));
-    expect(screen.getByRole('button', { name: 'Remove filter: 1 Mar 2026 – 1 May 2026' })).toBeVisible();
+    expect(router.state.location.search).toBe('?from=2026-03-01&to=2026-05-31');
+    expect(screen.getByRole('button', { name: 'Remove filter: Mar 2026 – May 2026' })).toBeVisible();
+  });
+
+  describe('on a wide screen', () => {
+    beforeEach(() => {
+      vi.spyOn(window, 'matchMedia').mockImplementation(
+        (query) =>
+          ({
+            matches: query.includes('min-width'),
+            media: query,
+            addEventListener: () => {},
+            removeEventListener: () => {},
+          }) as unknown as MediaQueryList,
+      );
+    });
+
+    function filterBar() {
+      return screen.getByRole('region', { name: 'Filters' });
+    }
+
+    it('shows every filter at once, with no Filter button', async () => {
+      await renderHome();
+
+      expect(within(filterBar()).getByRole('button', { name: 'Last year' })).toBeVisible();
+      expect(within(filterBar()).getByRole('button', { name: 'Sent' })).toBeVisible();
+      expect(screen.queryByRole('button', { name: 'Filter' })).not.toBeInTheDocument();
+    });
+
+    it('filters the moment a choice is pressed, and Clear all shows everything again', async () => {
+      const router = await renderHome();
+
+      await userEvent.click(within(filterBar()).getByRole('button', { name: 'This month' }));
+      await waitFor(() => expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-15'));
+      await userEvent.click(within(filterBar()).getByRole('button', { name: 'Not sent' }));
+      await waitFor(() => expect(router.state.location.search).toBe('?from=2026-10-01&to=2026-10-15&status=notSent'));
+
+      await userEvent.click(within(filterBar()).getByRole('button', { name: 'Clear all' }));
+
+      await waitFor(() => expect(router.state.location.search).toBe(''));
+      await waitFor(() =>
+        expect(within(filterBar()).queryByRole('button', { name: 'Clear all' })).not.toBeInTheDocument(),
+      );
+    });
+
+    it('filters by last calendar year', async () => {
+      const router = await renderHome();
+
+      await userEvent.click(within(filterBar()).getByRole('button', { name: 'Last year' }));
+
+      await waitFor(() => expect(router.state.location.search).toBe('?from=2025-01-01&to=2025-12-31'));
+    });
+
+    it('applies custom months only once Apply is pressed', async () => {
+      const router = await renderHome();
+
+      await userEvent.click(within(filterBar()).getByRole('button', { name: 'Custom' }));
+      await userEvent.selectOptions(within(filterBar()).getByRole('combobox', { name: 'From month' }), 'Mar');
+      await userEvent.selectOptions(within(filterBar()).getByRole('combobox', { name: 'From year' }), '2026');
+      expect(router.state.location.search).toBe('');
+
+      await userEvent.click(within(filterBar()).getByRole('button', { name: 'Apply' }));
+
+      await waitFor(() => expect(router.state.location.search).toBe('?from=2026-03-01'));
+    });
   });
 
   it('starts again from the first page when the filters change, and Load more keeps them', async () => {
