@@ -5,14 +5,17 @@ import DataBackup from './components/DataBackup';
 import SettingsForm from './components/SettingsForm';
 import type { loader } from './settingsLoader';
 
-// The app's settings (ADR 0003). One user, so being signed in is the only lock (ADR 0002).
+// The app's settings (ADR 0003). One user, so being signed in is the only lock (ADR 0002). A phone gets one narrow
+// column. From lg the page widens so the form can put the preview beside its fields; the Card lets go of its
+// overflow there, as a clipping box would stop the preview sticking (see SettingsForm). Data stays below the form
+// either way.
 function Settings() {
   const { settings } = useLoaderData<LoaderDataUtil<typeof loader>>();
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-md flex-col gap-6 p-6 lg:max-w-5xl">
       <h1 className="text-2xl font-bold">Settings</h1>
-      <Card>
+      <Card className="lg:overflow-visible">
         <CardContent>
           <SettingsForm settings={settings} />
         </CardContent>
