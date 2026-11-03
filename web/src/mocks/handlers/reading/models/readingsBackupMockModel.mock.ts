@@ -1,4 +1,4 @@
-import type { BackupApiModel, BackupReadingApiModel, ReadingApiModel } from '@app-types/models';
+import type { BackupReadingApiModel, ReadingApiModel, ReadingsBackupApiModel } from '@app-types/models';
 
 // Fixed, so every run serves the same file: the moment the mock backup says it was made.
 const MOCK_EXPORTED_AT = '2026-11-03T09:00:00.000Z';
@@ -24,7 +24,7 @@ export const createBackupReadingMockModel = (reading: ReadingApiModel): BackupRe
 });
 
 // The backup of the mock history, in the order it is given (the history's, newest first).
-export const createBackupMockModel = (readings: ReadingApiModel[]): BackupApiModel => ({
+export const createReadingsBackupMockModel = (readings: ReadingApiModel[]): ReadingsBackupApiModel => ({
   exportedAt: MOCK_EXPORTED_AT,
   readings: readings.map(createBackupReadingMockModel),
 });

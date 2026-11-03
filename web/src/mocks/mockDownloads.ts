@@ -4,6 +4,7 @@
 const DOWNLOAD_LINK_SELECTOR = 'a[download][href]';
 const FILE_NAME_PATTERN = /filename="([^"]+)"/;
 const FALLBACK_FILE_NAME = 'download';
+const UNKNOWN_FAILURE = 'unknown error';
 
 function fileNameOf(response: Response): string {
   const disposition = response.headers.get('content-disposition') ?? '';
@@ -28,7 +29,8 @@ async function downloadThroughMocks(url: string): Promise<void> {
 
     if (response.ok) await saveResponse(response);
   } catch (error) {
-    console.error('mock download failed', error instanceof Error ? error.message : error);
+    // The reason only, never the thrown value itself.
+    console.error('mock download failed', error instanceof Error ? error.message : UNKNOWN_FAILURE);
   }
 }
 

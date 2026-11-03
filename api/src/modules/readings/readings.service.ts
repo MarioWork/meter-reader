@@ -22,9 +22,12 @@ import {
 import type { MessageTemplates, MessageValues } from '../settings/settings.type.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
+import { CSV_EXTENSION, JSON_EXTENSION, readingsBackupFileName, toReadingsBackupCsv } from './readings.backup.ts';
 import { readingsSpreadsheetFileName, toReadingsSpreadsheet, type ReadingSheetLine } from './readings.spreadsheet.ts';
 import type {
+  BackupReading,
   CreateReading,
+  ReadingsBackupResponse,
   ExportReadingsQuery,
   ListReadingsQuery,
   ReadingEmailResponse,
@@ -71,6 +74,9 @@ type ReadingFilterQuery = Pick<ListReadingsQuery, 'from' | 'to' | 'status'>;
 
 // The spreadsheet's bytes, and the name the download saves it under.
 export type ReadingsSpreadsheet = { fileName: string; content: Buffer };
+
+// A backup download: what is in it, and the name the browser saves it under.
+export type ReadingsBackupFile<Content> = { fileName: string; content: Content };
 
 const STATUS_MAP: Record<ReadingRow['status'], ReadingStatus> = {
   NOT_SENT: 'notSent',
@@ -192,6 +198,47 @@ export async function getReadingsSpreadsheet(query: ExportReadingsQuery): Promis
   const fileName = readingsSpreadsheetFileName(query);
 
   return { fileName, content };
+}
+
+// The one place a row becomes a backed-up reading: the JSON holds it as is, and the CSV's columns read off it.
+function toBackupReading(row: ReadingRow): BackupReading {
+  return {
+    id: row.id,
+    digits: row.digits,
+    date: toIsoDate(row.date),
+    status: STATUS_MAP[row.status],
+    sentAt: row.sentAt?.toISOString() ?? null,
+    sentEmail: toSentEmailResponse(row),
+    photoFileName: row.photo?.fileName ?? null,
+  };
+}
+
+// Every reading, whatever Home is filtered to: no filter, no page.
+async function getBackupReadings(): Promise<BackupReading[]> {
+  const rows = await readingsRepository.findAll({});
+
+  // A count only: the readings are the user's data.
+  log.info({ readingCount: rows.length }, 'backup made');
+
+  return rows.map(toBackupReading);
+}
+
+export async function getReadingsBackup(): Promise<ReadingsBackupFile<ReadingsBackupResponse>> {
+  const exportedAt = new Date();
+  const readings = await getBackupReadings();
+
+  return {
+    fileName: readingsBackupFileName(exportedAt, JSON_EXTENSION),
+    content: { exportedAt: exportedAt.toISOString(), readings },
+  };
+}
+
+// The same readings, one CSV line each.
+export async function getReadingsBackupCsv(): Promise<ReadingsBackupFile<string>> {
+  const exportedAt = new Date();
+  const readings = await getBackupReadings();
+
+  return { fileName: readingsBackupFileName(exportedAt, CSV_EXTENSION), content: toReadingsBackupCsv(readings) };
 }
 
 // Deleting the reading already deleted its photo row (cascade); this removes the file from the uploads folder. The

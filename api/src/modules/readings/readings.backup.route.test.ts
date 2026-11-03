@@ -1,7 +1,7 @@
 import { buildApp, type App } from '../../app.ts';
 import { prisma } from '../../lib/prisma.ts';
 import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
-import type { BackupResponse } from './backup.schema.ts';
+import type { ReadingsBackupResponse } from './readings.schema.ts';
 
 // More than one page of the history (10), so a backup that paged would show.
 const MANY_READINGS = 12;
@@ -10,13 +10,13 @@ const SENT_AT = '2026-11-01T09:30:00.000Z';
 const SENT_BODY = 'Date: 31 October 2026\nReading: 00123';
 const CSV_HEADER =
   'id,date,digits,status,sent_at,sent_from,sent_to,sent_subject,sent_body,sent_with_photo,photo_file_name';
-const ATTACHMENT_FILE_NAME = /^attachment; filename="meter-readings-\d{4}-\d{2}-\d{2}\.(json|csv)"$/;
+const ATTACHMENT_FILE_NAME = /^attachment; filename="water-readings-backup-\d{4}-\d{2}-\d{2}\.(json|csv)"$/;
 
 let app: App;
 let token: string;
 
 function getBackup(format: 'json' | 'csv') {
-  return app.inject({ method: 'GET', url: `/backup/readings.${format}`, ...withSession(token) });
+  return app.inject({ method: 'GET', url: `/readings/backup.${format}`, ...withSession(token) });
 }
 
 // Sent, with its email kept and its photo attached: every field a reading has today.
@@ -60,7 +60,7 @@ beforeEach(async () => {
   token = await setUpWithPassword(app);
 });
 
-describe('GET /backup/readings.json', () => {
+describe('GET /readings/backup.json', () => {
   it('answers every reading with its sent email and photo file name, as a download, when readings exist', async () => {
     const sentId = await addSentReading();
     const notSentId = await addReading('00456', '2026-11-02');
@@ -69,7 +69,7 @@ describe('GET /backup/readings.json', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-disposition']).toMatch(ATTACHMENT_FILE_NAME);
-    const backup = response.json<BackupResponse>();
+    const backup = response.json<ReadingsBackupResponse>();
     expect(Number.isNaN(Date.parse(backup.exportedAt))).toBe(false);
     expect(backup.readings).toEqual([
       {
@@ -106,7 +106,7 @@ describe('GET /backup/readings.json', () => {
 
     const response = await getBackup('json');
 
-    expect(response.json<BackupResponse>().readings).toHaveLength(MANY_READINGS);
+    expect(response.json<ReadingsBackupResponse>().readings).toHaveLength(MANY_READINGS);
   });
 
   it('answers a failed reading as failed with no sent email when its send failed', async () => {
@@ -120,17 +120,17 @@ describe('GET /backup/readings.json', () => {
   it('answers no readings when none were saved', async () => {
     const response = await getBackup('json');
 
-    expect(response.json<BackupResponse>().readings).toEqual([]);
+    expect(response.json<ReadingsBackupResponse>().readings).toEqual([]);
   });
 
   it('returns 401 when the browser is not signed in', async () => {
-    const response = await app.inject({ method: 'GET', url: '/backup/readings.json' });
+    const response = await app.inject({ method: 'GET', url: '/readings/backup.json' });
 
     expect(response.statusCode).toBe(401);
   });
 });
 
-describe('GET /backup/readings.csv', () => {
+describe('GET /readings/backup.csv', () => {
   it('answers a header and one line per reading, as a CSV download, when readings exist', async () => {
     const sentId = await addSentReading();
     const notSentId = await addReading('00456', '2026-11-02');
@@ -168,7 +168,7 @@ describe('GET /backup/readings.csv', () => {
   });
 
   it('returns 401 when the browser is not signed in', async () => {
-    const response = await app.inject({ method: 'GET', url: '/backup/readings.csv' });
+    const response = await app.inject({ method: 'GET', url: '/readings/backup.csv' });
 
     expect(response.statusCode).toBe(401);
   });

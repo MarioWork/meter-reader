@@ -9,7 +9,7 @@ const COLUMNS: CsvColumn<Row>[] = [
 ];
 
 describe('toCsv', () => {
-  it('writes the header and one line per row, each ending in CRLF', () => {
+  it('writes the header and one CRLF-ended line per row when rows are given', () => {
     const csv = toCsv([{ name: 'first', count: 2, isDone: true }], COLUMNS);
 
     expect(csv).toBe('name,count,is_done\r\nfirst,2,true\r\n');

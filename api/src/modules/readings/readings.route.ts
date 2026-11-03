@@ -11,6 +11,7 @@ import {
   ReadingListResponseSchema,
   ReadingParamsSchema,
   ReadingResponseSchema,
+  ReadingsBackupResponseSchema,
   ReadingsSpreadsheetResponseSchema,
   SendReadingSchema,
   UpdateReadingSchema,
@@ -22,12 +23,15 @@ import {
   getReading,
   getReadingEmail,
   getReadings,
+  getReadingsBackup,
+  getReadingsBackupCsv,
   getReadingsSpreadsheet,
   sendReading,
   updateReading,
 } from './readings.service.ts';
 
 const TAGS = ['readings'];
+const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
 
 // Saved under this name, never shown in the browser.
 function attachment(fileName: string): string {
@@ -65,6 +69,40 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
       const { fileName, content } = await getReadingsSpreadsheet(request.query);
 
       return reply.type(XLSX_CONTENT_TYPE).header('content-disposition', attachment(fileName)).send(content);
+    },
+  );
+
+  // The backup, followed by a plain link on the Settings page: every reading, whatever Home is filtered to.
+  app.get(
+    '/backup.json',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'Every reading as one JSON download, with its sent email and the file name of its photo',
+        response: { 200: ReadingsBackupResponseSchema, 401: ErrorResponseSchema },
+      },
+    },
+    async (_request, reply) => {
+      const { fileName, content } = await getReadingsBackup();
+
+      return reply.header('content-disposition', attachment(fileName)).send(content);
+    },
+  );
+
+  app.get(
+    '/backup.csv',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'The same backup as a CSV download, one line per reading',
+        produces: [CSV_CONTENT_TYPE],
+        response: { 200: z.string(), 401: ErrorResponseSchema },
+      },
+    },
+    async (_request, reply) => {
+      const { fileName, content } = await getReadingsBackupCsv();
+
+      return reply.type(CSV_CONTENT_TYPE).header('content-disposition', attachment(fileName)).send(content);
     },
   );
 

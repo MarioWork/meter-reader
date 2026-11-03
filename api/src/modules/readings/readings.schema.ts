@@ -169,6 +169,30 @@ export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponse
 // The .xlsx file. Binary: a Buffer goes out as is (Fastify never serialises one); the schema documents it as a file.
 export const ReadingsSpreadsheetResponseSchema = z.instanceof(Buffer).meta({ type: 'string', format: 'binary' });
 
+// One reading in the backup, with everything kept about it. A new field (Cost, Bill) is one more key here, in
+// readings.service.ts's toBackupReading and in readings.backup.ts's CSV columns.
+export const BackupReadingSchema = z.object({
+  id: z.number().int(),
+  // Text, never a number: "00123" stays "00123".
+  digits: z.string(),
+  date: z.iso.date(),
+  status: z.enum(READING_STATUSES),
+  // When the mail service accepted its email; null until it is sent.
+  sentAt: z.iso.datetime().nullable(),
+  // Null until it is sent, and for readings sent before the email was kept.
+  sentEmail: SentEmailResponseSchema.nullable(),
+  // The photo's file name in UPLOADS_DIR, where the file itself is; null when the reading was saved without one.
+  photoFileName: z.string().nullable(),
+});
+
+// The JSON backup: every reading, newest first, whatever Home is filtered to.
+export const ReadingsBackupResponseSchema = z
+  .object({
+    exportedAt: z.iso.datetime(),
+    readings: z.array(BackupReadingSchema),
+  })
+  .meta({ id: 'ReadingsBackup' });
+
 export type CreateReading = z.infer<typeof CreateReadingSchema>;
 export type ListReadingsQuery = z.infer<typeof ListReadingsQuerySchema>;
 export type ExportReadingsQuery = z.infer<typeof ExportReadingsQuerySchema>;
@@ -180,3 +204,5 @@ export type EmailDefaultsResponse = z.infer<typeof EmailDefaultsResponseSchema>;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 export type ReadingResponse = z.infer<typeof ReadingResponseSchema>;
 export type ReadingListResponse = z.infer<typeof ReadingListResponseSchema>;
+export type BackupReading = z.infer<typeof BackupReadingSchema>;
+export type ReadingsBackupResponse = z.infer<typeof ReadingsBackupResponseSchema>;

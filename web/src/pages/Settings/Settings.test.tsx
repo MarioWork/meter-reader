@@ -207,8 +207,8 @@ it('has one main heading', async () => {
 });
 
 it.each([
-  ['Export everything (JSON)', `${TEST_BASE_API_URL}/backup/readings.json`],
-  ['Export everything (CSV)', `${TEST_BASE_API_URL}/backup/readings.csv`],
+  ['Export everything (JSON)', `${TEST_BASE_API_URL}/readings/backup.json`],
+  ['Export everything (CSV)', `${TEST_BASE_API_URL}/readings/backup.csv`],
 ])('offers %s as a download of every reading under Data', async (name, href) => {
   await renderSettings();
 

@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw/http';
 import { HttpVerbsUtil, ReadingStatusUtil } from '@app-types/utility';
+import type { ReadingsBackupApiModel } from '@app-types/models';
+import { getMockReadings } from '@mocks/handlers/reading/readingMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import readingService from './readingService';
 
@@ -110,6 +112,34 @@ describe('getReadingsSpreadsheetUrl', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe(XLSX_CONTENT_TYPE);
     expect(response.headers.get('content-disposition')).toBe('attachment; filename="water-readings.xlsx"');
+  });
+});
+
+describe('getReadingsBackupJsonUrl', () => {
+  it('points at the JSON backup under the API base url, with no filter', () => {
+    expect(readingService.getReadingsBackupJsonUrl()).toBe(`${API}/readings/backup.json`);
+  });
+
+  it('downloads every mock reading as a JSON file when followed', async () => {
+    const response = await fetch(readingService.getReadingsBackupJsonUrl());
+
+    const backup = (await response.json()) as ReadingsBackupApiModel;
+    expect(response.headers.get('content-disposition')).toMatch(/^attachment; filename="water-readings-backup-/);
+    expect(backup.readings).toHaveLength(getMockReadings().length);
+  });
+});
+
+describe('getReadingsBackupCsvUrl', () => {
+  it('points at the CSV backup under the API base url, with no filter', () => {
+    expect(readingService.getReadingsBackupCsvUrl()).toBe(`${API}/readings/backup.csv`);
+  });
+
+  it('downloads a header and one line per mock reading as a CSV file when followed', async () => {
+    const response = await fetch(readingService.getReadingsBackupCsvUrl());
+
+    const lines = (await response.text()).trimEnd().split('\r\n');
+    expect(response.headers.get('content-type')).toBe('text/csv; charset=utf-8');
+    expect(lines).toHaveLength(getMockReadings().length + 1);
   });
 });
 
