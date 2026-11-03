@@ -8,8 +8,8 @@ import {
 } from '@components/ui/dropdown-menu';
 import PagesMenuGroup from './components/PagesMenuGroup';
 import SignOutMenuGroup from './components/SignOutMenuGroup';
-import ThemeMenuGroup from './components/ThemeMenuGroup';
-import { useSignOut } from '../../hooks/useSignOut';
+import ThemeMenuGroup from '../../../ThemeMenuGroup';
+import { useSignOut } from '../../../../hooks/useSignOut';
 
 // The header's one menu: Costs and Settings, the theme and Sign out. The trigger is 36 px square, over the 24 px minimum target.
 function HeaderMenu() {

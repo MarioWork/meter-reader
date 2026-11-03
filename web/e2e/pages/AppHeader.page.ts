@@ -2,14 +2,47 @@ import type { Locator, Page } from '@playwright/test';
 import { ThemeUtil } from '@app-types/utility';
 import { BASE_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
-// Each theme's name in the menu.
-const THEME_LABELS: Record<ThemeUtil, string> = {
+// Each theme's name in the menu: the phone's header menu and the sidebar's Theme menu alike.
+export const THEME_LABELS: Record<ThemeUtil, string> = {
   [ThemeUtil.LIGHT]: 'Light',
   [ThemeUtil.DARK]: 'Dark',
   [ThemeUtil.SYSTEM]: 'System',
 };
 
-// The signed-in header on every page: the logo, the app name, and the menu with the theme and Sign out.
+type MenuKeyboardChoice = {
+  page: Page;
+  // The button that opens the menu.
+  trigger: Locator;
+  menu: Locator;
+  // Every item in the open menu.
+  menuItems: Locator;
+  // The one to choose.
+  item: Locator;
+};
+
+// Keyboard only: focus the trigger, open its menu with Enter, arrow down to the item, press Enter. The phone's header
+// menu and the sidebar's Theme menu both work this way.
+export async function chooseMenuItemWithKeyboard({ page, trigger, menu, menuItems, item }: MenuKeyboardChoice) {
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await menu.waitFor();
+
+  // One press per item reaches any of them.
+  const itemCount = await menuItems.count();
+
+  for (let i = 0; i < itemCount; i++) {
+    const isItemFocused = await item.evaluate((element) => element === document.activeElement);
+
+    if (isItemFocused) break;
+
+    await page.keyboard.press('ArrowDown');
+  }
+
+  await page.keyboard.press('Enter');
+}
+
+// The signed-in header on every page of a phone: the logo, the app name, and the menu with the pages, the theme and
+// Sign out. A wider screen has the sidebar instead (AppSidebar.page.ts).
 export class AppHeader {
   private readonly page: Page;
 
@@ -57,24 +90,14 @@ export class AppHeader {
     await this.signOutItem.tap();
   }
 
-  // Keyboard only: focus the menu button, open the menu with Enter, arrow down to the item, press Enter.
   async chooseWithKeyboard(item: Locator) {
-    await this.menuButton.focus();
-    await this.page.keyboard.press('Enter');
-    await this.menu.waitFor();
-
-    // One press per item reaches any of them.
-    const itemCount = await this.menuItems.count();
-
-    for (let i = 0; i < itemCount; i++) {
-      const isItemFocused = await item.evaluate((element) => element === document.activeElement);
-
-      if (isItemFocused) break;
-
-      await this.page.keyboard.press('ArrowDown');
-    }
-
-    await this.page.keyboard.press('Enter');
+    await chooseMenuItemWithKeyboard({
+      page: this.page,
+      trigger: this.menuButton,
+      menu: this.menu,
+      menuItems: this.menuItems,
+      item,
+    });
   }
 
   async chooseThemeWithKeyboard(theme: ThemeUtil) {

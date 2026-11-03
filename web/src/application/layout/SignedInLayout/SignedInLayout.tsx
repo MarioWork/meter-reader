@@ -1,26 +1,20 @@
-import { Outlet, useLoaderData } from 'react-router';
+import { useLoaderData } from 'react-router';
 import { MailStateUtil, type LoaderDataUtil } from '@app-types/utility';
-import AppHeader from './components/AppHeader';
-import MailNotConnectedBanner from './components/MailNotConnectedBanner';
+import { useIsWideScreen } from '@hooks/useIsWideScreen';
+import DesktopShell from './components/DesktopShell';
+import PhoneShell from './components/PhoneShell';
 import type { loader } from './signedInLayoutLoader';
 
-// The signed-in part of the app: the header with its menu (theme, sign out) on every page, and the Hotmail banner
-// while the server cannot send mail. Its loader sends anyone else to setup or the login page.
+// The signed-in part of the app: a phone gets the header with its menu, a wider screen the sidebar; both show the
+// Hotmail banner while the server cannot send mail. Its loader sends anyone else to setup or the login page.
 function SignedInLayout() {
   const { mailStatus } = useLoaderData<LoaderDataUtil<typeof loader>>();
+  const isWideScreen = useIsWideScreen();
   const isMailNotConnected = mailStatus.state === MailStateUtil.NOT_CONNECTED;
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <AppHeader />
-      {isMailNotConnected && (
-        <div className="mx-auto max-w-2xl px-4 pt-4 sm:px-6">
-          <MailNotConnectedBanner />
-        </div>
-      )}
-      <Outlet />
-    </div>
-  );
+  if (isWideScreen) return <DesktopShell isMailNotConnected={isMailNotConnected} />;
+
+  return <PhoneShell isMailNotConnected={isMailNotConnected} />;
 }
 
 export default SignedInLayout;

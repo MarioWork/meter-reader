@@ -6,6 +6,8 @@ import { AppHeader } from '../pages/AppHeader.page';
 const DARK_CLASS = /\bdark\b/;
 // WCAG 2.2 target size (minimum), in CSS px.
 const MIN_TARGET_PX = 24;
+// The header is the phone's (a wider screen has the sidebar, sidebar.e2e.test.ts).
+const PHONE_VIEWPORT = { width: 390, height: 844 };
 // A short phone screen, so the page scrolls under the sticky header.
 const SHORT_PHONE_VIEWPORT = { width: 390, height: 420 };
 // Inside the 56 px header.
@@ -17,6 +19,8 @@ async function openHome(header: AppHeader) {
 }
 
 test.describe('by keyboard', () => {
+  test.use({ viewport: PHONE_VIEWPORT });
+
   test('picks a theme from the header menu', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     const header = new AppHeader(page);
