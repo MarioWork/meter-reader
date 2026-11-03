@@ -1,10 +1,16 @@
 import { http, HttpResponse } from 'msw/http';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
+import { MessageDateFormatUtil } from '@app-types/utility';
 import settingsService from './settingsService';
 
 const API = TEST_BASE_API_URL;
-const TEMPLATES = { subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' };
-const SETTINGS = { from: 'me@hotmail.example', to: 'readings@water-provider.example', ...TEMPLATES };
+// The templates and the date format: the message part of the settings.
+const MESSAGE_SETTINGS = {
+  subjectTemplate: 'Leitura {date}',
+  bodyTemplate: 'Leitura - {reading} - {date}',
+  dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR,
+};
+const SETTINGS = { from: 'me@hotmail.example', to: 'readings@water-provider.example', ...MESSAGE_SETTINGS };
 
 describe('getSettings', () => {
   it('returns the settings from GET /settings', async () => {
@@ -21,7 +27,7 @@ describe('getSettings', () => {
 });
 
 describe('updateSettings', () => {
-  it('puts the address and the templates to /settings and returns the saved settings', async () => {
+  it('puts the address, the templates and the date format to /settings and returns the saved settings', async () => {
     let receivedBody: unknown;
     server.use(
       http.put(`${API}/settings`, async ({ request }) => {
@@ -31,9 +37,9 @@ describe('updateSettings', () => {
       }),
     );
 
-    const result = await settingsService.updateSettings({ to: SETTINGS.to, ...TEMPLATES });
+    const result = await settingsService.updateSettings({ to: SETTINGS.to, ...MESSAGE_SETTINGS });
 
-    expect(receivedBody).toEqual({ to: SETTINGS.to, ...TEMPLATES });
+    expect(receivedBody).toEqual({ to: SETTINGS.to, ...MESSAGE_SETTINGS });
     expect(result).toEqual({ success: true, data: SETTINGS });
   });
 
@@ -44,7 +50,7 @@ describe('updateSettings', () => {
       ),
     );
 
-    const result = await settingsService.updateSettings({ to: 'not an address', ...TEMPLATES });
+    const result = await settingsService.updateSettings({ to: 'not an address', ...MESSAGE_SETTINGS });
 
     expect(result).toEqual({
       success: false,

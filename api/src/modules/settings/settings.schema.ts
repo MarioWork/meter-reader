@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { findUnknownPlaceholder, toUnknownPlaceholderMessage } from './settings.template.ts';
+import { MESSAGE_DATE_FORMATS } from './settings.type.ts';
 
 // The longest address an email can carry (RFC 5321's path limit, less its angle brackets).
 const EMAIL_MAX_LENGTH = 254;
@@ -27,12 +28,18 @@ function templateSchema(emptyMessage: string, maxLength: number) {
     });
 }
 
+// How {date} is written: one of the four formats, nothing else.
+const MessageDateFormatSchema = z
+  .enum(MESSAGE_DATE_FORMATS)
+  .meta({ description: 'How {date} is written in every email', example: MESSAGE_DATE_FORMATS.LONG_MONTH });
+
 // What the user saves on the Settings page, all of it at once. "From" is not in it: it is whichever account
 // yarn mail:connect signed in with, so it is never the app's to change.
 export const UpdateSettingsSchema = z.strictObject({
   to: z.string().trim().max(EMAIL_MAX_LENGTH).pipe(z.email()),
   subjectTemplate: templateSchema(EMPTY_SUBJECT_TEMPLATE_MESSAGE, SUBJECT_TEMPLATE_MAX_LENGTH),
   bodyTemplate: templateSchema(EMPTY_BODY_TEMPLATE_MESSAGE, BODY_TEMPLATE_MAX_LENGTH),
+  dateFormat: MessageDateFormatSchema,
 });
 
 export const SettingsResponseSchema = z
@@ -44,6 +51,8 @@ export const SettingsResponseSchema = z
     // Every email's subject and body, with {reading} and {date} to fill in. A fresh install's until the user saves.
     subjectTemplate: z.string(),
     bodyTemplate: z.string(),
+    // A fresh install's ("31 October 2026") until the user saves.
+    dateFormat: MessageDateFormatSchema,
   })
   .meta({ id: 'Settings' });
 

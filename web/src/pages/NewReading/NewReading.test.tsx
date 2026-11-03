@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw/http';
+import { MessageDateFormatUtil } from '@app-types/utility';
 import routes from '@application/routes';
 import { READING_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
@@ -14,6 +15,7 @@ import {
   within,
 } from '@test-utils';
 import { formatIsoDate, todayAsIsoDate } from '@utils/dateUtils';
+import { formatMessageDate } from '@utils/messageDateFormatUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
 import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
 
@@ -38,10 +40,8 @@ const HIGHER_THAN_LAST = '00600';
 const WARNING = /lower than your last reading/;
 const READING_IN_PHOTO = '00612';
 const MISREAD_IN_PHOTO = '00812';
-// Today as the email spells it: "3 November 2026".
-const TODAY_IN_EMAIL = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(
-  new Date(),
-);
+// Today as the email writes it in the mock settings' format: "3 November 2026".
+const TODAY_IN_EMAIL = formatMessageDate(todayAsIsoDate(), MessageDateFormatUtil.LONG_MONTH);
 const FINDING_DIGITS_STATUS = 'Reading the number from the photo…';
 const NOTHING_FOUND_STATUS = 'No number found in the photo. Type it in.';
 
@@ -151,6 +151,13 @@ it('fills the subject and the message from the templates saved in Settings, foll
   expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue(
     `Leitura - ${HIGHER_THAN_LAST} - ${TODAY_IN_EMAIL}`,
   );
+});
+
+it('writes the date in the date format saved in Settings', async () => {
+  updateMockSettings({ subjectTemplate: 'Leitura {date}', dateFormat: MessageDateFormatUtil.ISO });
+  await renderNewReading();
+
+  expect(screen.getByRole('textbox', { name: 'Subject' })).toHaveValue(`Leitura ${todayAsIsoDate()}`);
 });
 
 it('keeps a subject the user edited, even when the reading changes', async () => {

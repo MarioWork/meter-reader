@@ -3,6 +3,7 @@ import type { UpdateSettings } from '@services/settingsService/settingsService.t
 import type { ApiErrorIssue } from '@app-types/models';
 import type { JSONResponseUtil } from '@app-types/utility';
 import { INVALID_EMAIL_MESSAGE } from '@utils/emailUtils';
+import { UNKNOWN_DATE_FORMAT_MESSAGE } from '@utils/messageDateFormatUtils';
 import { SAVE_FAILED_MESSAGE } from '../../settingsUtils';
 
 // The API's code for a body that failed its checks; its issues say which fields, by path.
@@ -14,18 +15,20 @@ export type SettingsFieldErrors = Partial<Record<SettingsField, string>>;
 
 export type SaveFailure = { fieldErrors: SettingsFieldErrors; formError?: string };
 
-// Each field the API can refuse, by its issue's path. The address gets the app's own wording, which says what a valid
-// one looks like; a template gets the API's, which names the unknown placeholder.
+// Each field the API can refuse, by its issue's path. The address and the date format get the app's own wording, which
+// says what a valid one looks like; a template gets the API's, which names the unknown placeholder.
 const FIELD_BY_ISSUE_PATH: Record<string, SettingsField> = {
   '/to': 'to',
   '/subjectTemplate': 'subjectTemplate',
   '/bodyTemplate': 'bodyTemplate',
+  '/dateFormat': 'dateFormat',
 };
 
 const FIELD_MESSAGE_MAP: Record<SettingsField, (issue: ApiErrorIssue) => string> = {
   to: () => INVALID_EMAIL_MESSAGE,
   subjectTemplate: (issue) => issue.message,
   bodyTemplate: (issue) => issue.message,
+  dateFormat: () => UNKNOWN_DATE_FORMAT_MESSAGE,
 };
 
 const NO_FAILURE: SaveFailure = { fieldErrors: {} };

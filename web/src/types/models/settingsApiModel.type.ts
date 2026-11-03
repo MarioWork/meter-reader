@@ -1,3 +1,5 @@
+import type { MessageDateFormatUtil } from '@app-types/utility';
+
 // The app's settings, set on the Settings page (ADR 0003).
 export interface SettingsApiModel {
   // The user's own address, display only: Microsoft sends from whichever account yarn mail:connect signed in with.
@@ -8,4 +10,6 @@ export interface SettingsApiModel {
   // Every email's subject and body, with {reading} and {date} to fill in. A fresh install's until the user saves.
   subjectTemplate: string;
   bodyTemplate: string;
+  // How {date} is written in every email. A fresh install's ("31 October 2026") until the user saves.
+  dateFormat: MessageDateFormatUtil;
 }

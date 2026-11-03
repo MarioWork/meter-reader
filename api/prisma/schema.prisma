@@ -207,15 +207,26 @@ model Bill {
 // The app's own settings, set on the Settings page (ADR 0003). One row at most, id 1, made the first time the user
 // saves: until then, and while a field is empty, that setting is not set.
 model Settings {
-  id            Int      @id @default(1)
+  id              Int               @id @default(1)
   // The provider's one address: every reading is emailed here. No default: the user sets it.
-  providerEmail   String?  @map("provider_email")
+  providerEmail   String?           @map("provider_email")
   // Every email's subject and body, with {reading} and {date} to fill in (docs/GLOSSARY.md: Template). The defaults
   // are a fresh install's, the same as DEFAULT_SUBJECT_TEMPLATE and DEFAULT_BODY_TEMPLATE in settings.template.ts.
-  subjectTemplate String   @default("Leitura {date}") @map("subject_template")
-  bodyTemplate    String   @default("Leitura - {reading} - {date}") @map("body_template")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  subjectTemplate String            @default("Leitura {date}") @map("subject_template")
+  bodyTemplate    String            @default("Leitura - {reading} - {date}") @map("body_template")
+  // How {date} is written in every email (docs/GLOSSARY.md: Date format). A fresh install's is "31 October 2026".
+  dateFormat      MessageDateFormat @default(LONG_MONTH) @map("date_format")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("settings")
+}
+
+// The ways {date} can be written (settings.dateFormat.ts): "31 October 2026", "31 Oct 2026", "31/10/2026",
+// "2026-10-31". Only these: the database refuses any other.
+enum MessageDateFormat {
+  LONG_MONTH
+  SHORT_MONTH
+  DAY_MONTH_YEAR
+  ISO
 }

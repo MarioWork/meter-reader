@@ -4,12 +4,15 @@ import { SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { getMockSettings, updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { findNotification, renderRoutes, screen, userEvent, within } from '@test-utils';
-import { formatEmailDate, todayAsIsoDate } from '@utils/dateUtils';
+import { MessageDateFormatUtil } from '@app-types/utility';
+import { todayAsIsoDate } from '@utils/dateUtils';
+import { formatMessageDate } from '@utils/messageDateFormatUtils';
 
 const SAVED_ADDRESS = 'readings@water-provider.example';
 const NEW_ADDRESS = 'meter@other-provider.example';
 const INVALID_ADDRESS_ERROR = /Type a valid email address/;
 const SAMPLE_READING = '00123';
+const DATE_FORMAT_ERROR = 'Pick a date format from the list.';
 
 async function renderSettings() {
   renderRoutes(routes, { initialEntries: [SETTINGS_ROUTES_PATHS.BASE] });
@@ -52,8 +55,13 @@ function previewRow(label: string) {
   return definitions[rowIndex];
 }
 
-function today() {
-  return formatEmailDate(todayAsIsoDate());
+function dateFormatField() {
+  return screen.getByRole('combobox', { name: 'Date format' });
+}
+
+// Today as {date} reads in the email, in the mock settings' format unless another is given.
+function today(dateFormat: MessageDateFormatUtil = MessageDateFormatUtil.LONG_MONTH) {
+  return formatMessageDate(todayAsIsoDate(), dateFormat);
 }
 
 async function save() {
@@ -274,4 +282,68 @@ it('previews To as not set while the address is empty', async () => {
   await userEvent.clear(toField());
 
   expect(previewRow('To')).toHaveTextContent('Not set');
+});
+
+it('offers the four date formats, each as a sample, with the saved one chosen', async () => {
+  await renderSettings();
+
+  const options = within(dateFormatField()).getAllByRole('option');
+
+  expect(options.map((option) => option.textContent)).toEqual([
+    '31 October 2026',
+    '31 Oct 2026',
+    '31/10/2026',
+    '2026-10-31',
+  ]);
+  expect(screen.getByRole('option', { name: '31 October 2026' })).toHaveProperty('selected', true);
+});
+
+it('shows the date format saved last when another one was saved', async () => {
+  updateMockSettings({ dateFormat: MessageDateFormatUtil.ISO });
+
+  await renderSettings();
+
+  expect(screen.getByRole('option', { name: '2026-10-31' })).toHaveProperty('selected', true);
+});
+
+it('saves the chosen date format with the rest and says so', async () => {
+  await renderSettings();
+
+  await userEvent.selectOptions(dateFormatField(), '31/10/2026');
+  await save();
+
+  expect(await findNotification('Settings saved')).toBeVisible();
+  expect(getMockSettings()).toMatchObject({ to: SAVED_ADDRESS, dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR });
+});
+
+it('writes the date in the preview in the chosen format, before saving', async () => {
+  await renderSettings();
+
+  await userEvent.selectOptions(dateFormatField(), '31 Oct 2026');
+
+  expect(previewRow('Subject')).toHaveTextContent(`Meter reading ${today(MessageDateFormatUtil.SHORT_MONTH)}`);
+  expect(previewRow('Body')).toHaveTextContent(`Date: ${today(MessageDateFormatUtil.SHORT_MONTH)}`);
+  expect(getMockSettings().dateFormat).toBe(MessageDateFormatUtil.LONG_MONTH);
+});
+
+it('marks the date format when the server refuses it', async () => {
+  server.use(
+    http.put(`${TEST_BASE_API_URL}/settings`, () =>
+      HttpResponse.json(
+        {
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          issues: [{ path: '/dateFormat', message: 'Invalid option' }],
+        },
+        { status: 400 },
+      ),
+    ),
+  );
+  await renderSettings();
+
+  await save();
+
+  expect(await screen.findByText(DATE_FORMAT_ERROR)).toBeVisible();
+  expect(dateFormatField()).toHaveAttribute('aria-invalid', 'true');
+  expect(dateFormatField()).toHaveAccessibleDescription(expect.stringContaining(DATE_FORMAT_ERROR));
 });

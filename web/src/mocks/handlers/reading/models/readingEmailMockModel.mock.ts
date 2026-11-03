@@ -1,16 +1,17 @@
 import type { EmailDefaultsApiModel, ReadingApiModel, ReadingEmailApiModel, SettingsApiModel } from '@app-types/models';
 import { createSettingsMockModel } from '@mocks/handlers/settings/models/settingsMockModel.mock';
-import { formatEmailDate } from '@utils/dateUtils';
+import { formatMessageDate } from '@utils/messageDateFormatUtils';
 import { fillMessageTemplate } from '@utils/messageTemplateUtils';
 
 // The preview the api builds for a reading: the templates in Settings filled in with the reading as read and its day
-// spelled out, and its photo when it has one. The handlers pass in the mock settings, so a save in the demo shows.
+// written in the date format chosen there, and its photo when it has one. The handlers pass in the mock settings, so
+// a save in the demo shows.
 export const createReadingEmailMockModel = (
   reading: ReadingApiModel,
   settings: SettingsApiModel = createSettingsMockModel(),
   overrides?: Partial<ReadingEmailApiModel>,
 ): ReadingEmailApiModel => {
-  const values = { reading: reading.digits, date: formatEmailDate(reading.date) };
+  const values = { reading: reading.digits, date: formatMessageDate(reading.date, settings.dateFormat) };
 
   return {
     from: settings.from,
@@ -30,5 +31,6 @@ export const createEmailDefaultsMockModel = (
   to: settings.to,
   subjectTemplate: settings.subjectTemplate,
   bodyTemplate: settings.bodyTemplate,
+  dateFormat: settings.dateFormat,
   ...overrides,
 });

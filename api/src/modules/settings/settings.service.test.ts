@@ -1,13 +1,18 @@
 import { ConflictError } from '../../lib/httpErrors.ts';
 import { settingsRepository } from './settings.repository.ts';
-import { getMessageTemplates, getProviderEmail, requireProviderEmail } from './settings.service.ts';
+import { getMessageSettings, getProviderEmail, requireProviderEmail } from './settings.service.ts';
 
 vi.mock('./settings.repository.ts', () => ({
   settingsRepository: { find: vi.fn(), save: vi.fn() },
 }));
 
 const PROVIDER_EMAIL = 'readings@water-provider.example';
-const SAVED_ROW = { providerEmail: PROVIDER_EMAIL, subjectTemplate: 'Meter {date}', bodyTemplate: 'Reading {reading}' };
+const SAVED_ROW = {
+  providerEmail: PROVIDER_EMAIL,
+  subjectTemplate: 'Meter {date}',
+  bodyTemplate: 'Reading {reading}',
+  dateFormat: 'ISO',
+} as const;
 
 describe('getProviderEmail', () => {
   it('answers null when Settings were never saved', async () => {
@@ -40,16 +45,24 @@ describe('requireProviderEmail', () => {
   });
 });
 
-describe('getMessageTemplates', () => {
-  it("answers a fresh install's templates when Settings were never saved", async () => {
+describe('getMessageSettings', () => {
+  it("answers a fresh install's templates and date format when Settings were never saved", async () => {
     vi.mocked(settingsRepository.find).mockResolvedValueOnce(undefined);
 
-    expect(await getMessageTemplates()).toEqual({ subject: 'Leitura {date}', body: 'Leitura - {reading} - {date}' });
+    expect(await getMessageSettings()).toEqual({
+      subject: 'Leitura {date}',
+      body: 'Leitura - {reading} - {date}',
+      dateFormat: 'longMonth',
+    });
   });
 
-  it('answers the saved templates when they were saved', async () => {
+  it('answers the saved templates and date format when they were saved', async () => {
     vi.mocked(settingsRepository.find).mockResolvedValueOnce(SAVED_ROW);
 
-    expect(await getMessageTemplates()).toEqual({ subject: 'Meter {date}', body: 'Reading {reading}' });
+    expect(await getMessageSettings()).toEqual({
+      subject: 'Meter {date}',
+      body: 'Reading {reading}',
+      dateFormat: 'iso',
+    });
   });
 });
