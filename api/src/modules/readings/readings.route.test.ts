@@ -1,5 +1,6 @@
 import { access } from 'node:fs/promises';
 import type { InjectOptions } from 'fastify';
+import { readSheet } from 'read-excel-file/node';
 import { buildApp, type App } from '../../app.ts';
 import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
 import { prisma } from '../../lib/prisma.ts';
@@ -11,6 +12,12 @@ import { microsoftServer } from '../mail/mail.microsoftIdentity.mock.ts';
 const HOUR_MS = 3_600_000;
 const PROVIDER_EMAIL = 'readings@water-provider.example';
 const STORED_ACCESS_TOKEN = 'stored-access-token';
+// The readings spreadsheet's header, and what its tests need to build readings and read times back.
+const SPREADSHEET_HEADER = ['Date', 'Digits', 'Status', 'Sent at'];
+const MINUTE_MS = 60_000;
+const READINGS_PAST_ONE_PAGE = 12;
+const DATE_PART_LENGTH = 2;
+const DIGIT_COUNT = 5;
 
 let app: App;
 let token: string;
@@ -381,6 +388,133 @@ describe('GET /readings', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+});
+
+describe('GET /readings/export.xlsx', () => {
+  function exportReadings(query = '') {
+    return app.inject({ method: 'GET', url: `/readings/export.xlsx${query}`, ...withSession(token) });
+  }
+
+  // A spreadsheet keeps a time as a fraction of a day, so it reads back a hair off the minute it shows.
+  function toNearestMinute(cell: unknown): unknown {
+    if (!(cell instanceof Date)) return cell;
+
+    return new Date(Math.round(cell.getTime() / MINUTE_MS) * MINUTE_MS);
+  }
+
+  // The sheet as rows of cells, header first.
+  async function sheetRows(query = ''): Promise<unknown[][]> {
+    const response = await exportReadings(query);
+    const rows = await readSheet(response.rawPayload);
+
+    return rows.map((row) => row.map(toNearestMinute));
+  }
+
+  function digitsColumn(rows: unknown[][]): unknown[] {
+    return rows.slice(1).map((row) => row[1]);
+  }
+
+  async function addSentReading(digits: string, date: string, sentAt: string): Promise<void> {
+    const id = (await addReading({ digits, date })).json<{ id: number }>().id;
+
+    await prisma.reading.update({ where: { id }, data: { status: 'SENT', sentAt: new Date(sentAt) } });
+  }
+
+  it('answers an .xlsx download named water-readings.xlsx when there are no filters', async () => {
+    const response = await exportReadings();
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(response.headers['content-disposition']).toBe('attachment; filename="water-readings.xlsx"');
+  });
+
+  it('holds the date, the digits as text, the status and when it was sent, newest first, when readings exist', async () => {
+    await addReading({ digits: '00123', date: '2026-09-01' });
+    await addReadingWithStatus('00456', '2026-10-01', 'FAILED');
+    await addSentReading('00789', '2026-10-31', '2026-10-31T09:05:00.000Z');
+
+    const rows = await sheetRows();
+
+    expect(rows).toEqual([
+      SPREADSHEET_HEADER,
+      [new Date('2026-10-31T00:00:00.000Z'), '00789', 'Sent', new Date('2026-10-31T09:05:00.000Z')],
+      [new Date('2026-10-01T00:00:00.000Z'), '00456', 'Failed', null],
+      [new Date('2026-09-01T00:00:00.000Z'), '00123', 'Not sent', null],
+    ]);
+  });
+
+  it("shows when a reading was sent as the user's clock showed it when a time zone is given", async () => {
+    await addSentReading('00789', '2026-07-31', '2026-07-31T09:05:00.000Z');
+
+    const rows = await sheetRows('?timeZone=Europe/Lisbon');
+
+    // Lisbon is an hour ahead of UTC in summer.
+    expect(rows[1]?.[3]).toEqual(new Date('2026-07-31T10:05:00.000Z'));
+  });
+
+  it('holds every reading, past the first page, when there are more than a page of them', async () => {
+    for (let month = 1; month <= READINGS_PAST_ONE_PAGE; month++) {
+      const monthPart = String(month).padStart(DATE_PART_LENGTH, '0');
+
+      await addReading({ digits: String(month).padStart(DIGIT_COUNT, '0'), date: `2025-${monthPart}-01` });
+    }
+
+    const rows = await sheetRows();
+
+    expect(rows).toHaveLength(READINGS_PAST_ONE_PAGE + 1);
+  });
+
+  it('holds only the readings in the day range and with the statuses asked for when filtered', async () => {
+    await addReading({ digits: '00100', date: '2026-08-31' });
+    await addReading({ digits: '00200', date: '2026-09-01' });
+    await addReadingWithStatus('00300', '2026-09-15', 'FAILED');
+    await addReadingWithStatus('00400', '2026-09-30', 'SENT');
+    await addReading({ digits: '00500', date: '2026-10-01' });
+
+    const rows = await sheetRows('?from=2026-09-01&to=2026-09-30&status=notSent,failed');
+
+    expect(digitsColumn(rows)).toEqual(['00300', '00200']);
+  });
+
+  it('is named after the filters when filtered', async () => {
+    const response = await exportReadings('?from=2026-01-01&to=2026-03-31&status=notSent,failed');
+
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="water-readings-2026-01-01-to-2026-03-31-not-sent-failed.xlsx"',
+    );
+  });
+
+  it('is named after the open end of the range when only one day is given', async () => {
+    const fromResponse = await exportReadings('?from=2026-01-01');
+    const toResponse = await exportReadings('?to=2026-03-31');
+
+    expect(fromResponse.headers['content-disposition']).toBe(
+      'attachment; filename="water-readings-from-2026-01-01.xlsx"',
+    );
+    expect(toResponse.headers['content-disposition']).toBe(
+      'attachment; filename="water-readings-until-2026-03-31.xlsx"',
+    );
+  });
+
+  it('returns 400 VALIDATION_ERROR when the range ends before it starts', async () => {
+    const response = await exportReadings('?from=2026-10-01&to=2026-09-01');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the time zone is not one the server knows', async () => {
+    const response = await exportReadings('?timeZone=Mars/Olympus');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const response = await app.inject({ method: 'GET', url: '/readings/export.xlsx' });
+
+    expect(response.statusCode).toBe(401);
   });
 });
 

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Outlet, useLoaderData } from 'react-router';
 import type { LoaderDataUtil } from '@app-types/utility';
 import EmptyHistory from './components/EmptyHistory';
+import ExportReadingsLink from './components/ExportReadingsLink';
 import HistoryFilters from './components/HistoryFilters';
 import LoadMoreHistory from './components/LoadMoreHistory';
 import NewReadingBar from './components/NewReadingBar';
@@ -37,7 +38,11 @@ function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-6 **:scroll-mb-24">
-      <h1 className="text-2xl font-bold">Water Readings</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Water Readings</h1>
+        {/* Only while readings are shown: an empty history, or a filter matching none, has nothing to export. */}
+        {hasReadings && <ExportReadingsLink filters={filters} />}
+      </div>
       <HistoryFilters filterButtonRef={filterButtonRef} />
       {/* Dims while new filters load, so the change shows at once instead of the list swapping out of nowhere. */}
       <div

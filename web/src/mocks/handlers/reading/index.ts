@@ -3,12 +3,14 @@ import deleteReadingHandler from './deleteReading.mock.handler';
 import getEmailDefaultsHandler from './getEmailDefaults.mock.handler';
 import getReadingHandler from './getReading.mock.handler';
 import getReadingEmailHandler from './getReadingEmail.mock.handler';
+import getReadingsSpreadsheetHandler from './getReadingsSpreadsheet.mock.handler';
 import listReadingsHandler from './listReadings.mock.handler';
 import sendReadingHandler from './sendReading.mock.handler';
 import updateReadingHandler from './updateReading.mock.handler';
 
 export const readingMockHandlers = (baseUrl: string) => [
   ...listReadingsHandler(baseUrl),
+  ...getReadingsSpreadsheetHandler(baseUrl),
   ...addReadingHandler(baseUrl),
   ...deleteReadingHandler(baseUrl),
   ...getEmailDefaultsHandler(baseUrl),

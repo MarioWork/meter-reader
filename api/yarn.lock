@@ -2556,6 +2556,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fflate@npm:^0.8.2, fflate@npm:^0.8.3":
+  version: 0.8.3
+  resolution: "fflate@npm:0.8.3"
+  checksum: 10c0/eab181ca37f5348ae76d4b6f840e0026e30220e33153289ac942222d8b9638237d486507dbcc09878d724095bd354993a2ee48bbee99c8f2c6440d4448719aa7
+  languageName: node
+  linkType: hard
+
 "file-entry-cache@npm:11.1.5 || >11.1.6 <12":
   version: 11.1.5
   resolution: "file-entry-cache@npm:11.1.5"
@@ -2710,7 +2717,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graceful-fs@npm:^4.2.4, graceful-fs@npm:^4.2.6":
+"graceful-fs@npm:^4.2.2, graceful-fs@npm:^4.2.4, graceful-fs@npm:^4.2.6":
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: 10c0/386d011a553e02bc594ac2ca0bd6d9e4c22d7fa8cfbfc448a6d148c59ea881b092db9dbe3547ae4b88e55f1b01f7c4a2ecc53b310c042793e63aa44cf6c257f2
@@ -3182,10 +3189,12 @@ __metadata:
     pino-pretty: "npm:^13"
     prettier: "npm:^3.9"
     prisma: "npm:^7"
+    read-excel-file: "npm:^9.3.14"
     typescript: "npm:~6.0"
     typescript-eslint: "npm:^8.72"
     vite: "npm:^8"
     vitest: "npm:^5"
+    write-excel-file: "npm:^4"
     zod: "npm:^4.6"
   languageName: unknown
   linkType: soft
@@ -3353,6 +3362,13 @@ __metadata:
   bin:
     node-gyp: bin/node-gyp.js
   checksum: 10c0/c6693e52e0e111b21f5cd8ff303b41b51f40338adcc79ac5c6a02399eba7039d50dc816dcafcc485870291a641f7cb75db8887a9bdd0de537fe635a3a81cba5b
+  languageName: node
+  linkType: hard
+
+"node-int64@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "node-int64@npm:0.4.0"
+  checksum: 10c0/a6a4d8369e2f2720e9c645255ffde909c0fbd41c92ea92a5607fc17055955daac99c1ff589d421eee12a0d24e99f7bfc2aabfeb1a4c14742f6c099a51863f31a
   languageName: node
   linkType: hard
 
@@ -3833,6 +3849,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"read-excel-file@npm:^9.3.14":
+  version: 9.3.14
+  resolution: "read-excel-file@npm:9.3.14"
+  dependencies:
+    fflate: "npm:^0.8.3"
+    saxen: "npm:^11.1.0"
+    unzipper-esm: "npm:^0.13.3"
+    worker-f: "npm:^0.1.12"
+  checksum: 10c0/0b40c1de016106e406da472aaa2c8ab085c7ec95c863c135d688d0a4dab7d347c083e2ca5e02ec03bf3b1795e2ae691013e19588b61c56f32d75b21cedb5071c
+  languageName: node
+  linkType: hard
+
 "readdirp@npm:^5.0.0":
   version: 5.1.1
   resolution: "readdirp@npm:5.1.1"
@@ -3990,6 +4018,13 @@ __metadata:
   version: 2.1.2
   resolution: "safer-buffer@npm:2.1.2"
   checksum: 10c0/7e3c8b2e88a1841c9671094bbaeebd94448111dd90a81a1f606f3f67708a6ec57763b3b47f06da09fc6054193e0e6709e77325415dc8422b04497a8070fa02d4
+  languageName: node
+  linkType: hard
+
+"saxen@npm:^11.1.0":
+  version: 11.2.0
+  resolution: "saxen@npm:11.2.0"
+  checksum: 10c0/118ea49566e50336bfbeba2b13c4dabd5f9db775a9664d6550b9a6b3570bdf930e6f48255bf8639c18debaf8df43f7eac1e11ee7dfd67f2fd99a23fc26d03710
   languageName: node
   linkType: hard
 
@@ -4361,6 +4396,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"unzipper-esm@npm:^0.13.3":
+  version: 0.13.3
+  resolution: "unzipper-esm@npm:0.13.3"
+  dependencies:
+    graceful-fs: "npm:^4.2.2"
+    node-int64: "npm:^0.4.0"
+  checksum: 10c0/9218208d9154f2d9053100ea083b02ce75f259744af817433d580c7a96db7b1ef353e25a88a2b832df566f696f612b8c780f7e6325e66132c512583ca61562fc
+  languageName: node
+  linkType: hard
+
 "uri-js@npm:^4.2.2":
   version: 4.4.1
   resolution: "uri-js@npm:4.4.1"
@@ -4545,6 +4590,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"worker-f@npm:^0.1.12":
+  version: 0.1.21
+  resolution: "worker-f@npm:0.1.21"
+  checksum: 10c0/e3252739880188913b279d6095e1cdba283b8f5eead46f29aae398a870df4b396029f3859e5edfafc52d7ab29b88880ad88682ecec22de492158c11c5065a817
+  languageName: node
+  linkType: hard
+
 "wrap-ansi@npm:^9.0.0":
   version: 9.0.2
   resolution: "wrap-ansi@npm:9.0.2"
@@ -4560,6 +4612,15 @@ __metadata:
   version: 1.0.2
   resolution: "wrappy@npm:1.0.2"
   checksum: 10c0/56fece1a4018c6a6c8e28fbc88c87e0fbf4ea8fd64fc6c63b18f4acc4bd13e0ad2515189786dd2c30d3eec9663d70f4ecf699330002f8ccb547e4a18231fc9f0
+  languageName: node
+  linkType: hard
+
+"write-excel-file@npm:^4":
+  version: 4.1.1
+  resolution: "write-excel-file@npm:4.1.1"
+  dependencies:
+    fflate: "npm:^0.8.2"
+  checksum: 10c0/6c301bdd99af643687aadc3dd3697ea9e647dd8f6fe3df8a43d61924cda8c21bdff08aa0c79b44e09160d84485dab69d8dcb3deec5317f5593154c88c3042bfa
   languageName: node
   linkType: hard
 

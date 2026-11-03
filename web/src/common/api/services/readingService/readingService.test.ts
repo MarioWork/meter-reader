@@ -69,6 +69,50 @@ describe('getReadings', () => {
   });
 });
 
+describe('getReadingsSpreadsheetUrl', () => {
+  const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+  // Reads the whole file, as a browser saving it would. A body left unread keeps the mocked socket open.
+  async function download(url: string): Promise<Response> {
+    const response = await fetch(url);
+
+    await response.arrayBuffer();
+
+    return response;
+  }
+
+  it('points at the spreadsheet under the API base url, the filters and time zone under their wire names, when filtered', () => {
+    const url = new URL(
+      readingService.getReadingsSpreadsheetUrl({
+        dateFrom: '2026-09-01',
+        dateTo: '2026-09-30',
+        statuses: [ReadingStatusUtil.NOT_SENT, ReadingStatusUtil.FAILED],
+        timeZone: 'Europe/Lisbon',
+      }),
+    );
+
+    expect(`${url.origin}${url.pathname}`).toBe(`${API}/readings/export.xlsx`);
+    expect(url.searchParams.get('from')).toBe('2026-09-01');
+    expect(url.searchParams.get('to')).toBe('2026-09-30');
+    expect(url.searchParams.get('status')).toBe('notSent,failed');
+    expect(url.searchParams.get('timeZone')).toBe('Europe/Lisbon');
+  });
+
+  it('leaves out every filter when none is set and no status is asked for', () => {
+    const url = new URL(readingService.getReadingsSpreadsheetUrl({ statuses: [], timeZone: 'UTC' }));
+
+    expect([...url.searchParams.keys()]).toEqual(['timeZone']);
+  });
+
+  it('downloads an .xlsx file under a clear name when followed', async () => {
+    const response = await download(readingService.getReadingsSpreadsheetUrl({ timeZone: 'UTC' }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe(XLSX_CONTENT_TYPE);
+    expect(response.headers.get('content-disposition')).toBe('attachment; filename="water-readings.xlsx"');
+  });
+});
+
 describe('addReading', () => {
   const reading = { digits: '00123', date: '2026-10-31' };
 

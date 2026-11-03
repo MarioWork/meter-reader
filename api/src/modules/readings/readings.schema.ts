@@ -34,12 +34,56 @@ const StatusFilterSchema = z
   .transform((value) => value.split(STATUS_SEPARATOR).map((status) => status.trim()))
   .pipe(z.array(z.enum(READING_STATUSES)));
 
-// The history narrowed to calendar days (both inclusive) and statuses, then paged. Still newest first.
-export const ListReadingsQuerySchema = PaginationQuerySchema.extend({
+// Calendar days (both inclusive) and statuses: Home's filters, the same for the history and its spreadsheet.
+const READING_FILTER_SHAPE = {
   from: z.preprocess(emptyAsAbsent, z.iso.date().optional()),
   to: z.preprocess(emptyAsAbsent, z.iso.date().optional()),
   status: z.preprocess(emptyAsAbsent, StatusFilterSchema.optional()),
-}).refine(({ from, to }) => !from || !to || from <= to, { message: FROM_AFTER_TO_MESSAGE, path: ['from'] });
+};
+
+type DayRange = { from?: string; to?: string };
+
+function isRangeInOrder({ from, to }: DayRange): boolean {
+  return !from || !to || from <= to;
+}
+
+const RANGE_IN_ORDER_RULE = { message: FROM_AFTER_TO_MESSAGE, path: ['from'] };
+
+// The history narrowed by the filters, then paged. Still newest first.
+export const ListReadingsQuerySchema = PaginationQuerySchema.extend(READING_FILTER_SHAPE).refine(
+  isRangeInOrder,
+  RANGE_IN_ORDER_RULE,
+);
+
+// A time zone the runtime knows (an IANA name such as Europe/Lisbon): Intl refuses any other.
+function isKnownTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const UNKNOWN_TIME_ZONE_MESSAGE = 'Use a time zone name such as Europe/Lisbon';
+const DEFAULT_TIME_ZONE = 'UTC';
+
+// Every reading the filters match, not a page: the spreadsheet holds them all, newest first. `timeZone` is where the
+// user is, so a sent time reads as their own clock showed it; UTC when it is left out.
+export const ExportReadingsQuerySchema = z
+  .object({
+    ...READING_FILTER_SHAPE,
+    timeZone: z.preprocess(
+      emptyAsAbsent,
+      z
+        .string()
+        .refine(isKnownTimeZone, UNKNOWN_TIME_ZONE_MESSAGE)
+        .default(DEFAULT_TIME_ZONE)
+        .meta({ example: 'Europe/Lisbon' }),
+    ),
+  })
+  .refine(isRangeInOrder, RANGE_IN_ORDER_RULE);
 
 export const ReadingParamsSchema = z.object({ id: z.coerce.number().int().positive() });
 
@@ -121,8 +165,12 @@ export const EmailDefaultsResponseSchema = z
 
 export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponseSchema);
 
+// The .xlsx file. Binary: a Buffer goes out as is (Fastify never serialises one); the schema documents it as a file.
+export const ReadingsSpreadsheetResponseSchema = z.instanceof(Buffer).meta({ type: 'string', format: 'binary' });
+
 export type CreateReading = z.infer<typeof CreateReadingSchema>;
 export type ListReadingsQuery = z.infer<typeof ListReadingsQuerySchema>;
+export type ExportReadingsQuery = z.infer<typeof ExportReadingsQuerySchema>;
 export type ReadingParams = z.infer<typeof ReadingParamsSchema>;
 export type SendReading = z.infer<typeof SendReadingSchema>;
 export type UpdateReading = z.infer<typeof UpdateReadingSchema>;
