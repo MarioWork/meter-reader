@@ -1,5 +1,6 @@
 export type { ApiError } from './apiError.type';
 export type { ApiErrorIssue } from './apiErrorIssue.type';
+export type { BackupApiModel, BackupReadingApiModel } from './backupApiModel.type';
 export type { AuthStatusApiModel } from './authStatusApiModel.type';
 export type { ReadingApiModel, ReadingId } from './readingApiModel.type';
 export type { ReadingEmailApiModel } from './readingEmailApiModel.type';

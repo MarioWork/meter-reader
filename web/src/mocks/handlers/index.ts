@@ -1,4 +1,5 @@
 import { authMockHandlers } from './auth';
+import { backupMockHandlers } from './backup';
 import { photoMockHandlers } from './photo';
 import { readingMockHandlers } from './reading';
 import { mailMockHandlers } from './mail';
@@ -13,6 +14,7 @@ export const getHandlers = (baseUrl: string) => [
   ...photoMockHandlers(baseUrl),
   ...mailMockHandlers(baseUrl),
   ...settingsMockHandlers(baseUrl),
+  ...backupMockHandlers(baseUrl),
 ];
 
 export { MOCK_DELAY };
