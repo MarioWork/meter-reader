@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ListFilterIcon } from 'lucide-react';
 import { Button } from '@components/ui/button';
+import { useIsWideScreen } from '@hooks/useIsWideScreen';
 import { historyFilterChips } from '../../historyFilterUtils';
 import { useHistoryFilters } from '../../hooks/useHistoryFilters';
 import type { HistoryFilterChip, HistoryFilterValues } from '../../types';
+import FilterBar from './components/FilterBar';
 import FilterChips from './components/FilterChips';
 import FilterSheet from './components/FilterSheet';
 
@@ -14,10 +16,12 @@ type Props = {
 
 const FILTER_LABEL = 'Filter';
 
-// The Filter button, which opens the filter sheet, and the active filters as chips beside it. A removed chip takes
-// focus with it, so focus goes to the Filter button first instead of dropping to the top of the page.
+// A wide screen has the room to show every filter at once, in a bar under the title. A phone gets the Filter button,
+// which opens the filter sheet, and the active filters as chips beside it. A removed chip takes focus with it, so
+// focus goes to the Filter button first instead of dropping to the top of the page.
 function HistoryFilters({ filterButtonRef }: Props) {
-  const { filters, applyFilters } = useHistoryFilters();
+  const { filters, applyFilters, updateFilters } = useHistoryFilters();
+  const isWideScreen = useIsWideScreen();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const chips = historyFilterChips(filters);
   const hasChips = chips.length > 0;
@@ -31,6 +35,8 @@ function HistoryFilters({ filterButtonRef }: Props) {
     filterButtonRef.current?.focus();
     applyFilters(chip.remainingFilters);
   };
+
+  if (isWideScreen) return <FilterBar filters={filters} onApply={applyFilters} onUpdate={updateFilters} />;
 
   return (
     <div className="flex flex-wrap items-center gap-2">

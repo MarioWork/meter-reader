@@ -19,8 +19,8 @@ export type HistoryFilterChip = {
   remainingFilters: HistoryFilterValues;
 };
 
-// The filter sheet's choices before they are applied. No preset means any day. The custom days are the date
-// inputs' text, empty while not picked.
+// The filters' choices before they are applied. No preset means any day. The custom range is whole months
+// (YYYY-MM), empty while not picked: From starts on its month's first day, To ends on its month's last day.
 export type HistoryFilterDraft = {
   datePreset?: DatePreset;
   customFrom: string;
