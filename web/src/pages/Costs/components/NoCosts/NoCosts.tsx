@@ -21,17 +21,17 @@ const EMPTY_STATES: Record<EmptyStateKind, EmptyState> = {
   filtered: {
     icon: <SearchXIcon />,
     title: 'No costs in these dates',
-    description: 'None of the readings in these dates has a cost.',
+    description: 'None of the readings in these dates has a cost or a bill.',
   },
   unfiltered: {
     icon: <ReceiptEuroIcon />,
     title: 'No costs yet',
-    description: 'Add a cost to a reading from its ⋯ menu on Home, and it shows up here.',
+    description: 'Add a cost or a bill to a reading from its ⋯ menu on Home, and it shows up here.',
   },
 };
 
-// Nothing to chart: no reading has a cost yet, or none in the dates picked. The second comes with the way back to
-// every cost.
+// Nothing to list: no reading has a cost or a bill yet, or none in the dates picked. The second comes with the way
+// back to every reading.
 function NoCosts({ isFiltered, onClearFilters }: Props) {
   const { icon, title, description } = EMPTY_STATES[isFiltered ? 'filtered' : 'unfiltered'];
 

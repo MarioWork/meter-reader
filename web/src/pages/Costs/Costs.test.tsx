@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { COSTS_ROUTES_PATHS } from '@application/routes/routesUtils';
+import { addMockBill } from '@mocks/handlers/bill/billMockState';
+import { updateMockReading } from '@mocks/handlers/reading/readingMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { mockWideScreen, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
 
@@ -9,6 +11,10 @@ const ALL_COSTS_TOTAL = '€444.80';
 const ALL_COSTS_COUNT = 11;
 // 1 Jan 2026 (€44.10) and 1 Feb 2026 (€37.75); 1 Mar 2026 has no cost.
 const FIRST_QUARTER_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-01-01&to=2026-03-31`;
+// The mock history's 1 Sep 2026 reading (no cost) and 1 Aug 2026 reading (€39.05).
+const NO_COST_READING_ID = 13;
+const COSTED_READING_ID = 12;
+const EXPORT_LINK_NAME = 'Export costs as a spreadsheet';
 
 async function renderCosts(path = COSTS_ROUTES_PATHS.BASE) {
   const { router } = renderRoutes(routes, { initialEntries: [path] });
@@ -22,7 +28,20 @@ function total() {
 }
 
 function costItems() {
-  return within(screen.getByRole('list', { name: 'Readings with a cost' })).getAllByRole('listitem');
+  return within(screen.getByRole('list', { name: 'Readings with a cost or a bill' })).getAllByRole('listitem');
+}
+
+// A bill saved on the mock reading, as the API answers the reading once updated with one. Its id, for the link.
+function saveMockBill(readingId: number): number {
+  const { id, contentType, sizeBytes } = addMockBill(new Blob([new Uint8Array(1000)]), 'application/pdf');
+
+  updateMockReading(readingId, { bill: { id, contentType, sizeBytes } });
+
+  return id;
+}
+
+function exportUrl() {
+  return new URL(screen.getByRole('link', { name: EXPORT_LINK_NAME }).getAttribute('href') ?? '');
 }
 
 // Keeps the query of every costs request, then lets the mock API answer it as usual.
@@ -57,6 +76,75 @@ it('lists only the readings that have a cost, newest first, with the sum of thei
   expect(costItems()[0]).toHaveTextContent('€39.05');
   expect(screen.queryByText('1 Mar 2026')).not.toBeInTheDocument();
   expect(screen.queryByText('1 Oct 2026')).not.toBeInTheDocument();
+});
+
+describe('readings with a bill', () => {
+  it('lists a reading with only a bill, says it has no cost, and leaves it out of the sum and the chart', async () => {
+    saveMockBill(NO_COST_READING_ID);
+
+    await renderCosts();
+
+    expect(costItems()).toHaveLength(ALL_COSTS_COUNT + 1);
+    expect(costItems()[0]).toHaveTextContent('1 Sept 2026');
+    expect(costItems()[0]).toHaveTextContent('No cost');
+    expect(total()).toHaveTextContent(ALL_COSTS_TOTAL);
+    expect(total()).toHaveTextContent(`${ALL_COSTS_COUNT} readings`);
+    expect(screen.getByRole('img', { name: /^Bar chart of 11 costs, from 1 Sept 2025 to 1 Aug 2026\./ })).toBeVisible();
+  });
+
+  it('links each row with a bill to it, in a new tab, and the rows without one to nothing', async () => {
+    const onlyBillId = saveMockBill(NO_COST_READING_ID);
+    const costedBillId = saveMockBill(COSTED_READING_ID);
+
+    await renderCosts();
+
+    const onlyBill = within(costItems()[0]).getByRole('link', { name: 'Bill of 1 Sept 2026, opens in a new tab' });
+    expect(onlyBill).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${onlyBillId}`);
+    expect(onlyBill).toHaveAttribute('target', '_blank');
+    expect(onlyBill).toHaveAttribute('rel', 'noopener noreferrer');
+    const costedBill = within(costItems()[1]).getByRole('link', { name: 'Bill of 1 Aug 2026, opens in a new tab' });
+    expect(costedBill).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${costedBillId}`);
+    expect(costItems()[1]).toHaveTextContent('€39.05');
+    expect(within(costItems()[2]).queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('lists the readings with only a bill when no reading in the dates has a cost', async () => {
+    saveMockBill(NO_COST_READING_ID);
+
+    await renderCosts(`${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`);
+
+    expect(costItems()).toHaveLength(1);
+    expect(total()).toHaveTextContent('€0.00');
+    expect(total()).toHaveTextContent('0 readings');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+});
+
+describe('exporting the costs', () => {
+  it('downloads every listed reading as a spreadsheet when no date filter is on', async () => {
+    await renderCosts();
+
+    const url = exportUrl();
+
+    expect(screen.getByRole('link', { name: EXPORT_LINK_NAME })).toHaveAttribute('download');
+    expect(`${url.origin}${url.pathname}`).toBe(`${TEST_BASE_API_URL}/readings/costs/export.xlsx`);
+    expect([...url.searchParams.keys()]).toEqual([]);
+  });
+
+  it("downloads only the readings in the page's day range when it is filtered", async () => {
+    await renderCosts(FIRST_QUARTER_2026);
+
+    const url = exportUrl();
+
+    expect(url.searchParams.get('from')).toBe('2026-01-01');
+    expect(url.searchParams.get('to')).toBe('2026-03-31');
+  });
+
+  it('is not offered when no reading in the dates has a cost or a bill', async () => {
+    await renderCosts(`${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`);
+
+    expect(screen.queryByRole('link', { name: EXPORT_LINK_NAME })).not.toBeInTheDocument();
+  });
 });
 
 it('describes the chart in words and points at the list, which has the same amounts', async () => {

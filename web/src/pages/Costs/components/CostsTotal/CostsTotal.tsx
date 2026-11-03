@@ -4,7 +4,7 @@ import { formatCost } from '@utils/costUtils';
 
 type Props = {
   totalCostCents: number;
-  readingCount: number;
+  costCount: number;
 };
 
 const TITLE = 'Total';
@@ -20,12 +20,13 @@ const READING_WORDS: Record<Intl.LDMLPluralRule, string> = {
 const PLURAL_RULES = new Intl.PluralRules(DISPLAY_LOCALE);
 
 // "1 reading", "11 readings".
-function readingCountLabel(readingCount: number): string {
-  return `${readingCount} ${READING_WORDS[PLURAL_RULES.select(readingCount)]}`;
+function costCountLabel(costCount: number): string {
+  return `${costCount} ${READING_WORDS[PLURAL_RULES.select(costCount)]}`;
 }
 
-// The sum of the Costs shown, and how many readings it adds up. A region named by its heading, so it can be found.
-function CostsTotal({ totalCostCents, readingCount }: Props) {
+// The sum of the Costs shown, and how many readings it adds up: those with a Cost, not those with only a Bill. A
+// region named by its heading, so it can be found.
+function CostsTotal({ totalCostCents, costCount }: Props) {
   const titleId = useId();
 
   return (
@@ -34,7 +35,7 @@ function CostsTotal({ totalCostCents, readingCount }: Props) {
         <CardTitle>
           <h2 id={titleId}>{TITLE}</h2>
         </CardTitle>
-        <CardDescription>{readingCountLabel(readingCount)}</CardDescription>
+        <CardDescription>{costCountLabel(costCount)}</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-3xl font-bold tabular-nums">{formatCost(totalCostCents)}</p>

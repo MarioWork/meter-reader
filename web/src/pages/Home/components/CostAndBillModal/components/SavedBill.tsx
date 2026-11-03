@@ -1,7 +1,7 @@
 import { Trash2Icon, Undo2Icon } from 'lucide-react';
 import type { ReadingBillApiModel } from '@app-types/models';
 import { Button } from '@components/ui/button';
-import { describeBill } from '@pages/Home/readingBillUtils';
+import { describeBill } from '@utils/billUtils';
 
 type Props = {
   bill: ReadingBillApiModel;

@@ -1,3 +1,4 @@
+import { APP_API_URL } from '../../lib/appOrigin.ts';
 import { BadRequestError, NotFoundError } from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import { openUpload, removeUpload, saveUpload, type OpenUpload } from '../../lib/uploads.ts';
@@ -14,6 +15,8 @@ const ENTITY = 'Bill';
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
 const DOWNLOAD_NAME_PREFIX = 'bill';
+// Where the bills routes are mounted (app.ts).
+const BILLS_PATH = '/bills';
 
 type BillFileType = BillRow['fileType'];
 
@@ -37,6 +40,11 @@ export type BillFile = OpenUpload & { contentType: BillContentType; downloadName
 // What a bill of this kind is sent as. For the readings, which answer their bill too.
 export function toBillContentType(fileType: BillFileType): BillContentType {
   return BILL_FORMATS[fileType].contentType;
+}
+
+// The absolute address a bill opens at, for a link outside the web app (a spreadsheet's). Built from a numeric id only.
+export function toBillUrl(id: number): string {
+  return `${APP_API_URL}${BILLS_PATH}/${id}`;
 }
 
 function toResponse(row: BillRow): BillResponse {

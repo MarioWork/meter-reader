@@ -24,6 +24,7 @@ import {
   addReading,
   deleteReading,
   getCosts,
+  getCostsSpreadsheet,
   getEmailDefaults,
   getReading,
   getReadingEmail,
@@ -65,12 +66,33 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'The readings that have a Cost, newest first, optionally in a day range, with the sum of their costs',
+        summary:
+          'The readings that have a Cost or a Bill, newest first, optionally in a day range, with the sum of their costs',
         querystring: ListCostsQuerySchema,
         response: { 200: CostListResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
       },
     },
     async (request) => getCosts(request.query),
+  );
+
+  // The Costs page's export: the same readings as GET /readings/costs for the same day range.
+  app.get(
+    '/costs/export.xlsx',
+    {
+      schema: {
+        tags: TAGS,
+        summary:
+          "The Costs page's readings as an .xlsx spreadsheet, newest first, with a link to each Bill and the sum",
+        querystring: ListCostsQuerySchema,
+        produces: [XLSX_CONTENT_TYPE],
+        response: { 200: ReadingsSpreadsheetResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const { fileName, content } = await getCostsSpreadsheet(request.query);
+
+      return reply.type(XLSX_CONTENT_TYPE).header('content-disposition', attachment(fileName)).send(content);
+    },
   );
 
   app.get(

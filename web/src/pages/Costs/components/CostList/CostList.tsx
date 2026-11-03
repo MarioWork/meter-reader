@@ -7,10 +7,11 @@ type Props = {
   readings: ReadingApiModel[];
 };
 
-const TITLE = 'Readings with a cost';
+const TITLE = 'Readings with a cost or a bill';
 
-// The readings behind the chart and the sum, newest first, each with its date and cost. It carries the same data as
-// the chart, so it is the chart's text alternative too.
+// The readings behind the chart and the sum, newest first, each with its date, its cost and its bill. It carries the
+// same data as the chart, so it is the chart's text alternative too; a reading with only a bill is listed but has no
+// bar.
 function CostList({ readings }: Props) {
   const titleId = useId();
 

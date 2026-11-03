@@ -171,11 +171,11 @@ export const readingsRepository = {
   findAll: (filter: ReadingFilter): Promise<ReadingRow[]> =>
     prisma.reading.findMany({ where: toWhere(filter), orderBy: [...NEWEST_FIRST], select: READING_SELECT }),
 
-  // Every reading with a Cost in the range, newest first. No `take`: the Costs page charts every one of them, and one
-  // meter read about monthly keeps this to a dozen rows a year.
-  findWithCost: (filter: ReadingFilter): Promise<ReadingRow[]> =>
+  // Every reading with a Cost or a Bill in the range, newest first. No `take`: the Costs page lists every one of them,
+  // and one meter read about monthly keeps this to a dozen rows a year.
+  findWithCostOrBill: (filter: ReadingFilter): Promise<ReadingRow[]> =>
     prisma.reading.findMany({
-      where: { ...toWhere(filter), costCents: { not: null } },
+      where: { ...toWhere(filter), OR: [{ costCents: { not: null } }, { bill: { isNot: null } }] },
       orderBy: [...NEWEST_FIRST],
       select: READING_SELECT,
     }),

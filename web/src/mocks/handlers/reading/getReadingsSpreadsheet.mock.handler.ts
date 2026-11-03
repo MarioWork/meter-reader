@@ -9,24 +9,22 @@ import { READING_STATUS_LABELS } from '@utils/readingStatusUtils';
 import { createReadingValidationErrorMockModel } from './models/readingErrorMockModel.mock';
 import { ReadingApiSearchFields } from '@services/readingService/readingService';
 import { getMockReadings } from './readingMockState';
+import { toMockCostCell, toMockDayCell, XLSX_CONTENT_TYPE } from './readingSheetMockCells';
 
 const BAD_REQUEST = 400;
-const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const FILE_NAME = 'water-readings.xlsx';
-const DATE_FORMAT = 'yyyy-mm-dd';
 const DATE_TIME_FORMAT = 'yyyy-mm-dd hh:mm';
-// A day as the API sends it is a calendar day; as a spreadsheet date, it is midnight UTC of that day.
-const MIDNIGHT_UTC = 'T00:00:00.000Z';
-const HEADER_TITLES = ['Date', 'Digits', 'Status', 'Sent at'];
+const HEADER_TITLES = ['Date', 'Digits', 'Status', 'Sent at', 'Cost'];
 
 function toRow(reading: ReadingApiModel) {
   const sentAt = reading.sentAt ? { value: new Date(reading.sentAt), format: DATE_TIME_FORMAT } : null;
 
   return [
-    { value: new Date(`${reading.date}${MIDNIGHT_UTC}`), format: DATE_FORMAT },
+    toMockDayCell(reading),
     reading.digits,
     READING_STATUS_LABELS[reading.status],
     sentAt,
+    toMockCostCell(reading),
   ];
 }
 

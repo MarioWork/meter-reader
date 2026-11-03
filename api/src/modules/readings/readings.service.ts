@@ -14,7 +14,7 @@ import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { openUpload, readUpload, removeUpload } from '../../lib/uploads.ts';
 import { toZipStream, ZIP_EXTENSION, type ZipEntry } from '../../lib/zip.ts';
-import { toBillContentType } from '../bills/bills.service.ts';
+import { toBillContentType, toBillUrl } from '../bills/bills.service.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import {
   fillMessageTemplate,
@@ -35,6 +35,7 @@ import {
   toCostEuros,
   toReadingsBackupCsv,
 } from './readings.backup.ts';
+import { costsSpreadsheetFileName, toCostsSpreadsheet, type CostSheetLine } from './readings.costsSpreadsheet.ts';
 import { readingsSpreadsheetFileName, toReadingsSpreadsheet, type ReadingSheetLine } from './readings.spreadsheet.ts';
 import type {
   BackupReading,
@@ -80,8 +81,8 @@ const readingsBeingSent = new Set<number>();
 // The filters alone, whichever query carries them.
 type ReadingFilterQuery = Pick<ListReadingsQuery, 'from' | 'to' | 'status'>;
 
-// The spreadsheet's bytes, and the name the download saves it under.
-export type ReadingsSpreadsheet = { fileName: string; content: Buffer };
+// A spreadsheet's bytes, and the name the download saves it under.
+export type SpreadsheetFile = { fileName: string; content: Buffer };
 
 // A backup download: what is in it, and the name the browser saves it under.
 export type ReadingsBackupFile<Content> = { fileName: string; content: Content };
@@ -230,20 +231,42 @@ function sumCostCents(rows: ReadingRow[]): number {
   return rows.reduce((totalCents, row) => totalCents + (row.costCents ?? 0), 0);
 }
 
-// The Costs page: every reading with a Cost in the range, and what they cost together.
+// The Costs page: every reading with a Cost or a Bill in the range, and what they cost together. A reading with only a
+// Bill adds nothing to the sum.
 export async function getCosts(query: ListCostsQuery): Promise<CostListResponse> {
-  const rows = await readingsRepository.findWithCost(toFilter(query));
+  const rows = await readingsRepository.findWithCostOrBill(toFilter(query));
 
   return { data: rows.map(toResponse), totalCostCents: sumCostCents(rows) };
 }
 
+function toCostSheetLine(row: ReadingRow): CostSheetLine {
+  const billUrl = row.bill ? toBillUrl(row.bill.id) : null;
+
+  return { date: row.date, digits: row.digits, costCents: row.costCents, billUrl };
+}
+
+// The readings the Costs page lists for the same day range, from the same query, as an .xlsx file named after it.
+export async function getCostsSpreadsheet(query: ListCostsQuery): Promise<SpreadsheetFile> {
+  const rows = await readingsRepository.findWithCostOrBill(toFilter(query));
+  const content = await toCostsSpreadsheet(rows.map(toCostSheetLine));
+  const fileName = costsSpreadsheetFileName(query);
+
+  return { fileName, content };
+}
+
 function toSheetLine(row: ReadingRow): ReadingSheetLine {
-  return { date: row.date, digits: row.digits, status: STATUS_MAP[row.status], sentAt: row.sentAt };
+  return {
+    date: row.date,
+    digits: row.digits,
+    status: STATUS_MAP[row.status],
+    sentAt: row.sentAt,
+    costCents: row.costCents,
+  };
 }
 
 // Every reading Home's filters match, not only the pages it has loaded, newest first, as an .xlsx file named
 // after the filters.
-export async function getReadingsSpreadsheet(query: ExportReadingsQuery): Promise<ReadingsSpreadsheet> {
+export async function getReadingsSpreadsheet(query: ExportReadingsQuery): Promise<SpreadsheetFile> {
   const rows = await readingsRepository.findAll(toFilter(query));
   const content = await toReadingsSpreadsheet(rows.map(toSheetLine), query.timeZone);
   const fileName = readingsSpreadsheetFileName(query);

@@ -2,8 +2,10 @@ import { access } from 'node:fs/promises';
 import type { InjectOptions } from 'fastify';
 import { readSheet } from 'read-excel-file/node';
 import { buildApp, type App } from '../../app.ts';
+import { APP_API_URL } from '../../lib/appOrigin.ts';
 import { fakeJpeg } from '../../lib/jpeg.fixture.ts';
 import { prisma } from '../../lib/prisma.ts';
+import { cellNumberFormat, sheetFormulas, sheetLinks } from '../../lib/spreadsheet.fixture.ts';
 import { uploadPath } from '../../lib/uploads.ts';
 import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fixture.ts';
 import { answerSendMail, graphErrorAnswer, type ReceivedSendMail } from '../mail/mail.microsoftGraph.mock.ts';
@@ -13,7 +15,9 @@ const HOUR_MS = 3_600_000;
 const PROVIDER_EMAIL = 'readings@water-provider.example';
 const STORED_ACCESS_TOKEN = 'stored-access-token';
 // The readings spreadsheet's header, and what its tests need to build readings and read times back.
-const SPREADSHEET_HEADER = ['Date', 'Digits', 'Status', 'Sent at'];
+const SPREADSHEET_HEADER = ['Date', 'Digits', 'Status', 'Sent at', 'Cost'];
+// The Costs spreadsheet's header.
+const COSTS_SPREADSHEET_HEADER = ['Date', 'Digits', 'Cost', 'Bill'];
 const MINUTE_MS = 60_000;
 const READINGS_PAST_ONE_PAGE = 12;
 const DATE_PART_LENGTH = 2;
@@ -108,6 +112,27 @@ async function addReadingWithCost(digits: string, date: string, costCents: numbe
   const id = (await addReading({ digits, date })).json<{ id: number }>().id;
 
   await updateReading(id, { costCents });
+}
+
+// A reading with a Bill, and a Cost when one is given, saved together the way the cost & bill dialog saves them. The
+// bill's id, for its link.
+async function addReadingWithBill(digits: string, date: string, costCents: number | null = null): Promise<number> {
+  const id = (await addReading({ digits, date })).json<{ id: number }>().id;
+  const billId = await addBill();
+
+  await updateReading(id, { costCents, billId });
+
+  return billId;
+}
+
+// Where a bill opens from outside the web app.
+function billUrl(billId: number): string {
+  return `${APP_API_URL}/bills/${billId}`;
+}
+
+// A day as a spreadsheet date: midnight UTC.
+function sheetDay(isoDate: string): Date {
+  return new Date(`${isoDate}T00:00:00.000Z`);
 }
 
 function getReadingEmail(id: number | string) {
@@ -485,10 +510,28 @@ describe('GET /readings/export.xlsx', () => {
 
     expect(rows).toEqual([
       SPREADSHEET_HEADER,
-      [new Date('2026-10-31T00:00:00.000Z'), '00789', 'Sent', new Date('2026-10-31T09:05:00.000Z')],
-      [new Date('2026-10-01T00:00:00.000Z'), '00456', 'Failed', null],
-      [new Date('2026-09-01T00:00:00.000Z'), '00123', 'Not sent', null],
+      [new Date('2026-10-31T00:00:00.000Z'), '00789', 'Sent', new Date('2026-10-31T09:05:00.000Z'), null],
+      [new Date('2026-10-01T00:00:00.000Z'), '00456', 'Failed', null, null],
+      [new Date('2026-09-01T00:00:00.000Z'), '00123', 'Not sent', null, null],
     ]);
+  });
+
+  it('holds the Cost as a number in euros, and leaves it empty when the reading has none', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 4210);
+    await addReadingWithCost('00200', '2026-09-01', 0);
+    await addReading({ digits: '00300', date: '2026-10-01' });
+
+    const rows = await sheetRows();
+
+    expect(rows.map((row) => row[4])).toEqual(['Cost', null, 0, 42.1]);
+  });
+
+  it('shows the Cost with a euro sign and 2 decimals', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 4210);
+
+    const response = await exportReadings();
+
+    expect(cellNumberFormat(response.rawPayload, 'E2')).toBe('"€"#,##0.00');
   });
 
   it("shows when a reading was sent as the user's clock showed it when a time zone is given", async () => {
@@ -583,6 +626,22 @@ describe('GET /readings/costs', () => {
     });
   });
 
+  it('lists the readings with only a bill too, newest first, and adds nothing to the sum for them', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 4210);
+    const billId = await addReadingWithBill('00200', '2026-09-01');
+    await addReading({ digits: '00300', date: '2026-10-01' });
+
+    const response = await getCosts();
+
+    expect(response.json()).toMatchObject({
+      totalCostCents: 4210,
+      data: [
+        { digits: '00200', costCents: null, bill: { id: billId } },
+        { digits: '00100', costCents: 4210, bill: null },
+      ],
+    });
+  });
+
   it('counts a cost of 0 as a cost when a reading cost nothing', async () => {
     await addReadingWithCost('00100', '2026-08-01', 0);
 
@@ -637,6 +696,109 @@ describe('GET /readings/costs', () => {
 
   it('returns 401 when the browser is not signed in', async () => {
     const response = await app.inject({ method: 'GET', url: '/readings/costs' });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('GET /readings/costs/export.xlsx', () => {
+  function exportCosts(query = '') {
+    return app.inject({ method: 'GET', url: `/readings/costs/export.xlsx${query}`, ...withSession(token) });
+  }
+
+  async function costRows(query = ''): Promise<unknown[][]> {
+    return readSheet((await exportCosts(query)).rawPayload);
+  }
+
+  function digitsColumn(rows: unknown[][]): unknown[] {
+    return rows.slice(1, -1).map((row) => row[1]);
+  }
+
+  it('answers an .xlsx download named water-costs.xlsx when there is no day range', async () => {
+    const response = await exportCosts();
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(response.headers['content-disposition']).toBe('attachment; filename="water-costs.xlsx"');
+  });
+
+  it('holds the date, the digits as text, the Cost and an Open link to the Bill, newest first, then the sum', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 4210);
+    const onlyBillId = await addReadingWithBill('00200', '2026-09-01');
+    const bothBillId = await addReadingWithBill('00300', '2026-10-01', 3990);
+    await addReading({ digits: '00400', date: '2026-10-31' });
+
+    const response = await exportCosts();
+    const rows = await readSheet(response.rawPayload);
+
+    expect(rows).toEqual([
+      COSTS_SPREADSHEET_HEADER,
+      [sheetDay('2026-10-01'), '00300', 39.9, 'Open'],
+      [sheetDay('2026-09-01'), '00200', null, 'Open'],
+      [sheetDay('2026-08-01'), '00100', 42.1, null],
+      ['Total', null, 82, null],
+    ]);
+    expect(sheetLinks(response.rawPayload)).toEqual({ D2: billUrl(bothBillId), D3: billUrl(onlyBillId) });
+  });
+
+  it('adds up the Costs in a sum row whose formula covers every reading row', async () => {
+    await addReadingWithCost('00100', '2026-08-01', 1000);
+    await addReadingWithBill('00200', '2026-09-01');
+    await addReadingWithCost('00300', '2026-10-01', 2550);
+
+    const response = await exportCosts();
+
+    expect((await readSheet(response.rawPayload)).at(-1)).toEqual(['Total', null, 35.5, null]);
+    expect(sheetFormulas(response.rawPayload)).toEqual({ C5: 'SUM(C2:C4)' });
+  });
+
+  it('holds exactly the readings the Costs page lists for the same day range, and is named after it', async () => {
+    await addReadingWithCost('00100', '2026-08-31', 1000);
+    await addReadingWithCost('00200', '2026-09-01', 2000);
+    await addReadingWithBill('00300', '2026-09-15');
+    await addReading({ digits: '00350', date: '2026-09-20' });
+    await addReadingWithCost('00400', '2026-09-30', 3000);
+    await addReadingWithCost('00500', '2026-10-01', 4000);
+    const range = '?from=2026-09-01&to=2026-09-30';
+
+    const response = await exportCosts(range);
+    const listed = (await getCosts(range)).json<{ data: { digits: string }[] }>().data;
+
+    const rows = await readSheet(response.rawPayload);
+    expect(digitsColumn(rows)).toEqual(['00400', '00300', '00200']);
+    expect(digitsColumn(rows)).toEqual(listed.map((reading) => reading.digits));
+    expect(rows.at(-1)).toEqual(['Total', null, 50, null]);
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="water-costs-2026-09-01-to-2026-09-30.xlsx"',
+    );
+  });
+
+  it('holds the header and a sum of 0 when no reading in the range has a Cost or a Bill', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+
+    const rows = await costRows();
+
+    expect(rows).toEqual([COSTS_SPREADSHEET_HEADER, ['Total', null, 0, null]]);
+  });
+
+  it('treats an empty day as no filter when a param is sent empty', async () => {
+    await addReadingWithCost('00100', '2026-09-01', 1000);
+
+    const response = await exportCosts('?from=&to=');
+
+    expect(digitsColumn(await readSheet(response.rawPayload))).toEqual(['00100']);
+    expect(response.headers['content-disposition']).toBe('attachment; filename="water-costs.xlsx"');
+  });
+
+  it('returns 400 VALIDATION_ERROR when the range ends before it starts', async () => {
+    const response = await exportCosts('?from=2026-10-01&to=2026-09-01');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 401 when the browser is not signed in', async () => {
+    const response = await app.inject({ method: 'GET', url: '/readings/costs/export.xlsx' });
 
     expect(response.statusCode).toBe(401);
   });

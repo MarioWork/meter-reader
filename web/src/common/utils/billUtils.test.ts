@@ -1,5 +1,5 @@
 import { TEST_BASE_API_URL } from '@mocks/server';
-import { describeBill, getBillDownloadUrl, getBillUrl } from './readingBillUtils';
+import { describeBill, getBillDownloadUrl, getBillUrl } from './billUtils';
 
 describe('getBillUrl', () => {
   it("points at the bill on the API's base URL", () => {

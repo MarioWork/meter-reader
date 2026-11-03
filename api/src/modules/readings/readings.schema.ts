@@ -59,7 +59,7 @@ export const ListReadingsQuerySchema = PaginationQuerySchema.extend(READING_FILT
 );
 
 // The Costs page's readings narrowed to calendar days (both inclusive), with no status. Not paged: see
-// CostListResponseSchema.
+// CostListResponseSchema. Its spreadsheet takes the same query, so it holds the same readings.
 export const ListCostsQuerySchema = z
   .object({ from: READING_FILTER_SHAPE.from, to: READING_FILTER_SHAPE.to })
   .refine(isRangeInOrder, RANGE_IN_ORDER_RULE);
@@ -187,8 +187,9 @@ export const EmailDefaultsResponseSchema = z
 
 export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponseSchema);
 
-// Every reading with a Cost in the range, newest first, and the sum of those costs in euro cents. Not paged: the
-// chart needs every bar in the range, and one meter read about monthly makes a dozen readings a year.
+// Every reading with a Cost or a Bill in the range, newest first, and the sum of their costs in euro cents (a reading
+// with only a Bill adds nothing). Not paged: the chart needs every bar in the range, and one meter read about monthly
+// makes a dozen readings a year.
 export const CostListResponseSchema = z
   .object({
     data: z.array(ReadingResponseSchema),
