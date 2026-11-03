@@ -12,6 +12,7 @@ import {
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
+import { toBillContentType } from '../bills/bills.service.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import {
   fillMessageTemplate,
@@ -45,6 +46,7 @@ const log = logger.child({ module: 'readings' });
 
 const ENTITY = 'Reading';
 const PHOTO_NOT_AVAILABLE_MESSAGE = 'This photo does not exist or already belongs to another reading';
+const BILL_NOT_AVAILABLE_MESSAGE = 'This bill does not exist or already belongs to another reading';
 
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
@@ -113,6 +115,12 @@ function toSentEmailResponse(row: ReadingRow): ReadingResponse['sentEmail'] {
   return { from: sentFrom, to: sentTo, subject: sentSubject, body: sentBody, hasPhoto: sentWithPhoto };
 }
 
+function toBillResponse({ bill }: ReadingRow): ReadingResponse['bill'] {
+  if (!bill) return null;
+
+  return { id: bill.id, contentType: toBillContentType(bill.fileType), sizeBytes: bill.sizeBytes };
+}
+
 function toResponse(row: ReadingRow): ReadingResponse {
   return {
     id: row.id,
@@ -124,6 +132,7 @@ function toResponse(row: ReadingRow): ReadingResponse {
     sentAt: row.sentAt?.toISOString() ?? null,
     sentEmail: toSentEmailResponse(row),
     costCents: row.costCents,
+    bill: toBillResponse(row),
   };
 }
 
@@ -162,16 +171,33 @@ export async function addReading({ digits, date, photoId }: CreateReading): Prom
   return toResponse(row);
 }
 
-// Sets, changes or removes (null) the reading's cost. Nothing here touches its email: the cost is never sent.
-export async function updateReading(id: number, { costCents }: UpdateReading): Promise<ReadingResponse> {
-  const row = await readingsRepository.update(id, { costCents });
+// A file left behind on disk is only wasted space, and the change is saved by now: logged, never a failed update.
+async function removeFile(fileName: string, logFields: object, message: string): Promise<void> {
+  try {
+    await removeUpload(fileName);
+  } catch (error: unknown) {
+    // Ids only: the error's message holds the file's path, never anything the user typed.
+    log.warn({ ...logFields, err: error }, message);
+  }
+}
 
-  if (!row) throw new NotFoundError(ENTITY, id);
+// Sets, changes or removes (null) the reading's cost and its bill. A bill replaced or removed is deleted, its file
+// too. Nothing here touches its email: the cost and the bill are never sent.
+export async function updateReading(id: number, { costCents, billId }: UpdateReading): Promise<ReadingResponse> {
+  const update = await readingsRepository.update(id, { costCents, billId });
+
+  if (update.outcome === 'notFound') throw new NotFoundError(ENTITY, id);
+
+  if (update.outcome === 'billNotAvailable') throw new ConflictError(BILL_NOT_AVAILABLE_MESSAGE, 'BILL_NOT_AVAILABLE');
+
+  if (update.removedBillFileName) {
+    await removeFile(update.removedBillFileName, { readingId: id }, 'file of a replaced bill not removed');
+  }
 
   // The id only: the cost is the user's data.
   log.info({ readingId: id }, 'reading updated');
 
-  return toResponse(row);
+  return toResponse(update.row);
 }
 
 function toFilter({ from, to, status }: ReadingFilterQuery): ReadingFilter {
@@ -254,16 +280,19 @@ export async function getReadingsBackupCsv(): Promise<ReadingsBackupFile<string>
   return { fileName: readingsBackupFileName(exportedAt, CSV_EXTENSION), content: toReadingsBackupCsv(readings) };
 }
 
-// Deleting the reading already deleted its photo row (cascade); this removes the file from the uploads folder. The
-// row is gone by then, so a file that cannot be removed is logged, not turned into a failed delete.
-async function removeReadingPhoto(row: ReadingRow): Promise<void> {
-  if (!row.photo) return;
+// Deleting the reading already deleted its photo and bill rows (cascade); this removes their files from the uploads
+// folder. The rows are gone by then, so a file that cannot be removed is logged, not turned into a failed delete.
+async function removeReadingFiles({ id, photo, bill }: ReadingRow): Promise<void> {
+  if (photo) {
+    await removeFile(
+      photo.fileName,
+      { readingId: id, photoId: photo.id },
+      'photo file of a deleted reading not removed',
+    );
+  }
 
-  try {
-    await removeUpload(row.photo.fileName);
-  } catch (error: unknown) {
-    // Ids only: the error's message holds the file's path, never anything the user typed.
-    log.warn({ readingId: row.id, photoId: row.photo.id, err: error }, 'photo file of a deleted reading not removed');
+  if (bill) {
+    await removeFile(bill.fileName, { readingId: id, billId: bill.id }, 'bill file of a deleted reading not removed');
   }
 }
 
@@ -272,7 +301,7 @@ export async function deleteReading(id: number): Promise<void> {
 
   if (!row) throw new NotFoundError(ENTITY, id);
 
-  await removeReadingPhoto(row);
+  await removeReadingFiles(row);
 
   log.info({ readingId: id }, 'reading deleted');
 }

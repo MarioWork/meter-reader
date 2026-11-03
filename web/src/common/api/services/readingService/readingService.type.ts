@@ -47,9 +47,11 @@ export const SendReadingSchema = object({
 
 export type SendReading = InferType<typeof SendReadingSchema>;
 
-// What can change on a saved reading: its cost, in euro cents, or null to remove it. Always said, never left out.
+// What can change on a saved reading: its cost, in euro cents, or null to remove it, always said, never left out. And
+// its bill: the id of one uploaded first, which replaces the saved one, or null to remove it; left out, it stays.
 export const UpdateReadingSchema = object({
   costCents: costCentsSchema.nullable().defined(),
+  billId: number().integer().positive().nullable().optional(),
 });
 
 export type UpdateReading = InferType<typeof UpdateReadingSchema>;

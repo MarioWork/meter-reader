@@ -130,7 +130,7 @@ export default {
   addReading: async (fields: CreateReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
     axiosActions<ReadingApiModel>({ url: BASE_READINGS_URL, method: HttpVerbsUtil.POST, data: fields }),
 
-  // Sets, changes or removes (null) what the reading cost. Never part of its email.
+  // Sets, changes or removes (null) what the reading cost and its bill. Neither is ever part of its email.
   updateReading: async (id: ReadingId, fields: UpdateReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
     axiosActions<ReadingApiModel>({ url: `${BASE_READINGS_URL}/${id}`, method: HttpVerbsUtil.PATCH, data: fields }),
 

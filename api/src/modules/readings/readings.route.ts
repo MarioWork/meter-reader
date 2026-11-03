@@ -175,7 +175,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'Set, change or remove what the reading cost (null removes it)',
+        summary: 'Set, change or remove what the reading cost and its bill (null removes either)',
         params: ReadingParamsSchema,
         body: UpdateReadingSchema,
         response: {
@@ -183,6 +183,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
           400: ErrorResponseSchema,
           401: ErrorResponseSchema,
           404: ErrorResponseSchema,
+          409: ErrorResponseSchema,
         },
       },
     },

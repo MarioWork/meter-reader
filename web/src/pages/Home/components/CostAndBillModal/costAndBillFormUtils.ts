@@ -1,4 +1,5 @@
 import { object, string, type InferType } from 'yup';
+import type { JSONResponseUtil } from '@app-types/utility';
 import { CENTS_DIGITS, CENTS_PER_EURO, COST_CENTS_MAX } from '@utils/costUtils';
 
 // Euros, then up to 2 decimals after a comma or a point: "42", "42,1", "42.10". Never below 0, as there is no sign.
@@ -44,3 +45,22 @@ export const costAndBillFormSchema = object({
 });
 
 export type CostAndBillFormValues = InferType<typeof costAndBillFormSchema>;
+
+// The API's codes for a bill it refuses: not a PDF, JPEG or PNG, or over 10 MB. Its reason belongs under the field.
+const REFUSED_BILL_CODES = new Set(['BILL_NOT_SUPPORTED', 'BILL_TOO_LARGE']);
+const CONTENT_TOO_LARGE_STATUS = 413;
+
+export type SaveFailure = { billError?: string; formError?: string };
+
+// The message for a failed save, split by where it belongs: under the Bill field when the API refused the file, in an
+// alert next to the form for anything else. Empty after a success.
+export function toSaveFailure(result: JSONResponseUtil | undefined, fallback: string): SaveFailure {
+  if (result?.success !== false) return {};
+
+  const { code = '', statusCode, message } = result.error ?? {};
+  const isRefusedBill = REFUSED_BILL_CODES.has(code) || statusCode === CONTENT_TOO_LARGE_STATUS;
+
+  if (isRefusedBill) return { billError: message ?? fallback };
+
+  return { formError: message ?? fallback };
+}

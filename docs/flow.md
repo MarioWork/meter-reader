@@ -8,8 +8,8 @@ Words follow `docs/GLOSSARY.md`. Decisions behind the flow are in `docs/adr/`.
 flowchart LR
     phone["Phone<br/>(web app, PWA)"]
     api["api<br/>(Fastify)"]
-    db[("Postgres<br/>readings, photos,<br/>login, mail connection")]
-    uploads[("./data/uploads<br/>photo files")]
+    db[("Postgres<br/>readings, photos, bills,<br/>login, mail connection")]
+    uploads[("./data/uploads<br/>photo and bill files")]
     ms["Microsoft<br/>sign-in + Graph sendMail"]
     provider["Provider<br/>inbox"]
 

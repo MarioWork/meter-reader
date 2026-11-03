@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PaginationQuerySchema, paginatedResponseSchema } from '../../lib/pagination.ts';
+import { BILL_CONTENT_TYPES } from '../bills/bills.type.ts';
 
 // Long enough for any household meter's digit window, red digits included.
 export const READING_DIGITS_MAX_LENGTH = 15;
@@ -109,6 +110,13 @@ const COST_CENTS_MAX = 2_147_483_647;
 // A Cost (docs/GLOSSARY.md) in euro cents: a whole number, so 42,10 € is 4210 and never a rounded float. 0 or more.
 const CostCentsSchema = z.number().int().min(0).max(COST_CENTS_MAX);
 
+// The reading's Bill (docs/GLOSSARY.md): GET /bills/:id serves it. `contentType` says what kind of file it is.
+const ReadingBillSchema = z.object({
+  id: z.number().int(),
+  contentType: z.enum(BILL_CONTENT_TYPES),
+  sizeBytes: z.number().int(),
+});
+
 export const ReadingResponseSchema = z
   .object({
     id: z.number().int(),
@@ -124,12 +132,16 @@ export const ReadingResponseSchema = z
     sentEmail: SentEmailResponseSchema.nullable(),
     // What the reading cost, in euro cents (4210 is 42,10 €); null when the user has not added one.
     costCents: CostCentsSchema.nullable(),
+    // The provider's bill for this reading; null when the user has not added one. Never part of its email.
+    bill: ReadingBillSchema.nullable(),
   })
   .meta({ id: 'Reading' });
 
-// What can change on a reading after it is saved. A field left out stays as it is; a cost sent as null is removed.
+// What can change on a reading after it is saved. A field left out stays as it is; one sent as null is removed.
+// `billId` is a bill uploaded first (POST /bills): it replaces the reading's bill, whose file is deleted.
 export const UpdateReadingSchema = z.strictObject({
   costCents: CostCentsSchema.nullable().optional(),
+  billId: z.number().int().positive().nullable().optional(),
 });
 
 const SUBJECT_MAX_LENGTH = 200;

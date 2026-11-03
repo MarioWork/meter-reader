@@ -2,7 +2,9 @@ import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { BASE_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil } from '@app-types/utility';
+import { addMockBill } from '@mocks/handlers/bill/billMockState';
 import { createReadingMockModel } from '@mocks/handlers/reading/models/readingMockModel.mock';
+import { updateMockReading } from '@mocks/handlers/reading/readingMockState';
 import { updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
@@ -803,7 +805,8 @@ describe("a reading's cost", () => {
     await screen.findByRole('menuitem', { name: ADD_COST });
     // View photo comes first, then this one.
     await userEvent.keyboard('{ArrowDown}');
-    expect(screen.getByRole('menuitem', { name: ADD_COST })).toHaveFocus();
+    // The menu moves focus once it has opened, which can land a tick after the key.
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: ADD_COST })).toHaveFocus());
     await userEvent.keyboard('{Enter}');
     const dialog = await screen.findByRole('dialog', { name: ADD_COST });
     // The dialog takes focus; its × comes first, then the field.
@@ -811,7 +814,13 @@ describe("a reading's cost", () => {
     await userEvent.tab();
     await userEvent.tab();
     expect(costField(dialog)).toHaveFocus();
-    await userEvent.keyboard('42,10{Enter}');
+    await userEvent.keyboard('42,10');
+    // Past the Bill picker to Save. (A browser also saves on Enter in the field; user-event only does so in a form with
+    // a single input.)
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(within(dialog).getByRole('button', { name: 'Save' })).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: ADD_COST })).not.toBeInTheDocument());
     expect(lastReadingCard()).toHaveTextContent('Cost €42.10');
@@ -920,6 +929,153 @@ describe("a reading's cost", () => {
       'Date: 1 October 2026\nReading: 00529',
     );
     expect(preview).not.toHaveTextContent(/42[.,]10/);
+  });
+});
+
+describe("a reading's bill", () => {
+  const ADD_COST_AND_BILL = 'Add cost & bill';
+  const EDIT_COST_AND_BILL = 'Edit cost & bill';
+  // The newest reading is reading 14 in the mock history.
+  const NEWEST_ID = 14;
+  const PDF_BYTES = 184_320;
+  const PNG_BILL = new File([new Uint8Array(2_400_000)], 'october-bill.png', { type: 'image/png' });
+
+  // The newest reading with a bill already saved, as the API answers it once updated with one. (A bill picked in the
+  // dialog cannot go through the router in jsdom: its File is not the kind the router's Request reads. The upload
+  // itself is covered in costAndBillModalActions.test.ts.)
+  function saveMockBill() {
+    const { id, contentType, sizeBytes } = addMockBill(new Blob([new Uint8Array(PDF_BYTES)]), 'application/pdf');
+
+    updateMockReading(NEWEST_ID, { bill: { id, contentType, sizeBytes } });
+
+    return id;
+  }
+
+  async function openBillDialog(name = EDIT_COST_AND_BILL) {
+    await openMenuFor(NEWEST_DATE);
+    await chooseMenuItem(name);
+
+    return screen.findByRole('dialog', { name });
+  }
+
+  function billField(dialog: HTMLElement) {
+    return within(dialog).getByLabelText('Bill');
+  }
+
+  async function openDetails() {
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+
+    return screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+  }
+
+  // Keeps what the app asked to save, then lets the mock API answer it as usual.
+  function recordUpdateRequests() {
+    const received: unknown[] = [];
+
+    server.use(
+      http.patch(`${TEST_BASE_API_URL}/readings/:id`, async ({ request }) => {
+        received.push(await request.clone().json());
+      }),
+    );
+
+    return received;
+  }
+
+  it('shows the bill in the details, with Open in a new tab and Download', async () => {
+    const billId = saveMockBill();
+    await renderHome();
+
+    const details = await openDetails();
+
+    expect(within(details).getByText('Bill')).toBeVisible();
+    expect(within(details).getByText('PDF, 184.3 KB')).toBeVisible();
+    const open = within(details).getByRole('link', { name: 'Open the bill in a new tab' });
+    expect(open).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${billId}`);
+    expect(open).toHaveAttribute('target', '_blank');
+    expect(open).toHaveAttribute('rel', 'noopener noreferrer');
+    const download = within(details).getByRole('link', { name: 'Download the bill' });
+    expect(download).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${billId}?download=true`);
+    expect(download).toHaveAttribute('download');
+  });
+
+  it('shows no bill in the details while the reading has none', async () => {
+    await renderHome();
+
+    expect(await openDetails()).not.toHaveTextContent('Bill');
+  });
+
+  it('calls the menu item "Edit" once the reading has a bill, even with no cost', async () => {
+    saveMockBill();
+    await renderHome();
+
+    await openMenuFor(NEWEST_DATE);
+
+    expect(await screen.findByRole('menuitem', { name: EDIT_COST_AND_BILL })).toBeVisible();
+  });
+
+  it('offers a file picker for a PDF, JPEG or PNG when the reading has no bill', async () => {
+    await renderHome();
+
+    const dialog = await openBillDialog(ADD_COST_AND_BILL);
+
+    expect(billField(dialog)).toHaveAttribute('type', 'file');
+    expect(billField(dialog)).toHaveAccessibleDescription('A PDF, JPEG or PNG of up to 10 MB.');
+    expect(within(dialog).queryByRole('button', { name: 'Remove bill' })).not.toBeInTheDocument();
+  });
+
+  it('shows the saved bill, and says a new file replaces it', async () => {
+    saveMockBill();
+    await renderHome();
+
+    const dialog = await openBillDialog();
+    await userEvent.upload(billField(dialog), PNG_BILL);
+
+    expect(within(dialog).getByText('Saved bill: PDF, 184.3 KB')).toBeVisible();
+    expect(billField(dialog)).toHaveAccessibleDescription(/It replaces the saved bill/);
+  });
+
+  it('removes the saved bill with Remove bill, and Keep bill takes that back', async () => {
+    const received = recordUpdateRequests();
+    saveMockBill();
+    await renderHome();
+    const dialog = await openBillDialog();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove bill' }));
+    expect(within(dialog).getByText('The saved bill is removed when you save.')).toBeVisible();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep bill' }));
+    expect(within(dialog).getByText('Saved bill: PDF, 184.3 KB')).toBeVisible();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove bill' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: EDIT_COST_AND_BILL })).not.toBeInTheDocument());
+    expect(await findNotification('Bill removed')).toBeVisible();
+    expect(received).toEqual([{ costCents: null, billId: null }]);
+    expect(await openDetails()).not.toHaveTextContent('Bill');
+  });
+
+  it('keeps the saved bill when only the cost changes', async () => {
+    const received = recordUpdateRequests();
+    saveMockBill();
+    await renderHome();
+    const dialog = await openBillDialog();
+
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Cost (€)' }), '42,10');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: EDIT_COST_AND_BILL })).not.toBeInTheDocument());
+    expect(await findNotification('Cost saved')).toBeVisible();
+    expect(received).toEqual([{ costCents: 4210 }]);
+    expect(within(await openDetails()).getByText('PDF, 184.3 KB')).toBeVisible();
+  });
+
+  it("keeps the bill out of the reading's email", async () => {
+    saveMockBill();
+    await renderHome();
+
+    await userEvent.click(within(lastReadingCard()).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` }));
+
+    const preview = await screen.findByRole('dialog', { name: 'Send this reading?' });
+    expect(preview).not.toHaveTextContent(/bill/i);
   });
 });
 

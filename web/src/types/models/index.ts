@@ -12,3 +12,6 @@ export type { ReadingEmailAttachmentApiModel } from './readingEmailAttachmentApi
 export type { MailStatusApiModel } from './mailStatusApiModel.type';
 export type { PhotoApiModel, PhotoId } from './photoApiModel.type';
 export type { SettingsApiModel } from './settingsApiModel.type';
+export type { BillApiModel, BillId } from './billApiModel.type';
+export type { BillContentType } from './billContentType.type';
+export type { ReadingBillApiModel } from './readingBillApiModel.type';

@@ -60,7 +60,7 @@ services:
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
       # Your Hotmail address, shown as "From" in the app. Optional.
       MAIL_FROM: ${MAIL_FROM:-}
-      # The photos, on the volume below, so they outlive the container.
+      # The photos and the bills, on the volume below, so they outlive the container.
       UPLOADS_DIR: /app/data/uploads
     volumes:
       # Owned by uid 1000 (the image's `node` user), or the api refuses to start (README).

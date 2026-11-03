@@ -37,8 +37,8 @@ const EnvSchema = z
     // The user's own Hotmail address, shown as "From" on every email. Display only: Microsoft sends from whichever
     // account yarn mail:connect signed in. Optional; left empty, the app shows no "From".
     MAIL_FROM: z.preprocess((value) => (value === '' ? undefined : value), z.email().optional()),
-    // The folder the photos are kept in, relative to where the api starts. In the container it is the
-    // ./data/uploads volume, so the photos outlive the container.
+    // The folder the photos and the bills are kept in, relative to where the api starts. In the container it is the
+    // ./data/uploads volume, so they outlive the container.
     UPLOADS_DIR: z.string().min(1).default(DEFAULT_UPLOADS_DIR),
   })
   .refine((value) => value.NODE_ENV !== 'production' || new URL(value.APP_ORIGIN).protocol === HTTPS_PROTOCOL, {

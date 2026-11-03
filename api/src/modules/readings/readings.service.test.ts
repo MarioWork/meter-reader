@@ -1,4 +1,4 @@
-import { readingsRepository } from './readings.repository.ts';
+import { readingsRepository, type ReadingRow, type ReadingUpdate } from './readings.repository.ts';
 import { AppError } from '../../lib/errors.ts';
 import { NotFoundError } from '../../lib/httpErrors.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
@@ -44,6 +44,13 @@ vi.mock('../settings/settings.service.ts', async (importOriginal) => ({
 }));
 
 const PHOTO = { id: 4, fileName: '5b0f3c1e-6f7a-4d2b-9a51-2c8e0d9b7f10.jpg' };
+const BILL = {
+  id: 9,
+  fileName: '0c7d2e4a-8b1f-4e3c-a6d5-9f2b1c0e8a74.pdf',
+  fileType: 'PDF' as const,
+  sizeBytes: 52_000,
+};
+const REPLACED_BILL_FILE_NAME = '3e9a6b2c-1d4f-4a8e-b7c5-6f0d2e1a9b83.png';
 
 const SAVED_ROW = {
   id: 7,
@@ -59,6 +66,7 @@ const SAVED_ROW = {
   costCents: null,
   createdAt: new Date('2026-11-01T08:15:00.000Z'),
   photo: null,
+  bill: null,
 };
 
 describe('addReading', () => {
@@ -82,6 +90,7 @@ describe('addReading', () => {
       sentAt: null,
       sentEmail: null,
       costCents: null,
+      bill: null,
     });
   });
 
@@ -155,27 +164,66 @@ describe('addReading with a photo', () => {
   });
 });
 
+function updated(row: ReadingRow, removedBillFileName: string | null = null): ReadingUpdate {
+  return { outcome: 'updated', row, removedBillFileName };
+}
+
 describe('updateReading', () => {
   it('passes the cost on and answers it in cents when a cost is set or changed', async () => {
-    vi.mocked(readingsRepository.update).mockResolvedValueOnce({ ...SAVED_ROW, costCents: 4210 });
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(updated({ ...SAVED_ROW, costCents: 4210 }));
 
     const reading = await updateReading(7, { costCents: 4210 });
 
-    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: 4210 });
+    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: 4210, billId: undefined });
     expect(reading.costCents).toBe(4210);
   });
 
   it('passes null on and answers no cost when the cost is cleared', async () => {
-    vi.mocked(readingsRepository.update).mockResolvedValueOnce(SAVED_ROW);
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(updated(SAVED_ROW));
 
     const reading = await updateReading(7, { costCents: null });
 
-    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: null });
+    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: null, billId: undefined });
     expect(reading.costCents).toBeNull();
   });
 
+  it('passes the bill id on and answers the bill with its content type when a bill is linked', async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(updated({ ...SAVED_ROW, bill: BILL }));
+
+    const reading = await updateReading(7, { billId: 9 });
+
+    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: undefined, billId: 9 });
+    expect(reading.bill).toEqual({ id: 9, contentType: 'application/pdf', sizeBytes: 52_000 });
+    expect(removeUpload).not.toHaveBeenCalled();
+  });
+
+  it("removes the old bill's file when the bill is replaced or removed", async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(updated(SAVED_ROW, REPLACED_BILL_FILE_NAME));
+
+    const reading = await updateReading(7, { billId: null });
+
+    expect(removeUpload).toHaveBeenCalledWith(REPLACED_BILL_FILE_NAME);
+    expect(reading.bill).toBeNull();
+  });
+
+  it("still succeeds when the old bill's file cannot be removed, as the change is saved", async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(updated(SAVED_ROW, REPLACED_BILL_FILE_NAME));
+    vi.mocked(removeUpload).mockRejectedValueOnce(Object.assign(new Error('permission denied'), { code: 'EACCES' }));
+
+    await expect(updateReading(7, { billId: null })).resolves.toMatchObject({ bill: null });
+  });
+
+  it('throws 409 BILL_NOT_AVAILABLE when the bill cannot be linked', async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce({ outcome: 'billNotAvailable' });
+
+    await expect(updateReading(7, { billId: 9 })).rejects.toMatchObject({
+      code: 'BILL_NOT_AVAILABLE',
+      statusCode: 409,
+    });
+  });
+
   it('throws NotFoundError when the reading does not exist', async () => {
-    vi.mocked(readingsRepository.update).mockResolvedValueOnce(null);
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce({ outcome: 'notFound' });
 
     await expect(updateReading(7, { costCents: 4210 })).rejects.toBeInstanceOf(NotFoundError);
   });
@@ -197,6 +245,15 @@ describe('deleteReading', () => {
     await deleteReading(7);
 
     expect(removeUpload).toHaveBeenCalledWith(PHOTO.fileName);
+  });
+
+  it("removes the bill's file when the deleted reading had a bill", async () => {
+    vi.mocked(readingsRepository.deleteById).mockResolvedValueOnce({ ...SAVED_ROW, photo: PHOTO, bill: BILL });
+
+    await deleteReading(7);
+
+    expect(removeUpload).toHaveBeenCalledWith(PHOTO.fileName);
+    expect(removeUpload).toHaveBeenCalledWith(BILL.fileName);
   });
 
   it('still succeeds when the photo file cannot be removed, as the reading is already gone', async () => {
