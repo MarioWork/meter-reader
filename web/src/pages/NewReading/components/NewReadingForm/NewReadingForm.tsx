@@ -9,6 +9,7 @@ import ProviderEmailMissingNote from '@components/ProviderEmailMissingNote';
 import { FieldGroup } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
+import { fillTodaysEmail } from '@utils/messageTemplateUtils';
 import { isReadingLower, readingDigitsSchema } from '@utils/readingUtils';
 import { NewReadingIntent, SAVE_FAILED_MESSAGE, type NewReadingEmail } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
@@ -18,7 +19,6 @@ import { useReadingPhoto } from './hooks/useReadingPhoto';
 import NewReadingButtons from './components/NewReadingButtons';
 import NewReadingEmailFields from './components/NewReadingEmailFields';
 import {
-  fillEmail,
   getInitialValues,
   newReadingFormSchema,
   toEmail,
@@ -86,7 +86,7 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
   // The subject and the message follow the digits, so they always read as the email that would go out, each until the
   // user edits it.
   useEffect(() => {
-    const filled = fillEmail(emailDefaults, digits);
+    const filled = fillTodaysEmail(emailDefaults, digits);
 
     if (!getFieldState('subject').isDirty) setValue('subject', filled.subject);
 

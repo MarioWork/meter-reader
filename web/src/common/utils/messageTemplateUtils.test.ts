@@ -1,11 +1,13 @@
 import {
   bodyTemplateSchema,
   fillMessageTemplate,
+  fillTodaysEmail,
   findUnknownPlaceholder,
   subjectTemplateSchema,
 } from './messageTemplateUtils';
 
 const VALUES = { reading: '00123', date: '3 November 2026' };
+const TODAY = new Date(2026, 10, 3, 12);
 
 describe('fillMessageTemplate', () => {
   it('puts the reading and the date in place of every {reading} and {date}', () => {
@@ -16,6 +18,26 @@ describe('fillMessageTemplate', () => {
 
   it('leaves anything else in braces as it is', () => {
     expect(fillMessageTemplate('{day}: {reading}', VALUES)).toBe('{day}: 00123');
+  });
+});
+
+describe('fillTodaysEmail', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(TODAY);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fills the subject and body with the reading, trimmed, and today spelled out', () => {
+    const templates = { subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' };
+
+    expect(fillTodaysEmail(templates, ' 00123 ')).toEqual({
+      subject: 'Leitura 3 November 2026',
+      body: 'Leitura - 00123 - 3 November 2026',
+    });
   });
 });
 
