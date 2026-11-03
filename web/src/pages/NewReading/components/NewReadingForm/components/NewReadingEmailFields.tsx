@@ -19,7 +19,7 @@ const SUBJECT_ERROR_ID = 'new-reading-subject-error';
 const BODY_ID = 'new-reading-body';
 const BODY_HINT_ID = 'new-reading-body-hint';
 const BODY_ERROR_ID = 'new-reading-body-error';
-const BODY_HINT = 'Leave it empty to send the date and the reading.';
+const BODY_HINT = 'The message that goes out. It follows the reading until you change it.';
 const BODY_ROWS = 3;
 
 // The email a send straight away goes out with: who it is from and to, the subject (the API's to start with) and an

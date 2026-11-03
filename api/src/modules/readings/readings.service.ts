@@ -103,8 +103,17 @@ function toResponse(row: ReadingRow): ReadingResponse {
 }
 
 // The body is the date and the reading exactly as read (ADR 0001), leading zeros and all.
+// Every email's body, with the day and the reading put in. Sent as is to the New reading form, which fills it the
+// same way, so the message it shows is the one that goes out.
+const EMAIL_BODY_TEMPLATE = 'Date: {date}\nReading: {reading}';
+const DATE_PLACEHOLDER = '{date}';
+const READING_PLACEHOLDER = '{reading}';
+
 function toEmailBody(row: ReadingRow): string {
-  return `Date: ${EMAIL_DATE_FORMAT.format(row.date)}\nReading: ${row.digits}`;
+  return EMAIL_BODY_TEMPLATE.replace(DATE_PLACEHOLDER, EMAIL_DATE_FORMAT.format(row.date)).replace(
+    READING_PLACEHOLDER,
+    row.digits,
+  );
 }
 
 function toAttachmentName(row: ReadingRow): string {
@@ -186,7 +195,12 @@ export async function getReadingEmail(id: number): Promise<ReadingEmailResponse>
 
 // The parts of every email that do not depend on a reading.
 export function getEmailDefaults(): EmailDefaultsResponse {
-  return { from: env.MAIL_FROM ?? null, to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT };
+  return {
+    from: env.MAIL_FROM ?? null,
+    to: env.PROVIDER_EMAIL,
+    subject: env.MAIL_SUBJECT,
+    bodyTemplate: EMAIL_BODY_TEMPLATE,
+  };
 }
 
 async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {

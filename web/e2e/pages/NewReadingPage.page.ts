@@ -39,9 +39,9 @@ export class NewReadingPage {
     return hasFilledField || hasFoundNothing || isPhotoRefused;
   }
 
-  async save(digits: string, date: string) {
+  // A reading is always today's: there is no date to pick.
+  async save(digits: string) {
     await this.readingField.fill(digits);
-    await this.page.getByLabel('Date').fill(date);
     await this.page.getByRole('button', { name: 'Save reading' }).click();
   }
 }

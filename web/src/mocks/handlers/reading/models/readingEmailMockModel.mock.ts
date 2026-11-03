@@ -29,5 +29,6 @@ export const createEmailDefaultsMockModel = (overrides?: Partial<EmailDefaultsAp
   from: MOCK_FROM_EMAIL,
   to: MOCK_PROVIDER_EMAIL,
   subject: MOCK_SUBJECT,
+  bodyTemplate: 'Date: {date}\nReading: {reading}',
   ...overrides,
 });

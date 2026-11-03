@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useFetcher } from 'react-router';
@@ -10,13 +11,13 @@ import { createFormData } from '@utils/formDataUtils';
 import { isReadingLower, readingDigitsSchema } from '@utils/readingUtils';
 import { NewReadingIntent, SAVE_FAILED_MESSAGE, type NewReadingEmail } from '../../newReadingUtils';
 import LowerReadingWarning from './components/LowerReadingWarning';
-import ReadingDateField from './components/ReadingDateField';
 import ReadingDigitsField from './components/ReadingDigitsField';
 import PhotoPicker from './components/PhotoPicker';
 import { useReadingPhoto } from './hooks/useReadingPhoto';
 import NewReadingButtons from './components/NewReadingButtons';
 import NewReadingEmailFields from './components/NewReadingEmailFields';
 import {
+  fillEmailBody,
   getInitialValues,
   newReadingFormSchema,
   toEmail,
@@ -55,10 +56,11 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
   // The React Compiler would memoize that spread, so the inputs would stop reaching the form state.
   'use no memo';
 
-  const { register, handleSubmit, formState, control, getValues, setValue, setFocus } = useForm<NewReadingFormValues>({
-    defaultValues: getInitialValues(emailDefaults.subject),
-    resolver: yupResolver(newReadingFormSchema),
-  });
+  const { register, handleSubmit, formState, control, getValues, getFieldState, setValue, setFocus } =
+    useForm<NewReadingFormValues>({
+      defaultValues: getInitialValues(emailDefaults.subject, emailDefaults.bodyTemplate),
+      resolver: yupResolver(newReadingFormSchema),
+    });
 
   const fetcher = useFetcher<JSONResponseUtil>();
   const { photo, previewUrl, isShrinking, errorMessage, isFindingDigits, hasFoundNothing, pickPhoto, removePhoto } =
@@ -79,6 +81,13 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
   }
 
   const digits = useWatch({ control, name: 'digits' });
+
+  // The message follows the digits, so it always reads as the email that would go out, until the user edits it.
+  useEffect(() => {
+    if (getFieldState('body').isDirty) return;
+
+    setValue('body', fillEmailBody(emailDefaults.bodyTemplate, digits));
+  }, [digits, emailDefaults.bodyTemplate, getFieldState, setValue]);
   const isLower = isLowerThanLast(digits, lastReading);
   const isSaving = fetcher.state !== 'idle';
   const canSave = !isSaving && !isShrinking;
@@ -107,7 +116,6 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
           registration={register('digits')}
         />
         {isLower && lastReading && <LowerReadingWarning id={WARNING_ID} lastReading={lastReading} />}
-        <ReadingDateField error={formState.errors.date?.message} registration={register('date')} />
       </FieldGroup>
       <NewReadingEmailFields emailDefaults={emailDefaults} register={register} errors={formState.errors} />
       {failureMessage && <ErrorAlert message={failureMessage} />}
