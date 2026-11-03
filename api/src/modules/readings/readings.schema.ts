@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PaginationQuerySchema, paginatedResponseSchema } from '../../lib/pagination.ts';
 import { BILL_CONTENT_TYPES } from '../bills/bills.type.ts';
+import { MESSAGE_DATE_FORMATS } from '../settings/settings.type.ts';
 
 // Long enough for any household meter's digit window, red digits included.
 export const READING_DIGITS_MAX_LENGTH = 15;
@@ -175,10 +176,11 @@ export const EmailDefaultsResponseSchema = z
     from: z.string().nullable(),
     // The provider's address saved in Settings; null until one is saved.
     to: z.string().nullable(),
-    // The templates saved in Settings, with {date} (spelled out, "3 November 2026") and {reading} (the digits as
-    // read) to fill in.
+    // The templates saved in Settings, with {date} and {reading} (the digits as read) to fill in.
     subjectTemplate: z.string(),
     bodyTemplate: z.string(),
+    // How {date} is written, as chosen in Settings, so the form fills it in the way a send would.
+    dateFormat: z.enum(MESSAGE_DATE_FORMATS),
   })
   .meta({ id: 'EmailDefaults' });
 

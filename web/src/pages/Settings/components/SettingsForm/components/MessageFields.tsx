@@ -2,13 +2,14 @@ import type { UseFormRegister } from 'react-hook-form';
 import type { UpdateSettings } from '@services/settingsService/settingsService.type';
 import { FieldDescription, FieldLegend, FieldSet } from '@components/ui/field';
 import { MESSAGE_PLACEHOLDERS } from '@utils/messageTemplateUtils';
+import DateFormatField from './DateFormatField';
 import TemplateField from './TemplateField';
 
-type TemplateErrors = { subjectTemplate?: string; bodyTemplate?: string };
+type MessageErrors = { subjectTemplate?: string; bodyTemplate?: string; dateFormat?: string };
 
 type Props = {
   register: UseFormRegister<UpdateSettings>;
-  errors: TemplateErrors;
+  errors: MessageErrors;
 };
 
 const LEGEND = 'Message';
@@ -20,8 +21,8 @@ const BODY_TEMPLATE_ID = 'settings-body-template';
 const SUBJECT_TEMPLATE_HINT = `For example: Leitura ${MESSAGE_PLACEHOLDERS.date}`;
 const BODY_TEMPLATE_HINT = `For example: Leitura - ${MESSAGE_PLACEHOLDERS.reading} - ${MESSAGE_PLACEHOLDERS.date}`;
 
-// The subject and body templates, with the two placeholders they can hold.
-function MessageTemplatesFields({ register, errors }: Props) {
+// The subject and body templates, with the two placeholders they can hold, and how {date} is written in them.
+function MessageFields({ register, errors }: Props) {
   // react-hook-form drives uncontrolled inputs through the `ref` callback `register()` returns on every render.
   // The React Compiler would memoize that spread, so the input would stop reaching the form state.
   'use no memo';
@@ -45,8 +46,9 @@ function MessageTemplatesFields({ register, errors }: Props) {
         isMultiline
         registration={register('bodyTemplate')}
       />
+      <DateFormatField error={errors.dateFormat} registration={register('dateFormat')} />
     </FieldSet>
   );
 }
 
-export default MessageTemplatesFields;
+export default MessageFields;

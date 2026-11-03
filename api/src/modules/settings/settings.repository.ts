@@ -8,12 +8,13 @@ const SETTINGS_SELECT = {
   providerEmail: true,
   subjectTemplate: true,
   bodyTemplate: true,
+  dateFormat: true,
 } as const satisfies Prisma.SettingsSelect;
 
-export type SettingsRow = { providerEmail: string | null; subjectTemplate: string; bodyTemplate: string };
+export type SettingsRow = Prisma.SettingsGetPayload<{ select: typeof SETTINGS_SELECT }>;
 
 // What a save writes: every field the Settings page has.
-export type SettingsColumns = { providerEmail: string; subjectTemplate: string; bodyTemplate: string };
+export type SettingsColumns = Omit<SettingsRow, 'providerEmail'> & { providerEmail: string };
 
 export const settingsRepository = {
   // Undefined until the user saves Settings the first time.

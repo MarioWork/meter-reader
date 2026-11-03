@@ -16,11 +16,12 @@ import { toBillContentType } from '../bills/bills.service.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import {
   fillMessageTemplate,
-  getMessageTemplates,
+  formatMessageDate,
+  getMessageSettings,
   getProviderEmail,
   requireProviderEmail,
 } from '../settings/settings.service.ts';
-import type { MessageTemplates, MessageValues } from '../settings/settings.type.ts';
+import type { MessageSettings, MessageValues } from '../settings/settings.type.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
 import { CSV_EXTENSION, JSON_EXTENSION, readingsBackupFileName, toReadingsBackupCsv } from './readings.backup.ts';
@@ -56,13 +57,6 @@ const ALREADY_SENT_MESSAGE = 'This reading was sent already';
 const BEING_SENT_MESSAGE = 'This reading is being sent already';
 const NO_PHOTO_MESSAGE = 'This reading has no photo to attach';
 const PHOTO_FILE_MISSING_MESSAGE = 'The photo is missing on the server. Send the reading without it';
-// The day in the email, spelled out so the provider cannot misread it: "31 October 2026". A calendar day, so UTC.
-const EMAIL_DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 // How a failed send answers, by its code. Anything else is Microsoft's doing: a bad gateway.
 const SEND_FAILURE_ERRORS: Record<string, (message: string, code: string) => HttpError> = {
   MAIL_TOO_LARGE: (message, code) => new ContentTooLargeError(message, code),
@@ -141,11 +135,12 @@ function toAttachmentName(row: ReadingRow): string {
 }
 
 // The subject and the body, filled in from the templates in Settings with the reading exactly as read (leading zeros
-// and all) and its day spelled out. One builder for the preview and the send, so they cannot drift apart.
-function toMailText(row: ReadingRow, templates: MessageTemplates): Pick<OutgoingMail, 'subject' | 'body'> {
-  const values: MessageValues = { reading: row.digits, date: EMAIL_DATE_FORMAT.format(row.date) };
+// and all) and its day written in the date format chosen there. One builder for the preview and the send, so they
+// cannot drift apart.
+function toMailText(row: ReadingRow, settings: MessageSettings): Pick<OutgoingMail, 'subject' | 'body'> {
+  const values: MessageValues = { reading: row.digits, date: formatMessageDate(row.date, settings.dateFormat) };
 
-  return { subject: fillMessageTemplate(templates.subject, values), body: fillMessageTemplate(templates.body, values) };
+  return { subject: fillMessageTemplate(settings.subject, values), body: fillMessageTemplate(settings.body, values) };
 }
 
 async function findReading(id: number): Promise<ReadingRow> {
@@ -311,16 +306,17 @@ export async function deleteReading(id: number): Promise<void> {
 export async function getReadingEmail(id: number): Promise<ReadingEmailResponse> {
   const row = await findReading(id);
   const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
-  const [to, templates] = await Promise.all([getProviderEmail(), getMessageTemplates()]);
+  const [to, messageSettings] = await Promise.all([getProviderEmail(), getMessageSettings()]);
 
-  return { from: env.MAIL_FROM ?? null, to, ...toMailText(row, templates), attachment };
+  return { from: env.MAIL_FROM ?? null, to, ...toMailText(row, messageSettings), attachment };
 }
 
-// The parts of every email that do not depend on a reading, with the templates still to fill in.
+// The parts of every email that do not depend on a reading, with the templates still to fill in and the date format
+// to fill {date} in with.
 export async function getEmailDefaults(): Promise<EmailDefaultsResponse> {
-  const [to, templates] = await Promise.all([getProviderEmail(), getMessageTemplates()]);
+  const [to, { subject, body, dateFormat }] = await Promise.all([getProviderEmail(), getMessageSettings()]);
 
-  return { from: env.MAIL_FROM ?? null, to, subjectTemplate: templates.subject, bodyTemplate: templates.body };
+  return { from: env.MAIL_FROM ?? null, to, subjectTemplate: subject, bodyTemplate: body, dateFormat };
 }
 
 async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
@@ -337,7 +333,7 @@ async function toOutgoingMail(
   { row, to }: SendableReading,
   { attachPhoto, subject, body }: SendReading,
 ): Promise<OutgoingMail> {
-  const defaultText = toMailText(row, await getMessageTemplates());
+  const defaultText = toMailText(row, await getMessageSettings());
   const mail = { to, subject: subject ?? defaultText.subject, body: body ?? defaultText.body };
 
   if (!attachPhoto) return mail;

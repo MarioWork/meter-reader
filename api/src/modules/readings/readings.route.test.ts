@@ -20,6 +20,8 @@ const DATE_PART_LENGTH = 2;
 const DIGIT_COUNT = 5;
 // The templates the tests save in Settings, with both placeholders in the subject too.
 const TEMPLATES = { subjectTemplate: 'Meter reading {date}', bodyTemplate: 'Date: {date}\nReading: {reading}' };
+// A fresh install's date format: "31 October 2026".
+const DEFAULT_DATE_FORMAT = 'longMonth';
 // What they fill in to for 00123, read on 31 October 2026.
 const SUBJECT = 'Meter reading 31 October 2026';
 
@@ -127,12 +129,12 @@ async function connectHotmail(): Promise<void> {
   });
 }
 
-// The provider's address and the templates, as the user saves them on the Settings page.
-// Any field left out is the tests' own address or template.
-type SettingsChanges = Partial<typeof TEMPLATES & { to: string }>;
+// The provider's address, the templates and the date format, as the user saves them on the Settings page.
+// Any field left out is the tests' own address or template, or a fresh install's date format.
+type SettingsChanges = Partial<typeof TEMPLATES & { to: string; dateFormat: string }>;
 
 async function saveSettings(settings: SettingsChanges = {}): Promise<void> {
-  const payload = { to: PROVIDER_EMAIL, ...TEMPLATES, ...settings };
+  const payload = { to: PROVIDER_EMAIL, ...TEMPLATES, dateFormat: DEFAULT_DATE_FORMAT, ...settings };
 
   await app.inject({ method: 'PUT', url: '/settings', payload, ...withSession(token) });
 }
@@ -705,14 +707,21 @@ describe('DELETE /readings/:id', () => {
 });
 
 describe('GET /readings/email-defaults', () => {
-  it('answers who the email is from and to, and the saved templates, when Settings were saved', async () => {
+  it('answers who the email is from and to, the saved templates and date format, when Settings were saved', async () => {
+    await saveSettings({ dateFormat: 'iso' });
+
     const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ from: 'me@hotmail.example', to: PROVIDER_EMAIL, ...TEMPLATES });
+    expect(response.json()).toEqual({
+      from: 'me@hotmail.example',
+      to: PROVIDER_EMAIL,
+      ...TEMPLATES,
+      dateFormat: 'iso',
+    });
   });
 
-  it("answers no address and a fresh install's templates when Settings were never saved", async () => {
+  it("answers no address and a fresh install's templates and date format when Settings were never saved", async () => {
     await prisma.settings.deleteMany();
 
     const response = await app.inject({ method: 'GET', url: '/readings/email-defaults', ...withSession(token) });
@@ -721,6 +730,7 @@ describe('GET /readings/email-defaults', () => {
       to: null,
       subjectTemplate: 'Leitura {date}',
       bodyTemplate: 'Leitura - {reading} - {date}',
+      dateFormat: DEFAULT_DATE_FORMAT,
     });
   });
 
@@ -1024,6 +1034,19 @@ describe('GET /readings/:id/email', () => {
     expect(response.json()).toMatchObject({ attachment: null });
   });
 
+  it.each([
+    ['shortMonth', 'Meter reading 31 Oct 2026'],
+    ['dayMonthYear', 'Meter reading 31/10/2026'],
+    ['iso', 'Meter reading 2026-10-31'],
+  ])('writes {date} in the %s format when that one is chosen in Settings', async (dateFormat, subject) => {
+    const readingId = await addReadingId('00123');
+    await saveSettings({ dateFormat });
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ subject });
+  });
+
   it('answers no attachment when the reading has no photo', async () => {
     const readingId = await addReadingId('000045');
 
@@ -1088,6 +1111,21 @@ describe('POST /readings/:id/send', () => {
       },
     });
     expect(attachmentsOf(received[0])).toEqual([]);
+  });
+
+  it('writes {date} the same as the preview when a date format is chosen in Settings', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    await saveSettings({ dateFormat: 'dayMonthYear' });
+    const preview = await getReadingEmail(readingId);
+    const received = answerSendMail();
+
+    await sendReading(readingId, { attachPhoto: false });
+
+    expect(received[0]?.body).toMatchObject({
+      message: { subject: 'Meter reading 31/10/2026', body: { content: 'Date: 31/10/2026\nReading: 00123' } },
+    });
+    expect(preview.json()).toMatchObject({ subject: 'Meter reading 31/10/2026' });
   });
 
   it('leaves the cost out of what Graph receives when the reading has a cost', async () => {

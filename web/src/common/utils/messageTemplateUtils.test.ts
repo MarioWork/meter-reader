@@ -1,3 +1,4 @@
+import { MessageDateFormatUtil } from '@app-types/utility';
 import {
   bodyTemplateSchema,
   fillMessageTemplate,
@@ -31,13 +32,27 @@ describe('fillTodaysEmail', () => {
     vi.useRealTimers();
   });
 
-  it('fills the subject and body with the reading, trimmed, and today spelled out', () => {
-    const templates = { subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' };
+  it('fills the subject and body with the reading, trimmed, and today in the chosen date format', () => {
+    const settings = {
+      subjectTemplate: 'Leitura {date}',
+      bodyTemplate: 'Leitura - {reading} - {date}',
+      dateFormat: MessageDateFormatUtil.LONG_MONTH,
+    };
 
-    expect(fillTodaysEmail(templates, ' 00123 ')).toEqual({
+    expect(fillTodaysEmail(settings, ' 00123 ')).toEqual({
       subject: 'Leitura 3 November 2026',
       body: 'Leitura - 00123 - 3 November 2026',
     });
+  });
+
+  it('writes today in another format when another one is chosen', () => {
+    const settings = {
+      subjectTemplate: 'Leitura {date}',
+      bodyTemplate: '{reading}',
+      dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR,
+    };
+
+    expect(fillTodaysEmail(settings, '00123').subject).toBe('Leitura 03/11/2026');
   });
 });
 

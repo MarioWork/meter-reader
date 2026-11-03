@@ -28,6 +28,10 @@ _Avoid_: Format, pattern, default message
 A name in braces in a template, filled in when the email is made: `{reading}` is the reading as read, `{date}` the day it was read. Only these two exist, in the subject and in the body; anything else in braces is refused.
 _Avoid_: Variable, tag, token, field
 
+**Date format**:
+How `{date}` is written in every email, chosen in Settings: `31 October 2026` (a fresh install's), `31 Oct 2026`, `31/10/2026` or `2026-10-31`. Only the email follows it; the app shows its own dates its own way.
+_Avoid_: Date style, date pattern
+
 **Send**:
 Emailing one reading, with its photo unless the user leaves it out, from the user's own mail account to the provider.
 _Avoid_: Submit, upload, report

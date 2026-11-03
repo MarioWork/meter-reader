@@ -9,7 +9,9 @@ const MAIL_FROM = 'me@hotmail.example';
 // A fresh install's templates (the issue: "Leitura {date}" and "Leitura - {reading} - {date}").
 const DEFAULT_TEMPLATES = { subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' };
 const TEMPLATES = { subjectTemplate: 'Meter reading {date}', bodyTemplate: 'Date: {date}\nReading: {reading}' };
-const SETTINGS = { to: PROVIDER_EMAIL, ...TEMPLATES };
+// A fresh install's date format: "31 October 2026".
+const DEFAULT_DATE_FORMAT = 'longMonth';
+const SETTINGS = { to: PROVIDER_EMAIL, ...TEMPLATES, dateFormat: 'dayMonthYear' };
 
 let app: App;
 let token: string;
@@ -41,10 +43,15 @@ describe('GET /settings', () => {
     const response = await getSettings();
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ from: MAIL_FROM, to: null, ...DEFAULT_TEMPLATES });
+    expect(response.json()).toEqual({
+      from: MAIL_FROM,
+      to: null,
+      ...DEFAULT_TEMPLATES,
+      dateFormat: DEFAULT_DATE_FORMAT,
+    });
   });
 
-  it('answers the saved provider address and templates when they were saved', async () => {
+  it('answers the saved provider address, templates and date format when they were saved', async () => {
     await updateSettings(SETTINGS);
 
     const response = await getSettings();
@@ -52,12 +59,17 @@ describe('GET /settings', () => {
     expect(response.json()).toEqual({ from: MAIL_FROM, ...SETTINGS });
   });
 
-  it('answers the default templates when the settings row was made before templates existed', async () => {
+  it('answers the default templates and date format when the settings row was made before they existed', async () => {
     await prisma.settings.create({ data: { id: 1, providerEmail: PROVIDER_EMAIL } });
 
     const response = await getSettings();
 
-    expect(response.json()).toEqual({ from: MAIL_FROM, to: PROVIDER_EMAIL, ...DEFAULT_TEMPLATES });
+    expect(response.json()).toEqual({
+      from: MAIL_FROM,
+      to: PROVIDER_EMAIL,
+      ...DEFAULT_TEMPLATES,
+      dateFormat: DEFAULT_DATE_FORMAT,
+    });
   });
 
   it('returns 401 when the browser is not signed in', async () => {
@@ -68,18 +80,49 @@ describe('GET /settings', () => {
 });
 
 describe('PUT /settings', () => {
-  it('saves the provider address and the templates, trimmed, and answers the settings when they are valid', async () => {
+  it('saves every field, the templates trimmed, and answers the settings when they are valid', async () => {
     const response = await updateSettings({
       to: `  ${PROVIDER_EMAIL}  `,
       subjectTemplate: `  ${TEMPLATES.subjectTemplate} `,
       bodyTemplate: `\n${TEMPLATES.bodyTemplate}  `,
+      dateFormat: SETTINGS.dateFormat,
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ from: MAIL_FROM, ...SETTINGS });
     expect(
-      await prisma.settings.findMany({ select: { providerEmail: true, subjectTemplate: true, bodyTemplate: true } }),
-    ).toEqual([{ providerEmail: PROVIDER_EMAIL, ...TEMPLATES }]);
+      await prisma.settings.findMany({
+        select: { providerEmail: true, subjectTemplate: true, bodyTemplate: true, dateFormat: true },
+      }),
+    ).toEqual([{ providerEmail: PROVIDER_EMAIL, ...TEMPLATES, dateFormat: 'DAY_MONTH_YEAR' }]);
+  });
+
+  it.each(['longMonth', 'shortMonth', 'dayMonthYear', 'iso'])(
+    'saves and answers the date format when it is %s',
+    async (dateFormat) => {
+      const response = await updateSettings({ ...SETTINGS, dateFormat });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ dateFormat });
+    },
+  );
+
+  it.each(['dd/mm/yyyy', 'LONG_MONTH', ''])(
+    'returns 400 VALIDATION_ERROR naming the field and saves nothing when the date format is %j',
+    async (dateFormat) => {
+      const response = await updateSettings({ ...SETTINGS, dateFormat });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR', issues: [{ path: '/dateFormat' }] });
+      expect(await prisma.settings.count()).toBe(0);
+    },
+  );
+
+  it('returns 400 VALIDATION_ERROR when the date format is left out', async () => {
+    const response = await updateSettings({ to: PROVIDER_EMAIL, ...TEMPLATES });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR', issues: [{ path: '/dateFormat' }] });
   });
 
   it('replaces the settings and keeps one settings row when they are saved again', async () => {
@@ -131,7 +174,11 @@ describe('PUT /settings', () => {
   });
 
   it('returns 400 VALIDATION_ERROR when a template is left out', async () => {
-    const response = await updateSettings({ to: PROVIDER_EMAIL, subjectTemplate: TEMPLATES.subjectTemplate });
+    const response = await updateSettings({
+      to: PROVIDER_EMAIL,
+      subjectTemplate: TEMPLATES.subjectTemplate,
+      dateFormat: SETTINGS.dateFormat,
+    });
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });

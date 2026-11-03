@@ -10,10 +10,15 @@ export default (baseUrl: string) => [
   http.put(`${baseUrl}/settings`, async ({ request }): Promise<HttpResponse<SettingsApiModel>> => {
     await delay(MOCK_DELAY);
 
-    const { to, subjectTemplate, bodyTemplate } = (await request.json()) as UpdateSettings;
+    const { to, subjectTemplate, bodyTemplate, dateFormat } = (await request.json()) as UpdateSettings;
 
     return HttpResponse.json(
-      updateMockSettings({ to: to.trim(), subjectTemplate: subjectTemplate.trim(), bodyTemplate: bodyTemplate.trim() }),
+      updateMockSettings({
+        to: to.trim(),
+        subjectTemplate: subjectTemplate.trim(),
+        bodyTemplate: bodyTemplate.trim(),
+        dateFormat,
+      }),
     );
   }),
 ];

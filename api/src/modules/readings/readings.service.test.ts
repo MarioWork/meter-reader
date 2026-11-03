@@ -33,15 +33,21 @@ vi.mock('../../lib/uploads.ts', () => ({ readUpload: vi.fn(), removeUpload: vi.f
 
 vi.mock('../mail/mail.service.ts', () => ({ assertMailConnected: vi.fn(), sendMail: vi.fn() }));
 
-// The template filling is the settings module's own, kept real; only what reads the database is faked.
-vi.mock('../settings/settings.service.ts', async (importOriginal) => ({
-  fillMessageTemplate: (await importOriginal<typeof SettingsService>()).fillMessageTemplate,
-  getProviderEmail: vi.fn(),
-  getMessageTemplates: vi.fn(() =>
-    Promise.resolve({ subject: 'Leitura {date}', body: 'Leitura - {reading} - {date}' }),
-  ),
-  requireProviderEmail: vi.fn(() => Promise.resolve('readings@water-provider.example')),
-}));
+// The template filling and date writing are the settings module's own, kept real; only what reads the database is
+// faked.
+vi.mock('../settings/settings.service.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof SettingsService>();
+
+  return {
+    fillMessageTemplate: actual.fillMessageTemplate,
+    formatMessageDate: actual.formatMessageDate,
+    getProviderEmail: vi.fn(),
+    getMessageSettings: vi.fn(() =>
+      Promise.resolve({ subject: 'Leitura {date}', body: 'Leitura - {reading} - {date}', dateFormat: 'longMonth' }),
+    ),
+    requireProviderEmail: vi.fn(() => Promise.resolve('readings@water-provider.example')),
+  };
+});
 
 const PHOTO = { id: 4, fileName: '5b0f3c1e-6f7a-4d2b-9a51-2c8e0d9b7f10.jpg' };
 const BILL = {

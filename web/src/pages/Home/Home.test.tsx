@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { BASE_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
-import { MailStateUtil } from '@app-types/utility';
+import { MailStateUtil, MessageDateFormatUtil } from '@app-types/utility';
 import { addMockBill } from '@mocks/handlers/bill/billMockState';
 import { createReadingMockModel } from '@mocks/handlers/reading/models/readingMockModel.mock';
 import { updateMockReading } from '@mocks/handlers/reading/readingMockState';
@@ -540,6 +540,14 @@ describe('sending a reading', () => {
 
     expect(within(dialog).getByRole('textbox', { name: 'Subject' })).toHaveValue('Leitura 1 October 2026');
     expect(within(dialog).getByRole('textbox', { name: 'Message' })).toHaveValue('Leitura - 00529 - 1 October 2026');
+  });
+
+  it('writes the date in the date format saved in Settings when the preview opens', async () => {
+    updateMockSettings({ subjectTemplate: 'Leitura {date}', dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR });
+
+    const dialog = await openNewestPreview();
+
+    expect(within(dialog).getByRole('textbox', { name: 'Subject' })).toHaveValue('Leitura 01/10/2026');
   });
 
   it('previews what will be sent: the address, the subject and the body ready to edit, and the photo', async () => {

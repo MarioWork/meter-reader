@@ -12,20 +12,20 @@ type Props = {
 
 const SAMPLE_READING = '00123';
 const TITLE = 'Preview';
-const HINT = `How the email reads, with ${SAMPLE_READING} as the reading and today as the date.`;
+const HINT = `How the email reads, with ${SAMPLE_READING} as the reading and today as the date, in the date format chosen.`;
 const SUBJECT_LABEL = 'Subject';
 const BODY_LABEL = 'Body';
 const LABEL_CLASSES = 'text-muted-foreground';
-const WATCHED_FIELDS = ['to', 'subjectTemplate', 'bodyTemplate'] as const;
+const WATCHED_FIELDS = ['to', 'subjectTemplate', 'bodyTemplate', 'dateFormat'] as const;
 
 // The email as it will go out, from what is typed in the form right now, saved or not, trimmed as the save trims it.
 // An unknown placeholder stays as typed: the error under its field is the signal.
 function EmailPreview({ control, from }: Props) {
   const titleId = useId();
-  const [to, subjectTemplate, bodyTemplate] = useWatch({ control, name: WATCHED_FIELDS });
+  const [to, subjectTemplate, bodyTemplate, dateFormat] = useWatch({ control, name: WATCHED_FIELDS });
 
-  const templates = { subjectTemplate: subjectTemplate.trim(), bodyTemplate: bodyTemplate.trim() };
-  const { subject, body } = fillTodaysEmail(templates, SAMPLE_READING);
+  const messageSettings = { subjectTemplate: subjectTemplate.trim(), bodyTemplate: bodyTemplate.trim(), dateFormat };
+  const { subject, body } = fillTodaysEmail(messageSettings, SAMPLE_READING);
   const providerEmail = to.trim() || null;
 
   return (

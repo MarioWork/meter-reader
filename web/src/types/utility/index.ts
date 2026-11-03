@@ -4,6 +4,7 @@ export { HttpVerbsUtil } from './httpVerbsUtil.type';
 export type { JSONResponseUtil } from './jsonResponseUtil.type';
 export type { LoaderDataUtil } from './loaderDataUtil.type';
 export { MailStateUtil } from './mailStateUtil.type';
+export { MessageDateFormatUtil } from './messageDateFormatUtil.type';
 export { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from './paginationUtil.type';
 export type { PaginationUtil } from './paginationUtil.type';
 export { ReadingStatusUtil } from './readingStatusUtil.type';
