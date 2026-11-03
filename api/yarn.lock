@@ -1375,6 +1375,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/yauzl@npm:^3":
+  version: 3.4.0
+  resolution: "@types/yauzl@npm:3.4.0"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/9992cf7bf129466016baa4e99e05ad524afe2ff6e5d84e7408f2a7123bc4af3b4bfb639237308574b80e7e435571b6e1af6113910d166e8ea8b80da422ba8ecb
+  languageName: node
+  linkType: hard
+
+"@types/yazl@npm:^3":
+  version: 3.3.1
+  resolution: "@types/yazl@npm:3.3.1"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/bc72a56c88d99021ecb80ee9c0a2eb3dceb5bec522c20fd4e160d5c52dcc156c37b2e956a05d54e89e7ececba82aca07a361a9e8f66e5ebbbfcdcd8d2c0dfc0e
+  languageName: node
+  linkType: hard
+
 "@typescript-eslint/eslint-plugin@npm:8.72.1":
   version: 8.72.1
   resolution: "@typescript-eslint/eslint-plugin@npm:8.72.1"
@@ -1809,6 +1827,13 @@ __metadata:
   dependencies:
     balanced-match: "npm:^4.0.2"
   checksum: 10c0/a40ac64d3bdb5bb222456514d3633c1f627f03b844f509c69e70f98b78be0ce85e21b44bbfecdd0ddd4cc0855ca4242b41ea96ddccf88c7c3c7a84405474bb3a
+  languageName: node
+  linkType: hard
+
+"buffer-crc32@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "buffer-crc32@npm:1.0.0"
+  checksum: 10c0/8b86e161cee4bb48d5fa622cbae4c18f25e4857e5203b89e23de59e627ab26beb82d9d7999f2b8de02580165f61f83f997beaf02980cdf06affd175b651921ab
   languageName: node
   linkType: hard
 
@@ -3179,6 +3204,8 @@ __metadata:
     "@simplewebauthn/server": "npm:^14"
     "@types/node": "npm:^26"
     "@types/pg": "npm:^8"
+    "@types/yauzl": "npm:^3"
+    "@types/yazl": "npm:^3"
     eslint: "npm:^10"
     eslint-config-prettier: "npm:^10"
     fastify: "npm:^5.12"
@@ -3195,6 +3222,8 @@ __metadata:
     vite: "npm:^8"
     vitest: "npm:^5"
     write-excel-file: "npm:^4"
+    yauzl: "npm:^3"
+    yazl: "npm:^3"
     zod: "npm:^4.6"
   languageName: unknown
   linkType: soft
@@ -3487,6 +3516,13 @@ __metadata:
   version: 2.0.3
   resolution: "pathe@npm:2.0.3"
   checksum: 10c0/c118dc5a8b5c4166011b2b70608762e260085180bb9e33e80a50dcdb1e78c010b1624f4280c492c92b05fc276715a4c357d1f9edc570f8f1b3d90b6839ebaca1
+  languageName: node
+  linkType: hard
+
+"pend@npm:~1.2.0":
+  version: 1.2.0
+  resolution: "pend@npm:1.2.0"
+  checksum: 10c0/8a87e63f7a4afcfb0f9f77b39bb92374afc723418b9cb716ee4257689224171002e07768eeade4ecd0e86f1fa3d8f022994219fb45634f2dbd78c6803e452458
   languageName: node
   linkType: hard
 
@@ -4672,6 +4708,24 @@ __metadata:
     y18n: "npm:^5.0.5"
     yargs-parser: "npm:^22.0.0"
   checksum: 10c0/7419338c3c00f9143ec6b6ab168335061c6f5342d161642aec23ff119e28cac1c417e0eca1d7dc82fd084f07207cc5d34c7d8315f605c0e3dbf12c350e405f3f
+  languageName: node
+  linkType: hard
+
+"yauzl@npm:^3":
+  version: 3.4.0
+  resolution: "yauzl@npm:3.4.0"
+  dependencies:
+    pend: "npm:~1.2.0"
+  checksum: 10c0/17a98c42c0065e8af429eb8a61f7a0e4562181ed54080366b838f34f741b6829f167f804787c86b7646bb042707f35871739f053de0548285e405a2eae4da025
+  languageName: node
+  linkType: hard
+
+"yazl@npm:^3":
+  version: 3.3.1
+  resolution: "yazl@npm:3.3.1"
+  dependencies:
+    buffer-crc32: "npm:^1.0.0"
+  checksum: 10c0/8290dffd8afc4ea32459c0ce5d7e22af250515aa0170f289cbc896530d3cd40c5be4788b5e3e7aa5cd21889778071f424e1824faadbd257dbd5ff80fb60d1fa6
   languageName: node
   linkType: hard
 

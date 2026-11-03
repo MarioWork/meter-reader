@@ -21,6 +21,7 @@ const BASE_READINGS_URL = '/readings';
 const READINGS_SPREADSHEET_SEGMENT = 'export.xlsx';
 const READINGS_BACKUP_JSON_SEGMENT = 'backup.json';
 const READINGS_BACKUP_CSV_SEGMENT = 'backup.csv';
+const READINGS_BACKUP_ZIP_SEGMENT = 'backup.zip';
 // The API takes several statuses in one param, the way it takes several sorting fields.
 const STATUS_SEPARATOR = ',';
 
@@ -101,6 +102,10 @@ export default {
 
   getReadingsBackupCsvUrl: (): string =>
     `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_BACKUP_CSV_SEGMENT}`,
+
+  // Every Photo in photos/ and every Bill in bills/, under the file names the JSON and CSV backups list.
+  getReadingsBackupZipUrl: (): string =>
+    `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_BACKUP_ZIP_SEGMENT}`,
 
   // The readings that have a Cost, newest first, and the sum of their costs.
   getCosts: async ({ dateFrom, dateTo }: GetCostsFields): Promise<CostListApiModel> => {

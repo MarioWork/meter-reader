@@ -1,3 +1,4 @@
+import { unzipSync } from 'fflate';
 import { http, HttpResponse } from 'msw/http';
 import { HttpVerbsUtil, ReadingStatusUtil } from '@app-types/utility';
 import type { ReadingsBackupApiModel } from '@app-types/models';
@@ -164,6 +165,37 @@ describe('getReadingsBackupCsvUrl', () => {
     const lines = (await response.text()).trimEnd().split('\r\n');
     expect(response.headers.get('content-type')).toBe('text/csv; charset=utf-8');
     expect(lines).toHaveLength(getMockReadings().length + 1);
+  });
+});
+
+// Where each named file sits in the files zip: "photos/<name>". A reading with no file adds none.
+function zipPathsOf(folder: string, fileNames: (string | null)[]): string[] {
+  return fileNames.filter((fileName) => fileName !== null).map((fileName) => `${folder}${fileName}`);
+}
+
+describe('getReadingsBackupZipUrl', () => {
+  it('points at the files zip under the API base url, with no filter', () => {
+    expect(readingService.getReadingsBackupZipUrl()).toBe(`${API}/readings/backup.zip`);
+  });
+
+  it('downloads every Photo and Bill under the names the JSON backup lists when followed', async () => {
+    const [zipResponse, backupResponse] = await Promise.all([
+      fetch(readingService.getReadingsBackupZipUrl()),
+      fetch(readingService.getReadingsBackupJsonUrl()),
+    ]);
+
+    const zip = unzipSync(new Uint8Array(await zipResponse.arrayBuffer()));
+    const { readings } = (await backupResponse.json()) as ReadingsBackupApiModel;
+    const photoPaths = zipPathsOf(
+      'photos/',
+      readings.map((reading) => reading.photoFileName),
+    );
+    const billPaths = zipPathsOf(
+      'bills/',
+      readings.map((reading) => reading.billFileName),
+    );
+    expect(zipResponse.headers.get('content-type')).toBe('application/zip');
+    expect(Object.keys(zip).sort()).toEqual(['photos/', 'bills/', ...photoPaths, ...billPaths].sort());
   });
 });
 

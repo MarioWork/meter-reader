@@ -1,3 +1,4 @@
+import type { Readable } from 'node:stream';
 import { env } from '../../config/env.ts';
 import { getErrorLogFields } from '../../lib/databaseErrors.ts';
 import { AppError } from '../../lib/errors.ts';
@@ -11,7 +12,8 @@ import {
 } from '../../lib/httpErrors.ts';
 import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
-import { readUpload, removeUpload } from '../../lib/uploads.ts';
+import { openUpload, readUpload, removeUpload } from '../../lib/uploads.ts';
+import { toZipStream, ZIP_EXTENSION, type ZipEntry } from '../../lib/zip.ts';
 import { toBillContentType } from '../bills/bills.service.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import {
@@ -24,7 +26,15 @@ import {
 import type { MessageSettings, MessageValues } from '../settings/settings.type.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
-import { CSV_EXTENSION, JSON_EXTENSION, readingsBackupFileName, toReadingsBackupCsv } from './readings.backup.ts';
+import {
+  BILLS_FOLDER,
+  CSV_EXTENSION,
+  JSON_EXTENSION,
+  PHOTOS_FOLDER,
+  readingsBackupFileName,
+  toCostEuros,
+  toReadingsBackupCsv,
+} from './readings.backup.ts';
 import { readingsSpreadsheetFileName, toReadingsSpreadsheet, type ReadingSheetLine } from './readings.spreadsheet.ts';
 import type {
   BackupReading,
@@ -75,6 +85,13 @@ export type ReadingsSpreadsheet = { fileName: string; content: Buffer };
 
 // A backup download: what is in it, and the name the browser saves it under.
 export type ReadingsBackupFile<Content> = { fileName: string; content: Content };
+
+// One stored file for the files zip: the folder it goes in, its name on disk, and the ids a log line may carry.
+type BackupFile = {
+  folder: typeof PHOTOS_FOLDER | typeof BILLS_FOLDER;
+  fileName: string;
+  logIds: { readingId: number; photoId?: number; billId?: number };
+};
 
 const STATUS_MAP: Record<ReadingRow['status'], ReadingStatus> = {
   NOT_SENT: 'notSent',
@@ -244,6 +261,8 @@ function toBackupReading(row: ReadingRow): BackupReading {
     sentAt: row.sentAt?.toISOString() ?? null,
     sentEmail: toSentEmailResponse(row),
     photoFileName: row.photo?.fileName ?? null,
+    costEuros: row.costCents === null ? null : toCostEuros(row.costCents),
+    billFileName: row.bill?.fileName ?? null,
   };
 }
 
@@ -273,6 +292,48 @@ export async function getReadingsBackupCsv(): Promise<ReadingsBackupFile<string>
   const readings = await getBackupReadings();
 
   return { fileName: readingsBackupFileName(exportedAt, CSV_EXTENSION), content: toReadingsBackupCsv(readings) };
+}
+
+// The reading's Photo and Bill, whichever it has.
+function toBackupFiles({ id, photo, bill }: ReadingRow): BackupFile[] {
+  const files: BackupFile[] = [];
+
+  if (photo)
+    files.push({ folder: PHOTOS_FOLDER, fileName: photo.fileName, logIds: { readingId: id, photoId: photo.id } });
+
+  if (bill) files.push({ folder: BILLS_FOLDER, fileName: bill.fileName, logIds: { readingId: id, billId: bill.id } });
+
+  return files;
+}
+
+// Each file opened only when the zip is ready for it. One missing on disk is left out, and the download goes on.
+async function* openBackupFiles(files: BackupFile[]): AsyncGenerator<ZipEntry> {
+  for (const { folder, fileName, logIds } of files) {
+    const upload = await openUpload(fileName);
+
+    // The ids only: the file's name is the user's data.
+    if (!upload) {
+      log.warn(logIds, 'file missing on disk, left out of the files backup');
+      continue;
+    }
+
+    yield { path: `${folder}${fileName}`, stream: upload.stream };
+  }
+}
+
+// Every Photo in photos/ and every Bill in bills/, under the names the JSON and the CSV list, streamed as it is made.
+export async function getReadingsFilesBackup(): Promise<ReadingsBackupFile<Readable>> {
+  const exportedAt = new Date();
+  const rows = await readingsRepository.findAll({});
+  const files = rows.flatMap(toBackupFiles);
+
+  // A count only: the files are the user's data.
+  log.info({ fileCount: files.length }, 'files backup started');
+
+  return {
+    fileName: readingsBackupFileName(exportedAt, ZIP_EXTENSION),
+    content: toZipStream([PHOTOS_FOLDER, BILLS_FOLDER], openBackupFiles(files)),
+  };
 }
 
 // Deleting the reading already deleted its photo and bill rows (cascade); this removes their files from the uploads
