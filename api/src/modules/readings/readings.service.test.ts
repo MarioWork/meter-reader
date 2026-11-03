@@ -3,13 +3,14 @@ import { AppError } from '../../lib/errors.ts';
 import { NotFoundError } from '../../lib/httpErrors.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { sendMail } from '../mail/mail.service.ts';
-import { addReading, deleteReading, getReadings, sendReading } from './readings.service.ts';
+import { addReading, deleteReading, getReadings, sendReading, updateReading } from './readings.service.ts';
 
 vi.mock('./readings.repository.ts', () => ({
   readingsRepository: {
     create: vi.fn(),
     findPage: vi.fn(),
     findById: vi.fn(),
+    update: vi.fn(),
     markSent: vi.fn(),
     markFailed: vi.fn(),
     deleteById: vi.fn(),
@@ -38,6 +39,7 @@ const SAVED_ROW = {
   sentSubject: null,
   sentBody: null,
   sentWithPhoto: null,
+  costCents: null,
   createdAt: new Date('2026-11-01T08:15:00.000Z'),
   photo: null,
 };
@@ -62,6 +64,7 @@ describe('addReading', () => {
       photoId: null,
       sentAt: null,
       sentEmail: null,
+      costCents: null,
     });
   });
 
@@ -114,6 +117,32 @@ describe('addReading with a photo', () => {
     const adding = addReading({ digits: '00123', date: '2026-10-31', photoId: 4 });
 
     await expect(adding).rejects.toMatchObject({ code: 'PHOTO_NOT_AVAILABLE', statusCode: 409 });
+  });
+});
+
+describe('updateReading', () => {
+  it('passes the cost on and answers it in cents when a cost is set or changed', async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce({ ...SAVED_ROW, costCents: 4210 });
+
+    const reading = await updateReading(7, { costCents: 4210 });
+
+    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: 4210 });
+    expect(reading.costCents).toBe(4210);
+  });
+
+  it('passes null on and answers no cost when the cost is cleared', async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(SAVED_ROW);
+
+    const reading = await updateReading(7, { costCents: null });
+
+    expect(readingsRepository.update).toHaveBeenCalledWith(7, { costCents: null });
+    expect(reading.costCents).toBeNull();
+  });
+
+  it('throws NotFoundError when the reading does not exist', async () => {
+    vi.mocked(readingsRepository.update).mockResolvedValueOnce(null);
+
+    await expect(updateReading(7, { costCents: 4210 })).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 

@@ -63,6 +63,10 @@ function getReading(id: number | string) {
   return app.inject({ method: 'GET', url: `/readings/${id}`, ...withSession(token) });
 }
 
+function updateReading(id: number | string, payload: InjectOptions['payload']) {
+  return app.inject({ method: 'PATCH', url: `/readings/${id}`, payload, ...withSession(token) });
+}
+
 function getReadingEmail(id: number | string) {
   return app.inject({ method: 'GET', url: `/readings/${id}/email`, ...withSession(token) });
 }
@@ -123,6 +127,7 @@ describe('POST /readings', () => {
 
     expect(response.statusCode).toBe(201);
     expect(Object.keys(response.json<object>()).sort()).toEqual([
+      'costCents',
       'createdAt',
       'date',
       'digits',
@@ -139,6 +144,7 @@ describe('POST /readings', () => {
       photoId: null,
       sentAt: null,
       sentEmail: null,
+      costCents: null,
     });
   });
 
@@ -500,7 +506,113 @@ describe('GET /readings/:id', () => {
   });
 });
 
+describe('PATCH /readings/:id', () => {
+  it('sets the cost and answers the reading with it when the reading has none', async () => {
+    const readingId = await addReadingId('00123');
+
+    const response = await updateReading(readingId, { costCents: 4210 });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ id: readingId, digits: '00123', costCents: 4210 });
+    expect((await getReading(readingId)).json()).toMatchObject({ costCents: 4210 });
+  });
+
+  it('changes the cost when the reading has one already', async () => {
+    const readingId = await addReadingId('00123');
+    await updateReading(readingId, { costCents: 4210 });
+
+    const response = await updateReading(readingId, { costCents: 3999 });
+
+    expect(response.json()).toMatchObject({ costCents: 3999 });
+  });
+
+  it('sets a cost of 0 when the reading cost nothing', async () => {
+    const readingId = await addReadingId('00123');
+
+    const response = await updateReading(readingId, { costCents: 0 });
+
+    expect(response.json()).toMatchObject({ costCents: 0 });
+  });
+
+  it('removes the cost when it is sent as null', async () => {
+    const readingId = await addReadingId('00123');
+    await updateReading(readingId, { costCents: 4210 });
+
+    const response = await updateReading(readingId, { costCents: null });
+
+    expect(response.json()).toMatchObject({ costCents: null });
+    expect((await getReading(readingId)).json()).toMatchObject({ costCents: null });
+  });
+
+  it('keeps the cost when the body leaves it out', async () => {
+    const readingId = await addReadingId('00123');
+    await updateReading(readingId, { costCents: 4210 });
+
+    const response = await updateReading(readingId, {});
+
+    expect(response.json()).toMatchObject({ costCents: 4210 });
+  });
+
+  it.each([
+    ['below 0', -1],
+    ['not a whole number of cents', 42.1],
+    ['a string', '42,10'],
+    ['over the cap', 2_147_483_648],
+  ])('returns 400 VALIDATION_ERROR and keeps the cost when the cost is %s', async (_scenario, costCents) => {
+    const readingId = await addReadingId('00123');
+    await updateReading(readingId, { costCents: 4210 });
+
+    const response = await updateReading(readingId, { costCents });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect((await getReading(readingId)).json()).toMatchObject({ costCents: 4210 });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the body has an unknown field', async () => {
+    const readingId = await addReadingId('00123');
+
+    const response = await updateReading(readingId, { digits: '99999' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
+    const response = await updateReading('abc', { costCents: 4210 });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('returns 404 NOT_FOUND when the reading does not exist', async () => {
+    const response = await updateReading(999_999, { costCents: 4210 });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('returns 401 and keeps the reading as it was when the browser is not signed in', async () => {
+    const readingId = await addReadingId('00123');
+
+    const response = await app.inject({ method: 'PATCH', url: `/readings/${readingId}`, payload: { costCents: 4210 } });
+
+    expect(response.statusCode).toBe(401);
+    expect((await getReading(readingId)).json()).toMatchObject({ costCents: null });
+  });
+});
+
 describe('GET /readings/:id/email', () => {
+  it('leaves the cost out of the email when the reading has one', async () => {
+    const readingId = await addReadingId('000045');
+    await updateReading(readingId, { costCents: 4210 });
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ body: 'Date: 31 October 2026\nReading: 000045' });
+    expect(response.body).not.toMatch(/42[.,]10|4210/);
+  });
+
   it('answers the address, the subject and the body, with the photo to attach, when the reading has a photo', async () => {
     const photoId = await addPhoto();
     const readingId = (await addReading({ digits: '00123', date: '2026-10-31', photoId })).json<{ id: number }>().id;
@@ -581,6 +693,18 @@ describe('POST /readings/:id/send', () => {
       },
     });
     expect(attachmentsOf(received[0])).toEqual([]);
+  });
+
+  it('leaves the cost out of what Graph receives when the reading has a cost', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    await updateReading(readingId, { costCents: 4210 });
+    const received = answerSendMail();
+
+    const response = await sendReading(readingId, { attachPhoto: false });
+
+    expect(response.json()).toMatchObject({ status: 'sent', costCents: 4210 });
+    expect(JSON.stringify(received[0]?.body)).not.toMatch(/42[.,]10|4210/);
   });
 
   it("emails the user's own subject and body when they edited the preview", async () => {

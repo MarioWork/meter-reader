@@ -1,4 +1,5 @@
 import { boolean, number, object, string, type InferType } from 'yup';
+import { costCentsSchema } from '@utils/costUtils';
 import { readingDateSchema, readingDigitsSchema } from '@utils/readingUtils';
 
 export const CreateReadingSchema = object({
@@ -45,3 +46,10 @@ export const SendReadingSchema = object({
 });
 
 export type SendReading = InferType<typeof SendReadingSchema>;
+
+// What can change on a saved reading: its cost, in euro cents, or null to remove it. Always said, never left out.
+export const UpdateReadingSchema = object({
+  costCents: costCentsSchema.nullable().defined(),
+});
+
+export type UpdateReading = InferType<typeof UpdateReadingSchema>;

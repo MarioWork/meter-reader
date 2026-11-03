@@ -1,4 +1,5 @@
 import type { ReadingApiModel } from '@app-types/models';
+import { formatCost } from '@utils/costUtils';
 import { formatIsoDate, formatTimestamp } from '@utils/dateUtils';
 import ReadingSendStatus from '../../ReadingSendStatus';
 
@@ -10,7 +11,7 @@ const NO_PHOTO_LABEL = 'No photo';
 const LABEL_CLASSES = 'text-sm text-muted-foreground';
 
 // Every field of the reading as label and value: the digits big, as on the meter, then the day, the save time, the
-// photo and whether it was sent.
+// photo, whether it was sent and, once it has one, what it cost.
 function ReadingDetailsList({ reading }: Props) {
   const hasPhoto = reading.photoId !== null;
 
@@ -34,6 +35,12 @@ function ReadingDetailsList({ reading }: Props) {
       <dd>
         <ReadingSendStatus reading={reading} />
       </dd>
+      {reading.costCents !== null && (
+        <>
+          <dt className={LABEL_CLASSES}>Cost</dt>
+          <dd className="tabular-nums">{formatCost(reading.costCents)}</dd>
+        </>
+      )}
     </dl>
   );
 }

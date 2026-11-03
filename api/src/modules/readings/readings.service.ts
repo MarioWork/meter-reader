@@ -24,6 +24,7 @@ import type {
   ReadingResponse,
   ReadingStatus,
   SendReading,
+  UpdateReading,
   EmailDefaultsResponse,
 } from './readings.schema.ts';
 
@@ -100,6 +101,7 @@ function toResponse(row: ReadingRow): ReadingResponse {
     photoId: row.photo?.id ?? null,
     sentAt: row.sentAt?.toISOString() ?? null,
     sentEmail: toSentEmailResponse(row),
+    costCents: row.costCents,
   };
 }
 
@@ -146,6 +148,18 @@ export async function addReading({ digits, date, photoId }: CreateReading): Prom
 
   // The id only: the digits are the user's data.
   log.info({ readingId: row.id }, 'reading saved');
+
+  return toResponse(row);
+}
+
+// Sets, changes or removes (null) the reading's cost. Nothing here touches its email: the cost is never sent.
+export async function updateReading(id: number, { costCents }: UpdateReading): Promise<ReadingResponse> {
+  const row = await readingsRepository.update(id, { costCents });
+
+  if (!row) throw new NotFoundError(ENTITY, id);
+
+  // The id only: the cost is the user's data.
+  log.info({ readingId: id }, 'reading updated');
 
   return toResponse(row);
 }

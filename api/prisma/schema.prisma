@@ -131,6 +131,9 @@ model Reading {
   sentSubject   String?       @map("sent_subject")
   sentBody      String?       @map("sent_body")
   sentWithPhoto Boolean?      @map("sent_with_photo")
+  // What the reading cost (docs/GLOSSARY.md: Cost), in euro cents, so it is a whole number and never a rounded float;
+  // never below 0 (a check in the migration). Null until the user adds one. Never part of the reading's email.
+  costCents     Int?          @map("cost_cents")
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 

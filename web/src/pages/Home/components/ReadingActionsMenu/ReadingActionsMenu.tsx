@@ -1,9 +1,12 @@
 import { EllipsisIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useLocation } from 'react-router';
+import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { ReadingApiModel } from '@app-types/models';
 import { Button } from '@components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { formatIsoDate } from '@utils/dateUtils';
+import { getCostAndBillLabel } from '@pages/Home/costAndBillUtils';
 import { getPhotoUrl } from '@pages/Home/readingPhotoUtils';
 import DeleteReadingDialog from './components/DeleteReadingDialog';
 import PhotoDialog from './components/PhotoDialog';
@@ -20,11 +23,12 @@ const DELETE_LABEL = 'Delete';
 const PHOTO_DESCRIPTION = 'The meter showing';
 const PHOTO_SUBTITLE = 'Reading';
 
-// The "⋯" menu of a reading: View photo and Delete, which asks first. Each item opens its own dialog; closing it
-// gives focus back to the "⋯" button.
+// The "⋯" menu of a reading: View photo, the cost & bill dialog (a routed modal over the same page of the history),
+// and Delete, which asks first. Each item opens its own dialog; closing it gives focus back to the "⋯" button.
 function ReadingActionsMenu({ reading }: Props) {
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const { search } = useLocation();
   const { isOpen, isDeleting, failureMessage, openDialog, handleOpenChange, deleteReading } = useDeleteReading(
     reading.id,
   );
@@ -44,6 +48,8 @@ function ReadingActionsMenu({ reading }: Props) {
         <DropdownMenuContent align="end" className="w-auto">
           <ReadingMenuItems
             hasPhoto={reading.photoId !== null}
+            costAndBillLabel={getCostAndBillLabel(reading)}
+            costAndBillTo={{ pathname: READING_ROUTES_PATHS.costAndBill(String(reading.id)), search }}
             deleteLabel={DELETE_LABEL}
             onViewPhoto={() => setIsPhotoOpen(true)}
             onDelete={openDialog}

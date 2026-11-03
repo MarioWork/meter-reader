@@ -5,6 +5,7 @@ import getReadingHandler from './getReading.mock.handler';
 import getReadingEmailHandler from './getReadingEmail.mock.handler';
 import listReadingsHandler from './listReadings.mock.handler';
 import sendReadingHandler from './sendReading.mock.handler';
+import updateReadingHandler from './updateReading.mock.handler';
 
 export const readingMockHandlers = (baseUrl: string) => [
   ...listReadingsHandler(baseUrl),
@@ -14,4 +15,5 @@ export const readingMockHandlers = (baseUrl: string) => [
   ...getReadingHandler(baseUrl),
   ...getReadingEmailHandler(baseUrl),
   ...sendReadingHandler(baseUrl),
+  ...updateReadingHandler(baseUrl),
 ];

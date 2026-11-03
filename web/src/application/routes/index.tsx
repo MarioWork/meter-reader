@@ -49,6 +49,11 @@ const routes: RouteObject[] = [
                 path: READING_ROUTES_PATHS.send(),
                 lazy: () => import('@pages/Home/components/SendReadingModal/SendReadingModal.route'),
               },
+              {
+                // Over the history: the reading's cost, opened from its "⋯" menu.
+                path: READING_ROUTES_PATHS.costAndBill(),
+                lazy: () => import('@pages/Home/components/CostAndBillModal/CostAndBillModal.route'),
+              },
             ],
           },
           ...readingRoutes,
