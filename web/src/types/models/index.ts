@@ -7,3 +7,4 @@ export type { EmailDefaultsApiModel } from './emailDefaultsApiModel.type';
 export type { ReadingEmailAttachmentApiModel } from './readingEmailAttachmentApiModel.type';
 export type { MailStatusApiModel } from './mailStatusApiModel.type';
 export type { PhotoApiModel, PhotoId } from './photoApiModel.type';
+export type { SettingsApiModel } from './settingsApiModel.type';

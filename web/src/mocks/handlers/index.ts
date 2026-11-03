@@ -2,6 +2,7 @@ import { authMockHandlers } from './auth';
 import { photoMockHandlers } from './photo';
 import { readingMockHandlers } from './reading';
 import { mailMockHandlers } from './mail';
+import { settingsMockHandlers } from './settings';
 
 // Long enough to show loading states in local dev, short enough not to slow the tests.
 const MOCK_DELAY = 200;
@@ -11,6 +12,7 @@ export const getHandlers = (baseUrl: string) => [
   ...readingMockHandlers(baseUrl),
   ...photoMockHandlers(baseUrl),
   ...mailMockHandlers(baseUrl),
+  ...settingsMockHandlers(baseUrl),
 ];
 
 export { MOCK_DELAY };

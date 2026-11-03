@@ -1,8 +1,9 @@
 import type { EmailDefaultsApiModel, ReadingApiModel, ReadingEmailApiModel } from '@app-types/models';
+import { MOCK_PROVIDER_EMAIL } from '@mocks/handlers/settings/models/settingsMockModel.mock';
 
-// The api's settings for every email (MAIL_FROM, PROVIDER_EMAIL and MAIL_SUBJECT in api/.env.example).
+// The api's settings for every email (MAIL_FROM and MAIL_SUBJECT in api/.env.example). The address is the one saved in
+// Settings: the handlers pass it in from the mock settings.
 const MOCK_FROM_EMAIL = 'me@hotmail.example';
-const MOCK_PROVIDER_EMAIL = 'readings@water-provider.example';
 const MOCK_SUBJECT = 'test';
 // The api spells the day out: "1 October 2026".
 const EMAIL_DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {

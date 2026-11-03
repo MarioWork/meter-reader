@@ -22,7 +22,7 @@ The app is served at `https://meter.home.arpa:8443` (port 8443). Ports 80 and 44
 First time:
 
 1. Make the name resolve on every device that opens the app: a DNS entry on the router, or a line in each device's hosts file, pointing `meter.home.arpa` at the server's LAN address.
-2. Copy `.env.example` to `.env` next to `compose.yaml` and set `POSTGRES_PASSWORD` (letters and digits only: it goes inside a database URL) and `PROVIDER_EMAIL` (your water provider's address: every reading is emailed there). `.env` is never committed.
+2. Copy `.env.example` to `.env` next to `compose.yaml` and set `POSTGRES_PASSWORD` (letters and digits only: it goes inside a database URL). `.env` is never committed. Your water provider's address is set in the app, on the Settings page, once you are signed in.
 3. Make the photo folder, owned by the api container's user (uid 1000). Without it the api stops at start with "The uploads folder … is not writable":
 
    ```bash
@@ -38,7 +38,7 @@ First time:
 5. Check it: `curl -k https://meter.home.arpa:8443/api/ready` answers `{"status":"ok"}` once the database is up.
 6. Trust Caddy's certificate on each device (Caddy uses its own local CA, `tls internal`). Copy it off the server with `docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./meter-reader-root.crt` and install it as a trusted root on the phone or laptop. HTTPS is needed for the camera and for installing the app.
 
-Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service applies any new migrations before the api starts. An older `.env` without `PROVIDER_EMAIL` stops `docker compose up` with "set PROVIDER_EMAIL in .env": add it.
+Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service applies any new migrations before the api starts. `PROVIDER_EMAIL` is no longer read from `.env` ([ADR 0003](./docs/adr/0003-email-settings-in-the-app.md)): after updating, set the provider's address on the Settings page, and remove the line from `.env`.
 
 Logs: `docker compose logs -f api` (or `web`, `db`, `migrate`).
 
@@ -80,7 +80,7 @@ Open the printed link and set up the login again, as in **First sign-in**. Anyon
 
 ## Connecting Hotmail (`mail:connect`)
 
-The app sends readings from your own Hotmail through Microsoft Graph (see [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md)). It asks for one mail permission only, `Mail.Send` (plus `offline_access`, so the token can renew itself): it can send mail as you, but never read, list or delete it. The provider's address (`PROVIDER_EMAIL`, required), the subject (`MAIL_SUBJECT`, `test` by default) and your own Hotmail address (`MAIL_FROM`, optional: the app shows it as "From") live in the `.env` next to `compose.yaml`, or `api/.env` in local development.
+The app sends readings from your own Hotmail through Microsoft Graph (see [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md)). It asks for one mail permission only, `Mail.Send` (plus `offline_access`, so the token can renew itself): it can send mail as you, but never read, list or delete it. The provider's address is set in the app, on the Settings page ([ADR 0003](./docs/adr/0003-email-settings-in-the-app.md)); until it is, Send stays off. The subject (`MAIL_SUBJECT`, `test` by default) and your own Hotmail address (`MAIL_FROM`, optional: the app shows it as "From") live in the `.env` next to `compose.yaml`, or `api/.env` in local development.
 
 Until Hotmail is connected, the app shows a banner: "Hotmail not connected". Connecting takes two one-time steps.
 
@@ -228,7 +228,7 @@ Each `.env` belongs to the folder that reads it:
 
 | File                   | Read by               | Holds                                                                                                |
 | ---------------------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`, `MICROSOFT_CLIENT_ID`, `PROVIDER_EMAIL`, `MAIL_SUBJECT`, `MAIL_FROM` |
+| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`, `MICROSOFT_CLIENT_ID`, `MAIL_SUBJECT`, `MAIL_FROM`                   |
 | `web/.env.development` | `yarn dev` in `web/`  | The `VITE_*` dev values (committed, nothing secret)                                                  |
 | `web/.env.example`     | nobody                | Every `VITE_*` key; copy to `.env.development.local`                                                 |
 | `api/.env`             | `yarn dev` in `api/`  | The api's settings (copy `api/.env.example`, git-ignored)                                            |

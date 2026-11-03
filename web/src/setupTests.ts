@@ -3,6 +3,7 @@ import axios from 'axios';
 import { resetMockAuthState } from './mocks/handlers/auth/authMockState';
 import { resetMockPhotos } from './mocks/handlers/photo/photoMockState';
 import { resetMockReadings } from './mocks/handlers/reading/readingMockState';
+import { resetMockSettings } from './mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from './mocks/server';
 
 axios.defaults.baseURL = TEST_BASE_API_URL;
@@ -45,5 +46,6 @@ afterEach(() => {
   resetMockAuthState();
   resetMockReadings();
   resetMockPhotos();
+  resetMockSettings();
 });
 afterAll(() => server.close());

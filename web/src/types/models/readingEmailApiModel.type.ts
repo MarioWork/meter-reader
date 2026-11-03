@@ -5,7 +5,8 @@ import type { ReadingEmailAttachmentApiModel } from './readingEmailAttachmentApi
 export interface ReadingEmailApiModel {
   // The user's own address, display only; null when the server has none set.
   from: string | null;
-  to: string;
+  // The provider's address saved in Settings; null until one is saved, and Send stays off until then.
+  to: string | null;
   subject: string;
   body: string;
   attachment: ReadingEmailAttachmentApiModel | null;

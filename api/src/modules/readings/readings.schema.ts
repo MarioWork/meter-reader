@@ -86,7 +86,8 @@ export const ReadingEmailResponseSchema = z
   .object({
     // The user's own address (MAIL_FROM), display only; null when it is not set.
     from: z.string().nullable(),
-    to: z.string(),
+    // The provider's address saved in Settings; null until one is saved, and a send is refused until then.
+    to: z.string().nullable(),
     subject: z.string(),
     body: z.string(),
     attachment: z.object({ photoId: z.number().int(), name: z.string() }).nullable(),
@@ -97,7 +98,8 @@ export const ReadingEmailResponseSchema = z
 export const EmailDefaultsResponseSchema = z
   .object({
     from: z.string().nullable(),
-    to: z.string(),
+    // The provider's address saved in Settings; null until one is saved.
+    to: z.string().nullable(),
     subject: z.string(),
     // The body with {date} (spelled out, "3 November 2026") and {reading} (the digits as read) to fill in.
     bodyTemplate: z.string(),

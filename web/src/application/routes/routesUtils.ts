@@ -35,6 +35,10 @@ export const READING_ROUTES_PATHS = {
   send: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/send`,
 };
 
+export const SETTINGS_ROUTES_PATHS = {
+  BASE: '/settings',
+};
+
 // Routes whose loader data other routes read with useRouteLoaderData.
 export const ROUTE_IDS = {
   SIGNED_IN_LAYOUT: 'signedInLayout',

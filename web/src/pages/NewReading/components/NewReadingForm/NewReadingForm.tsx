@@ -5,6 +5,7 @@ import { useFetcher } from 'react-router';
 import type { EmailDefaultsApiModel, ReadingApiModel } from '@app-types/models';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import ErrorAlert from '@components/ErrorAlert';
+import ProviderEmailMissingNote from '@components/ProviderEmailMissingNote';
 import { FieldGroup } from '@components/ui/field';
 import { useFetcherFailure } from '@hooks/useFetcherFailure';
 import { createFormData } from '@utils/formDataUtils';
@@ -91,6 +92,7 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
   const isLower = isLowerThanLast(digits, lastReading);
   const isSaving = fetcher.state !== 'idle';
   const canSave = !isSaving && !isShrinking;
+  const hasProviderEmail = emailDefaults.to !== null;
   const failureMessage = useFetcherFailure(fetcher, SAVE_FAILED_MESSAGE);
 
   return (
@@ -118,8 +120,13 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
         {isLower && lastReading && <LowerReadingWarning id={WARNING_ID} lastReading={lastReading} />}
       </FieldGroup>
       <NewReadingEmailFields emailDefaults={emailDefaults} register={register} errors={formState.errors} />
+      {!hasProviderEmail && <ProviderEmailMissingNote />}
       {failureMessage && <ErrorAlert message={failureMessage} />}
-      <NewReadingButtons isDisabled={!canSave} onSend={(event) => void submitReading(NewReadingIntent.SEND)(event)} />
+      <NewReadingButtons
+        isDisabled={!canSave}
+        isSendDisabled={!hasProviderEmail}
+        onSend={(event) => void submitReading(NewReadingIntent.SEND)(event)}
+      />
     </form>
   );
 }

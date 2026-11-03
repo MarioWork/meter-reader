@@ -20,6 +20,7 @@ import { healthRoutes } from './modules/health/health.route.ts';
 import { photosRoutes } from './modules/photos/photos.route.ts';
 import { readingsRoutes } from './modules/readings/readings.route.ts';
 import { mailRoutes } from './modules/mail/mail.route.ts';
+import { settingsRoutes } from './modules/settings/settings.route.ts';
 import { authPlugin } from './plugins/auth.plugin.ts';
 import { prismaPlugin } from './plugins/prisma.plugin.ts';
 
@@ -31,6 +32,7 @@ const AUTH_ROUTE_PREFIX = '/auth';
 const READINGS_ROUTE_PREFIX = '/readings';
 const MAIL_ROUTE_PREFIX = '/mail';
 const PHOTOS_ROUTE_PREFIX = '/photos';
+const SETTINGS_ROUTE_PREFIX = '/settings';
 const REQUEST_LOG_MESSAGE = 'request';
 // A request no route matched (a 404) has no pattern to log.
 const UNMATCHED_ROUTE = '(no route)';
@@ -86,6 +88,7 @@ export async function buildApp() {
   await app.register(readingsRoutes, { prefix: READINGS_ROUTE_PREFIX });
   await app.register(mailRoutes, { prefix: MAIL_ROUTE_PREFIX });
   await app.register(photosRoutes, { prefix: PHOTOS_ROUTE_PREFIX });
+  await app.register(settingsRoutes, { prefix: SETTINGS_ROUTE_PREFIX });
 
   return app;
 }

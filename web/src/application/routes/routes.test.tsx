@@ -4,7 +4,7 @@ import { setMockAuthState } from '@mocks/handlers/auth/authMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { renderRoutes, screen, userEvent } from '@test-utils';
 import routes from '.';
-import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS } from './routesUtils';
+import { BASE_ROUTES_PATHS, READING_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from './routesUtils';
 
 const UNKNOWN_PATH = '/no-such-page';
 
@@ -55,6 +55,14 @@ describe('signed-in pages', () => {
     setMockAuthState(AuthStateUtil.SIGNED_OUT);
 
     renderRoutes(routes, { initialEntries: [READING_ROUTES_PATHS.NEW] });
+
+    expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
+  });
+
+  it('sends a signed-out browser to the login page from Settings', async () => {
+    setMockAuthState(AuthStateUtil.SIGNED_OUT);
+
+    renderRoutes(routes, { initialEntries: [SETTINGS_ROUTES_PATHS.BASE] });
 
     expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   });

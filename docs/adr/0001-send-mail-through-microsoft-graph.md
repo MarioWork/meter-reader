@@ -10,7 +10,7 @@ Mail goes out through the Microsoft Graph `sendMail` call, signed in once as the
 
 A `sendMail` call must stay under 4 MB in total. Attachments travel inside it as base64, which makes a file about a third bigger. A bigger mail needs an upload session, which needs a draft and so `Mail.ReadWrite`. To stay send-only, the app shrinks every photo to at most 2.5 MB before it sends it: about 3.3 MB once encoded, which leaves room for the rest of the mail.
 
-The provider's address, the subject and the mail settings live in the server `.env`. For now the subject is `test` and the body is the date plus the reading.
+~~The provider's address, the subject and the mail settings live in the server `.env`.~~ Replaced by [ADR 0003](./0003-email-settings-in-the-app.md): they move into an in-app settings row; only "From" stays tied to the connected Microsoft account. For now the subject is `test` and the body is the date plus the reading.
 
 ## Considered Options
 

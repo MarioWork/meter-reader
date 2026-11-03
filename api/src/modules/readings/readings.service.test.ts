@@ -20,6 +20,11 @@ vi.mock('../../lib/uploads.ts', () => ({ readUpload: vi.fn(), removeUpload: vi.f
 
 vi.mock('../mail/mail.service.ts', () => ({ assertMailConnected: vi.fn(), sendMail: vi.fn() }));
 
+vi.mock('../settings/settings.service.ts', () => ({
+  getProviderEmail: vi.fn(),
+  requireProviderEmail: vi.fn(() => Promise.resolve('readings@water-provider.example')),
+}));
+
 const PHOTO = { id: 4, fileName: '5b0f3c1e-6f7a-4d2b-9a51-2c8e0d9b7f10.jpg' };
 
 const SAVED_ROW = {

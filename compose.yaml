@@ -58,8 +58,7 @@ services:
       APP_ORIGIN: *app-address
       # The Microsoft Entra app the server sends mail through (README, "Connecting Hotmail"). Empty until registered.
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
-      # Where every reading is emailed, and the subject (README, "Connecting Hotmail").
-      PROVIDER_EMAIL: ${PROVIDER_EMAIL:?set PROVIDER_EMAIL in .env}
+      # The subject of every reading's email (README, "Connecting Hotmail"). The provider's address is set in the app.
       MAIL_SUBJECT: ${MAIL_SUBJECT:-test}
       # Your Hotmail address, shown as "From" in the app. Optional.
       MAIL_FROM: ${MAIL_FROM:-}
