@@ -115,7 +115,8 @@ function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
             />
           )}
           {isFiltered && (
-            <Button variant="ghost" size="sm" onClick={clearAll}>
+            // Right-aligned even when it is alone in the row (Costs) or wraps under the statuses.
+            <Button variant="ghost" size="sm" onClick={clearAll} className="ml-auto">
               <XIcon aria-hidden="true" />
               {CLEAR_LABEL}
             </Button>

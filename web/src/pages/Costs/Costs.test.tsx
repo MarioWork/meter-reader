@@ -21,7 +21,7 @@ const SEPT_OCT_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`
 
 async function renderCosts(path = COSTS_ROUTES_PATHS.BASE) {
   const { router } = renderRoutes(routes, { initialEntries: [path] });
-  await screen.findByRole('heading', { level: 1, name: 'Costs' });
+  await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' });
 
   return router;
 }

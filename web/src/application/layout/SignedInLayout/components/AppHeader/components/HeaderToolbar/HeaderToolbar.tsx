@@ -1,7 +1,8 @@
 import { ChartColumnIcon, LogOutIcon, SettingsIcon } from 'lucide-react';
 import { Link } from 'react-router';
-import { COSTS_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
+import { SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { Button, buttonVariants } from '@components/ui/button';
+import { thisYearCostsPath } from '@utils/historyFilterUtils';
 import { useSignOut } from '../../hooks/useSignOut';
 import ThemeToggleGroup from './components/ThemeToggleGroup';
 
@@ -15,7 +16,7 @@ function HeaderToolbar() {
 
   return (
     <div className="flex items-center gap-3">
-      <Link to={COSTS_ROUTES_PATHS.BASE} className={buttonVariants({ variant: 'ghost' })}>
+      <Link to={thisYearCostsPath()} className={buttonVariants({ variant: 'ghost' })}>
         <ChartColumnIcon aria-hidden="true" />
         {COSTS_LABEL}
       </Link>

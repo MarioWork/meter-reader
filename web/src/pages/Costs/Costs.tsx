@@ -12,6 +12,8 @@ import ExportCostsLink from './components/ExportCostsLink';
 import NoCosts from './components/NoCosts';
 import type { loader } from './costsLoader';
 
+const PAGE_TITLE = 'Water Readings Costs';
+
 // Costs filters by day only.
 const FILTERS_OPTIONS = { hasStatusFilter: false };
 
@@ -36,7 +38,7 @@ function Costs() {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Costs</h1>
+        <h1 className="text-2xl font-bold">{PAGE_TITLE}</h1>
         {/* Only while readings are listed: an empty page has nothing to export. */}
         {hasListedReadings && <ExportCostsLink range={filters} />}
       </div>

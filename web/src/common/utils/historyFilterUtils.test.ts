@@ -8,6 +8,7 @@ import {
   isRangeBackwards,
   readDateFilters,
   readHistoryFilters,
+  thisYearCostsPath,
   withHistoryFilters,
 } from './historyFilterUtils';
 
@@ -208,5 +209,11 @@ describe('historyFiltersFromDraft', () => {
     expect(historyFiltersFromDraft(draft, NOW)).toEqual({
       statuses: [ReadingStatusUtil.NOT_SENT, ReadingStatusUtil.FAILED],
     });
+  });
+});
+
+describe('thisYearCostsPath', () => {
+  it('gives the Costs page from 1 January up to today', () => {
+    expect(thisYearCostsPath(NOW)).toBe('/costs?from=2026-01-01&to=2026-10-15');
   });
 });
