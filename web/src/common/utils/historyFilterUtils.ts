@@ -1,5 +1,5 @@
 import type { ReadingStatusUtil } from '@app-types/utility';
-import { HISTORY_FILTER_SEARCH_PARAMS, HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
+import { COSTS_ROUTES_PATHS, HISTORY_FILTER_SEARCH_PARAMS, HOME_SEARCH_PARAMS } from '@application/routes/routesUtils';
 import { formatIsoDate, ISO_DATE_PATTERN, toIsoDate } from '@utils/dateUtils';
 import { READING_STATUS_LABELS, READING_STATUSES } from './readingStatusUtils';
 import type {
@@ -273,4 +273,12 @@ function draftDayRange({ datePreset, customFrom, customTo }: HistoryFilterDraft,
 // The filters the sheet's choices make: a preset becomes today's days for it.
 export function historyFiltersFromDraft(draft: HistoryFilterDraft, now = new Date()): HistoryFilterValues {
   return { ...draftDayRange(draft, now), statuses: inStatusOrder(draft.statuses) };
+}
+
+// Costs opens on this year: the links to it carry This year's days, so Clear filters still shows every year.
+export function thisYearCostsPath(now = new Date()): string {
+  const thisYear = { ...datePresetRange(DatePreset.THIS_YEAR, now), statuses: [] };
+  const searchParams = withHistoryFilters(new URLSearchParams(), thisYear);
+
+  return `${COSTS_ROUTES_PATHS.BASE}?${searchParams.toString()}`;
 }

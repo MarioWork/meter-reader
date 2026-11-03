@@ -65,7 +65,8 @@ it('opens Costs from the header menu', async () => {
 
   await userEvent.click(screen.getByRole('menuitem', { name: 'Costs' }));
 
-  expect(await screen.findByRole('heading', { level: 1, name: 'Costs' })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Remove filter: This year' })).toBeVisible();
 });
 
 it('opens Settings from the header menu', async () => {
@@ -83,7 +84,7 @@ it('opens Costs from the link in the header on a wide screen', async () => {
 
   await userEvent.click(within(screen.getByRole('banner')).getByRole('link', { name: 'Costs' }));
 
-  expect(await screen.findByRole('heading', { level: 1, name: 'Costs' })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' })).toBeVisible();
 });
 
 it('opens Settings from the link in the header on a wide screen', async () => {
