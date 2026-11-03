@@ -33,6 +33,8 @@ export const READING_ROUTES_PATHS = {
   details: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}`,
   // A routed modal over the history: the email preview, and the send.
   send: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/send`,
+  // A routed modal over the history: what the reading cost, added after it is saved.
+  costAndBill: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/cost-and-bill`,
 };
 
 export const SETTINGS_ROUTES_PATHS = {

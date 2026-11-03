@@ -9,7 +9,7 @@ import {
   type ReadingStatusUtil,
   type ResponseWithPaginationUtil,
 } from '@app-types/utility';
-import type { CreateReading, SendReading } from './readingService.type';
+import type { CreateReading, SendReading, UpdateReading } from './readingService.type';
 
 const BASE_READINGS_URL = '/readings';
 // The API takes several statuses in one param, the way it takes several sorting fields.
@@ -66,6 +66,10 @@ export default {
 
   addReading: async (fields: CreateReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
     axiosActions<ReadingApiModel>({ url: BASE_READINGS_URL, method: HttpVerbsUtil.POST, data: fields }),
+
+  // Sets, changes or removes (null) what the reading cost. Never part of its email.
+  updateReading: async (id: ReadingId, fields: UpdateReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
+    axiosActions<ReadingApiModel>({ url: `${BASE_READINGS_URL}/${id}`, method: HttpVerbsUtil.PATCH, data: fields }),
 
   deleteReading: async (id: ReadingId): Promise<JSONResponseUtil> =>
     axiosActions({ url: `${BASE_READINGS_URL}/${id}`, method: HttpVerbsUtil.DELETE }),

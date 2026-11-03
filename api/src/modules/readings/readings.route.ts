@@ -10,6 +10,7 @@ import {
   ReadingParamsSchema,
   ReadingResponseSchema,
   SendReadingSchema,
+  UpdateReadingSchema,
 } from './readings.schema.ts';
 import {
   addReading,
@@ -19,6 +20,7 @@ import {
   getReadingEmail,
   getReadings,
   sendReading,
+  updateReading,
 } from './readings.service.ts';
 
 const TAGS = ['readings'];
@@ -83,6 +85,25 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request) => getReading(request.params.id),
+  );
+
+  app.patch(
+    '/:id',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'Set, change or remove what the reading cost (null removes it)',
+        params: ReadingParamsSchema,
+        body: UpdateReadingSchema,
+        response: {
+          200: ReadingResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request) => updateReading(request.params.id, request.body),
   );
 
   app.delete(

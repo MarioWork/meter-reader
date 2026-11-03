@@ -53,6 +53,12 @@ export const SentEmailResponseSchema = z.object({
   hasPhoto: z.boolean(),
 });
 
+// The most a Postgres `integer` column holds: a bigger cost would fail in the database instead of in validation.
+const COST_CENTS_MAX = 2_147_483_647;
+
+// A Cost (docs/GLOSSARY.md) in euro cents: a whole number, so 42,10 € is 4210 and never a rounded float. 0 or more.
+const CostCentsSchema = z.number().int().min(0).max(COST_CENTS_MAX);
+
 export const ReadingResponseSchema = z
   .object({
     id: z.number().int(),
@@ -66,8 +72,15 @@ export const ReadingResponseSchema = z
     sentAt: z.iso.datetime().nullable(),
     // Null until it is sent, and for readings sent before the email was kept.
     sentEmail: SentEmailResponseSchema.nullable(),
+    // What the reading cost, in euro cents (4210 is 42,10 €); null when the user has not added one.
+    costCents: CostCentsSchema.nullable(),
   })
   .meta({ id: 'Reading' });
+
+// What can change on a reading after it is saved. A field left out stays as it is; a cost sent as null is removed.
+export const UpdateReadingSchema = z.strictObject({
+  costCents: CostCentsSchema.nullable().optional(),
+});
 
 const SUBJECT_MAX_LENGTH = 200;
 const BODY_MAX_LENGTH = 5000;
@@ -112,6 +125,7 @@ export type CreateReading = z.infer<typeof CreateReadingSchema>;
 export type ListReadingsQuery = z.infer<typeof ListReadingsQuerySchema>;
 export type ReadingParams = z.infer<typeof ReadingParamsSchema>;
 export type SendReading = z.infer<typeof SendReadingSchema>;
+export type UpdateReading = z.infer<typeof UpdateReadingSchema>;
 export type ReadingEmailResponse = z.infer<typeof ReadingEmailResponseSchema>;
 export type EmailDefaultsResponse = z.infer<typeof EmailDefaultsResponseSchema>;
 export type ReadingStatus = (typeof READING_STATUSES)[number];

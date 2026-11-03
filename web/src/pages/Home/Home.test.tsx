@@ -724,6 +724,195 @@ describe('sending a reading', () => {
   });
 });
 
+describe("a reading's cost", () => {
+  const ADD_COST = 'Add cost & bill';
+  const EDIT_COST = 'Edit cost & bill';
+  // The newest reading is reading 14 in the mock history.
+  const NEWEST_ID = 14;
+  const NEWEST_COST_PATH = `/home/readings/${NEWEST_ID}/cost-and-bill`;
+
+  async function openCostDialog(name = ADD_COST) {
+    await openMenuFor(NEWEST_DATE);
+    await chooseMenuItem(name);
+
+    return screen.findByRole('dialog', { name });
+  }
+
+  function costField(dialog: HTMLElement) {
+    return within(dialog).getByRole('textbox', { name: 'Cost (€)' });
+  }
+
+  async function saveCost(dialog: HTMLElement, costText: string) {
+    await userEvent.clear(costField(dialog));
+    if (costText) await userEvent.type(costField(dialog), costText);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+  }
+
+  // Keeps what the app asked to save, then lets the mock API answer it as usual.
+  function recordUpdateRequests() {
+    const received: unknown[] = [];
+
+    server.use(
+      http.patch(`${TEST_BASE_API_URL}/readings/:id`, async ({ request }) => {
+        received.push(await request.clone().json());
+      }),
+    );
+
+    return received;
+  }
+
+  it('shows no cost on a card or in the details while the reading has none', async () => {
+    await renderHome();
+
+    expect(lastReadingCard()).not.toHaveTextContent('€');
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+    const details = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+    expect(details).not.toHaveTextContent('Cost');
+  });
+
+  it('opens from the "⋯" menu as a dialog with its own url', async () => {
+    const router = await renderHome();
+
+    const dialog = await openCostDialog();
+
+    expect(router.state.location.pathname).toBe(NEWEST_COST_PATH);
+    expect(costField(dialog)).toHaveValue('');
+  });
+
+  it('opens straight from its url', async () => {
+    renderRoutes(routes, { initialEntries: [NEWEST_COST_PATH] });
+
+    expect(await screen.findByRole('dialog', { name: ADD_COST })).toBeVisible();
+  });
+
+  it('opens and saves with the keyboard alone', async () => {
+    await renderHome();
+
+    screen.getByRole('button', { name: `More actions for the reading of ${NEWEST_DATE}` }).focus();
+    await userEvent.keyboard('{Enter}');
+    await screen.findByRole('menuitem', { name: ADD_COST });
+    // View photo comes first, then this one.
+    await userEvent.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: ADD_COST })).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: ADD_COST });
+    // The dialog takes focus; its × comes first, then the field.
+    await waitFor(() => expect(dialog).toHaveFocus());
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(costField(dialog)).toHaveFocus();
+    await userEvent.keyboard('42,10{Enter}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: ADD_COST })).not.toBeInTheDocument());
+    expect(lastReadingCard()).toHaveTextContent('Cost €42.10');
+  });
+
+  it('saves a cost typed with a comma, in cents, and shows it on the card and in the details', async () => {
+    const received = recordUpdateRequests();
+    await renderHome();
+    const dialog = await openCostDialog();
+
+    await saveCost(dialog, '42,10');
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: ADD_COST })).not.toBeInTheDocument());
+    expect(received).toEqual([{ costCents: 4210 }]);
+    expect(await findNotification('Cost saved')).toBeVisible();
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('Cost €42.10'));
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+    const details = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+    expect(within(details).getByText('Cost')).toBeVisible();
+    expect(within(details).getByText('€42.10')).toBeVisible();
+  });
+
+  it('changes a cost already set, starting from it, typed with a point', async () => {
+    const received = recordUpdateRequests();
+    await renderHome();
+    await saveCost(await openCostDialog(), '42,10');
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('Cost €42.10'));
+
+    const dialog = await openCostDialog(EDIT_COST);
+    expect(costField(dialog)).toHaveValue('42.10');
+    await saveCost(dialog, '39.9');
+
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('Cost €39.90'));
+    expect(received).toEqual([{ costCents: 4210 }, { costCents: 3990 }]);
+  });
+
+  it('removes the cost when the field is cleared', async () => {
+    const received = recordUpdateRequests();
+    await renderHome();
+    await saveCost(await openCostDialog(), '42,10');
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('Cost €42.10'));
+
+    await saveCost(await openCostDialog(EDIT_COST), '');
+
+    await waitFor(() => expect(lastReadingCard()).not.toHaveTextContent('€'));
+    expect(received).toEqual([{ costCents: 4210 }, { costCents: null }]);
+    expect(await findNotification('Cost removed')).toBeVisible();
+    await openMenuFor(NEWEST_DATE);
+    expect(await screen.findByRole('menuitem', { name: ADD_COST })).toBeVisible();
+  });
+
+  it.each(['abc', '-5', '42,105'])('refuses %j with an error on the field and saves nothing', async (costText) => {
+    const received = recordUpdateRequests();
+    await renderHome();
+    const dialog = await openCostDialog();
+
+    await saveCost(dialog, costText);
+
+    const field = costField(dialog);
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(/Write the cost in euros, like 42,10 or 42.10/);
+    expect(received).toEqual([]);
+    expect(screen.getByRole('dialog', { name: ADD_COST })).toBeVisible();
+  });
+
+  it("keeps the dialog open with the server's reason when the save fails", async () => {
+    server.use(
+      http.patch(`${TEST_BASE_API_URL}/readings/:id`, () =>
+        HttpResponse.json({ code: 'INTERNAL_ERROR', message: 'Something went wrong' }, { status: SERVER_ERROR }),
+      ),
+    );
+    await renderHome();
+    const dialog = await openCostDialog();
+
+    await saveCost(dialog, '42,10');
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(costField(dialog)).toHaveValue('42,10');
+    expect(queryAllNotifications()).toHaveLength(0);
+  });
+
+  it('closes with Close, saves nothing and gives focus back to the "⋯" button', async () => {
+    const received = recordUpdateRequests();
+    await renderHome();
+    const dialog = await openCostDialog();
+
+    await userEvent.type(costField(dialog), '42,10');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByRole('dialog', { name: ADD_COST })).not.toBeInTheDocument();
+    expect(received).toEqual([]);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: `More actions for the reading of ${NEWEST_DATE}` })).toHaveFocus(),
+    );
+  });
+
+  it("keeps the cost out of the reading's email", async () => {
+    await renderHome();
+    await saveCost(await openCostDialog(), '42,10');
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent('Cost €42.10'));
+
+    await userEvent.click(within(lastReadingCard()).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` }));
+
+    const preview = await screen.findByRole('dialog', { name: 'Send this reading?' });
+    expect(within(preview).getByRole('textbox', { name: 'Message' })).toHaveValue(
+      'Date: 1 October 2026\nReading: 00529',
+    );
+    expect(preview).not.toHaveTextContent(/42[.,]10/);
+  });
+});
+
 describe('filtering the history', () => {
   const THIS_MONTH = `${BASE_ROUTES_PATHS.HOME}?from=2026-10-01&to=2026-10-15`;
   const AUGUST_TO_MID_OCTOBER = 'from=2026-08-01&to=2026-10-15';

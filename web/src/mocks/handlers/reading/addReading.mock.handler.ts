@@ -21,6 +21,7 @@ export default (baseUrl: string) => [
       photoId: photoId ?? null,
       sentAt: null,
       sentEmail: null,
+      costCents: null,
     });
 
     return HttpResponse.json(saved, { status: 201 });

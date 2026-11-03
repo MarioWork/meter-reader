@@ -136,6 +136,71 @@ describe('deleteReading', () => {
   });
 });
 
+describe('updateReading', () => {
+  // Keeps what the app asked for and where, then lets the mock API answer it as usual.
+  function recordUpdateRequest() {
+    const received: { method: string; path: string; body: unknown } = { method: '', path: '', body: undefined };
+    server.use(
+      http.patch(`${API}/readings/:id`, async ({ request }) => {
+        received.method = request.method;
+        received.path = new URL(request.url).pathname;
+        received.body = await request.clone().json();
+      }),
+    );
+
+    return received;
+  }
+
+  it('patches the cost in cents and returns the updated reading in a success envelope', async () => {
+    const received = recordUpdateRequest();
+
+    const response = await readingService.updateReading(14, { costCents: 4210 });
+
+    expect(received).toEqual({ method: HttpVerbsUtil.PATCH, path: '/api/readings/14', body: { costCents: 4210 } });
+    expect(response.success).toBe(true);
+    expect(response.data?.costCents).toBe(4210);
+  });
+
+  it('changes a cost that is already set', async () => {
+    await readingService.updateReading(14, { costCents: 4210 });
+
+    const response = await readingService.updateReading(14, { costCents: 3999 });
+
+    expect(response.data?.costCents).toBe(3999);
+  });
+
+  it('sends null to remove the cost', async () => {
+    const received = recordUpdateRequest();
+    await readingService.updateReading(14, { costCents: 4210 });
+
+    const response = await readingService.updateReading(14, { costCents: null });
+
+    expect(received.body).toEqual({ costCents: null });
+    expect(response.data?.costCents).toBeNull();
+  });
+
+  it("returns a failure envelope with the server's reason instead of throwing when the API refuses the cost", async () => {
+    server.use(
+      http.patch(`${API}/readings/:id`, () =>
+        HttpResponse.json({ code: 'VALIDATION_ERROR', message: 'Request validation failed' }, { status: 400 }),
+      ),
+    );
+
+    const response = await readingService.updateReading(14, { costCents: -1 });
+
+    expect(response).toEqual({
+      success: false,
+      error: { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Request validation failed' },
+    });
+  });
+
+  it('returns a failure envelope when the reading is gone', async () => {
+    const response = await readingService.updateReading(999, { costCents: 4210 });
+
+    expect(response).toMatchObject({ success: false, error: { statusCode: 404 } });
+  });
+});
+
 describe('getReadingEmail', () => {
   it("asks for the reading's email and returns the preview the API built", async () => {
     let receivedPath = '';

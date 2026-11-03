@@ -46,6 +46,7 @@ export const createReadingMockModel = (overrides?: Partial<ReadingApiModel>): Re
   photoId: 1,
   sentAt: null,
   sentEmail: null,
+  costCents: null,
   ...overrides,
 });
 
