@@ -1,8 +1,12 @@
 import { expect, test } from '../fixtures/app.fixture';
 import { HomePage } from '../pages/HomePage.page';
 
-// 15 October 2026: "Last 3 months" is 1 August to 15 October, which holds three mock readings, one of them sent.
+// 15 October 2026: "This year" is 1 January to 15 October, which holds ten mock readings, one of them failed.
 const TODAY = new Date(2026, 9, 15, 12);
+const DATE_PRESET = 'This year';
+const STATUS = 'Failed';
+const FAILED_READING_DATE = '1 Sept 2026';
+const THIS_YEAR_READING_COUNT = 10;
 // The Filter button and its sheet, and the cards, are a phone's: an iPhone 14's screen, narrower than Tailwind's `sm`.
 const PHONE_VIEWPORT = { width: 390, height: 844 };
 
@@ -17,20 +21,20 @@ test('filters narrow the history, live in the url, and come off with their chips
   await homePage.goto();
   await expect(homePage.earlierCards).toHaveCount(9);
 
-  await homePage.filterBy(['Last 3 months', 'Sent']);
+  await homePage.filterBy([DATE_PRESET, STATUS]);
 
   await expect(homePage.matchingCards).toHaveCount(1);
-  await expect(homePage.matchingCards).toContainText('1 Aug 2026');
+  await expect(homePage.matchingCards).toContainText(FAILED_READING_DATE);
   await expect(homePage.lastReadingCard).toBeHidden();
-  await expect(homePage.activeFilters).toHaveText(['Last 3 months', 'Sent']);
-  await expect(page).toHaveURL(/from=2026-08-01&to=2026-10-15&status=sent/);
+  await expect(homePage.activeFilters).toHaveText([DATE_PRESET, STATUS]);
+  await expect(page).toHaveURL(/from=2026-01-01&to=2026-10-15&status=failed/);
 
   await homePage.reload();
   await expect(homePage.matchingCards).toHaveCount(1);
 
-  await homePage.removeFilter('Sent');
-  await expect(homePage.matchingCards).toHaveCount(3);
-  await expect(homePage.activeFilters).toHaveText(['Last 3 months']);
+  await homePage.removeFilter(STATUS);
+  await expect(homePage.matchingCards).toHaveCount(THIS_YEAR_READING_COUNT);
+  await expect(homePage.activeFilters).toHaveText([DATE_PRESET]);
 
   await homePage.goBack();
   await expect(homePage.matchingCards).toHaveCount(1);

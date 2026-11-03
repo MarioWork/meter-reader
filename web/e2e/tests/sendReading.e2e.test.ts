@@ -2,6 +2,9 @@ import { expect, test } from '../fixtures/app.fixture';
 import { HomePage } from '../pages/HomePage.page';
 
 const NEWEST_DATE = '1 Oct 2026';
+// The mock settings' templates filled in for the newest reading, its day written in the long month format.
+const NEWEST_SUBJECT = 'Meter reading 1 October 2026';
+const NEWEST_BODY = 'Date: 1 October 2026\nReading: 00529';
 // An iPhone 14's screen, narrower than Tailwind's `sm` breakpoint.
 const PHONE_VIEWPORT = { width: 390, height: 844 };
 
@@ -11,7 +14,8 @@ test('a reading is previewed and sent with its photo, and the history shows it s
 
   await homePage.openSendPreview(NEWEST_DATE);
   await expect(homePage.sendDialog).toContainText('readings@water-provider.example');
-  await expect(homePage.sendDialog).toContainText('Reading: 00529');
+  await expect(homePage.sendSubjectField).toHaveValue(NEWEST_SUBJECT);
+  await expect(homePage.sendMessageField).toHaveValue(NEWEST_BODY);
   await expect(homePage.attachPhotoSwitch).toBeChecked();
   await homePage.sendFromPreview();
 
@@ -55,7 +59,7 @@ test.describe('on a phone', () => {
     await homePage.goto();
 
     await homePage.openSendPreview(NEWEST_DATE);
-    await expect(homePage.sendDialog).toContainText('Reading: 00529');
+    await expect(homePage.sendMessageField).toHaveValue(NEWEST_BODY);
     await expect(homePage.sendDialog).toBeInViewport();
     // It slides up, so its position settles a moment after it shows.
     await expect.poll(() => homePage.isSendSheetAtBottom()).toBe(true);

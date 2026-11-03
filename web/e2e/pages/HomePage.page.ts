@@ -104,6 +104,15 @@ export class HomePage {
     return this.sendDialog.getByRole('button', { name: 'Send' });
   }
 
+  // The subject and message are fields the user can edit, so their text is the fields' value, not the dialog's text.
+  get sendSubjectField() {
+    return this.sendDialog.getByRole('textbox', { name: 'Subject' });
+  }
+
+  get sendMessageField() {
+    return this.sendDialog.getByRole('textbox', { name: 'Message' });
+  }
+
   get attachPhotoSwitch() {
     return this.sendDialog.getByRole('switch', { name: 'Attach photo' });
   }
