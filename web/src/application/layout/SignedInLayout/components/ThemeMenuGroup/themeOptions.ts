@@ -7,7 +7,7 @@ type ThemeOption = {
   Icon: LucideIcon;
 };
 
-// The header's theme choices, in the phone's menu and in the wide screen's toolbar alike.
+// The theme choices, in the phone's menu and the sidebar's Theme menu alike.
 export const THEME_OPTIONS: ThemeOption[] = [
   { value: ThemeUtil.LIGHT, label: 'Light', Icon: SunIcon },
   { value: ThemeUtil.DARK, label: 'Dark', Icon: MoonIcon },

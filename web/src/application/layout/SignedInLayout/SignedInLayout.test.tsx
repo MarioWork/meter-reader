@@ -4,6 +4,7 @@ import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil, ThemeUtil } from '@app-types/utility';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { mockWideScreen, renderRoutes, screen, userEvent, within } from '@test-utils';
+import { thisYearCostsPath } from '@utils/historyFilterUtils';
 import { THEME_STORAGE_KEY } from '@utils/themeUtils';
 
 const DARK_CLASS = 'dark';
@@ -77,24 +78,53 @@ it('opens Settings from the header menu', async () => {
   expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 });
 
-it('opens Costs from the link in the header on a wide screen', async () => {
+async function renderHomeOnWideScreen() {
   mockWideScreen();
-  renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
+  const { router } = renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
   await screen.findByRole('heading', { name: 'Water Readings' });
 
-  await userEvent.click(within(screen.getByRole('banner')).getByRole('link', { name: 'Costs' }));
+  return router;
+}
 
-  expect(await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' })).toBeVisible();
+function sidebarNavigation() {
+  return screen.getByRole('navigation', { name: 'Main' });
+}
+
+it('shows the sidebar instead of the header on a wide screen', async () => {
+  await renderHomeOnWideScreen();
+
+  expect(within(sidebarNavigation()).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument();
 });
 
-it('opens Settings from the link in the header on a wide screen', async () => {
-  mockWideScreen();
-  renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
-  await screen.findByRole('heading', { name: 'Water Readings' });
+it('opens Costs on this year from the sidebar', async () => {
+  const router = await renderHomeOnWideScreen();
 
-  await userEvent.click(within(screen.getByRole('banner')).getByRole('link', { name: 'Settings' }));
+  await userEvent.click(within(sidebarNavigation()).getByRole('link', { name: 'Costs' }));
+
+  expect(await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' })).toBeVisible();
+
+  const { pathname, search } = router.state.location;
+
+  expect(`${pathname}${search}`).toBe(thisYearCostsPath());
+  expect(within(sidebarNavigation()).getByRole('link', { name: 'Costs' })).toHaveAttribute('aria-current', 'page');
+});
+
+it('opens Settings from the sidebar', async () => {
+  await renderHomeOnWideScreen();
+
+  await userEvent.click(within(sidebarNavigation()).getByRole('link', { name: 'Settings' }));
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+});
+
+it('signs out from the sidebar and opens the login page', async () => {
+  await renderHomeOnWideScreen();
+
+  await userEvent.click(within(sidebarNavigation()).getByRole('button', { name: 'Sign out' }));
+
+  expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
 });
 
 it('signs out from the header menu and opens the login page', async () => {
