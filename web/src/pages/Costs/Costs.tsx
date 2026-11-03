@@ -56,9 +56,13 @@ function Costs() {
       >
         {hasListedReadings ? (
           <>
-            {/* The total takes a third of the row and the chart the rest; with no chart, the total fills it. */}
+            {/* From lg: the total takes a third of the row at its own height, the chart the rest. */}
             <div role="group" aria-label={SUMMARY_LABEL} className="flex flex-col gap-6 lg:flex-row">
-              <CostsTotal totalCostCents={costs.totalCostCents} costCount={costCount} className="lg:flex-1" />
+              <CostsTotal
+                totalCostCents={costs.totalCostCents}
+                costCount={costCount}
+                className="lg:flex-1 lg:self-start"
+              />
               <CostsChart readings={costs.data} className="min-w-0 lg:flex-2" />
             </div>
             <CostList readings={costs.data} />
