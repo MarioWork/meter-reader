@@ -10,8 +10,8 @@ const THEME_COLOUR_META_SELECTOR = 'meta[name="theme-color"]';
 // The browser's toolbar colour for each theme: the page background (src/index.css), also in index.html's
 // theme-color tags.
 export const THEME_COLOURS: Record<AppliedThemeUtil, string> = {
-  [ThemeUtil.LIGHT]: '#ffffff',
-  [ThemeUtil.DARK]: '#373f3c',
+  [ThemeUtil.LIGHT]: '#e8f6fa',
+  [ThemeUtil.DARK]: '#06121f',
 };
 
 const THEMES: readonly string[] = Object.values(ThemeUtil);

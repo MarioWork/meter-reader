@@ -1,4 +1,4 @@
-import { boolean, number, object, type InferType } from 'yup';
+import { boolean, number, object, string, type InferType } from 'yup';
 import { readingDateSchema, readingDigitsSchema } from '@utils/readingUtils';
 
 export const CreateReadingSchema = object({
@@ -15,9 +15,33 @@ export const ReadingParamsSchema = object({
   readingId: number().integer().positive().required(),
 });
 
-// Whether the reading's photo goes with its email. Always said, never assumed.
+// The API's limits on an edited subject and body.
+const SUBJECT_MAX_LENGTH = 200;
+const BODY_MAX_LENGTH = 5000;
+
+const emailSubjectSchema = string()
+  .trim()
+  .required('Write a subject.')
+  .max(SUBJECT_MAX_LENGTH, 'Keep the subject under 200 characters.');
+const emailBodySchema = string()
+  .trim()
+  .required('Write a message.')
+  .max(BODY_MAX_LENGTH, 'Keep the message under 5000 characters.');
+
+// The subject and body as the user left them in the preview. Shared by the preview's form and the send action.
+export const EmailTextSchema = object({
+  subject: emailSubjectSchema,
+  body: emailBodySchema,
+});
+
+export type EmailText = InferType<typeof EmailTextSchema>;
+
+// Whether the reading's photo goes with its email, always said, never assumed. The subject and body are optional:
+// left out, the API uses its own (a send straight from New reading).
 export const SendReadingSchema = object({
   attachPhoto: boolean().required(),
+  subject: emailSubjectSchema.optional(),
+  body: emailBodySchema.optional(),
 });
 
 export type SendReading = InferType<typeof SendReadingSchema>;

@@ -33,7 +33,7 @@ function Home() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pt-6 **:scroll-mb-24">
+    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-6 **:scroll-mb-24">
       <h1 className="text-2xl font-bold">History</h1>
       <HistoryFilters filterButtonRef={filterButtonRef} />
       {hasReadings ? <ReadingHistory readings={readings} isFiltered={isFiltered} /> : emptyHistory}
@@ -46,7 +46,7 @@ function Home() {
         />
       )}
       <NewReadingBar />
-      {/* The send preview, a routed modal. */}
+      {/* The routed modals: New reading on a wide screen, and the send preview. */}
       <Outlet />
     </main>
   );

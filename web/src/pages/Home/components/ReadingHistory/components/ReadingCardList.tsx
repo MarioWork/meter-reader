@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { ReadingApiModel } from '@app-types/models';
-import ReadingHistoryCard from './ReadingHistoryCard';
+import ReadingCard from '../../ReadingCard';
 
 type Props = {
   title: string;
@@ -27,7 +27,7 @@ function ReadingCardList({ title, readings, ref }: Props) {
       <ul className="flex flex-col gap-3">
         {readings.map((reading) => (
           <li key={reading.id}>
-            <ReadingHistoryCard reading={reading} />
+            <ReadingCard reading={reading} />
           </li>
         ))}
       </ul>

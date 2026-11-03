@@ -4,7 +4,16 @@ import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil } from '@app-types/utility';
 import { createReadingMockModel } from '@mocks/handlers/reading/models/readingMockModel.mock';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { findNotification, queryAllNotifications, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
+import {
+  findNotification,
+  fireEvent,
+  queryAllNotifications,
+  renderRoutes,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from '@test-utils';
 
 const NEWEST_DATE = '1 Oct 2026';
 // The mock history's 1 Jun 2026 reading has no photo and was never sent.
@@ -101,6 +110,106 @@ it('lists the earlier readings as cards, newest first, with the date, the readin
   expect(earlierReadings()).not.toHaveFocus();
 });
 
+describe("a reading's details", () => {
+  it('opens from a tap on the card, with the digits, the day, the save time, the status and the photo on request', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+
+    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+    // The photo stays hidden until asked for.
+    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
+    const showPhoto = within(dialog).getByRole('button', { name: 'Show photo' });
+    await userEvent.click(showPhoto);
+    expect(showPhoto).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(showPhoto);
+    expect(showPhoto).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(showPhoto);
+    expect(within(dialog).getByRole('img', { name: `The meter showing 00529 on ${NEWEST_DATE}` })).toHaveAttribute(
+      'src',
+      `${TEST_BASE_API_URL}/photos/14`,
+    );
+    expect(dialog).toHaveTextContent('00529');
+    expect(dialog).toHaveTextContent('Not sent');
+    expect(within(dialog).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` })).toHaveTextContent('Send');
+  });
+
+  it('offers no way to send a reading that was sent', async () => {
+    await renderHome();
+
+    // The mock history's 1 Aug 2026 reading was sent.
+    await userEvent.click(screen.getByRole('link', { name: 'Details of the 1 Aug 2026 reading' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Reading of 1 Aug 2026' });
+    expect(dialog).toHaveTextContent(/Sent 1 Aug 2026/);
+    expect(within(dialog).queryByRole('link', { name: /Send|Try again/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the email a sent reading went out with', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('link', { name: 'Details of the 1 Aug 2026 reading' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Reading of 1 Aug 2026' });
+    const email = within(dialog).getByRole('region', { name: 'Email sent' });
+    expect(email).toHaveTextContent('Fromme@hotmail.example');
+    expect(email).toHaveTextContent('Toreadings@water-provider.example');
+    expect(email).toHaveTextContent('Date: 1 August 2026');
+    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
+
+    await userEvent.click(within(email).getByRole('button', { name: 'Photo attached' }));
+
+    expect(within(email).getByRole('img', { name: 'The meter showing 00511 on 1 Aug 2026' })).toBeVisible();
+    // The email shows the photo, so there is no second way to it.
+    expect(within(dialog).queryByRole('button', { name: 'Show photo' })).not.toBeInTheDocument();
+  });
+
+  it('shows the edited subject and message once a reading is sent with them', async () => {
+    await renderHome();
+    await userEvent.click(within(lastReadingCard()).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` }));
+    const preview = await screen.findByRole('dialog', { name: 'Send this reading?' });
+    const subject = within(preview).getByRole('textbox', { name: 'Subject' });
+    await userEvent.clear(subject);
+    await userEvent.type(subject, 'Water meter reading');
+    await userEvent.click(within(preview).getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(lastReadingCard()).toHaveTextContent(/Sent 2 Nov 2026/));
+
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+
+    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+    expect(within(dialog).getByRole('region', { name: 'Email sent' })).toHaveTextContent('Water meter reading');
+  });
+
+  it('shows no email section for a reading not sent yet', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+
+    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+    expect(within(dialog).queryByRole('region', { name: 'Email sent' })).not.toBeInTheDocument();
+  });
+
+  it('closes with Close and leaves the history as it was', async () => {
+    await renderHome();
+    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(lastReadingCard()).toHaveTextContent('00529');
+  });
+
+  it("keeps the card's own buttons working: the menu opens, not the details", async () => {
+    await renderHome();
+
+    await openMenuFor(NEWEST_DATE);
+
+    expect(await screen.findByRole('menuitem', { name: 'View photo' })).toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
 describe("a reading's photo", () => {
   it('shows the full photo inside the app from the "⋯" menu', async () => {
     await renderHome();
@@ -108,11 +217,49 @@ describe("a reading's photo", () => {
     await openMenuFor(NEWEST_DATE);
     await chooseMenuItem('View photo');
 
-    const dialog = screen.getByRole('dialog', { name: `Photo of 00529 on ${NEWEST_DATE}` });
+    const dialog = screen.getByRole('dialog', { name: `Photo of the ${NEWEST_DATE} reading` });
     expect(within(dialog).getByRole('img', { name: `The meter showing 00529 on ${NEWEST_DATE}` })).toHaveAttribute(
       'src',
       `${TEST_BASE_API_URL}/photos/14`,
     );
+  });
+
+  it('says the photo is loading until it arrives, then shows it', async () => {
+    await renderHome();
+    await openMenuFor(NEWEST_DATE);
+    await chooseMenuItem('View photo');
+    const dialog = screen.getByRole('dialog', { name: `Photo of the ${NEWEST_DATE} reading` });
+
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Loading the photo…');
+    fireEvent.load(within(dialog).getByRole('img'));
+
+    expect(within(dialog).queryByRole('status')).not.toBeInTheDocument();
+    expect(dialog).toHaveTextContent('Reading 00529');
+  });
+
+  it('says so when the photo cannot be loaded', async () => {
+    await renderHome();
+    await openMenuFor(NEWEST_DATE);
+    await chooseMenuItem('View photo');
+    const dialog = screen.getByRole('dialog', { name: `Photo of the ${NEWEST_DATE} reading` });
+
+    fireEvent.error(within(dialog).getByRole('img'));
+
+    expect(within(dialog).getByRole('alert')).toHaveTextContent("The photo couldn't be loaded.");
+  });
+
+  it('closes the full photo with a click outside it, but not with a click on the photo', async () => {
+    await renderHome();
+    await openMenuFor(NEWEST_DATE);
+    await chooseMenuItem('View photo');
+    const dialog = screen.getByRole('dialog');
+
+    await userEvent.click(within(dialog).getByRole('img'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // A click on the dim backdrop lands on the <dialog> element itself.
+    await userEvent.click(dialog);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('closes the full photo with Close', async () => {
@@ -125,10 +272,9 @@ describe("a reading's photo", () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('is not offered when the reading was saved without one, and the card says so', async () => {
+  it('is not offered when the reading was saved without one', async () => {
     await renderHome();
 
-    expect(earlierCardFor(NO_PHOTO_DATE)).toHaveTextContent('No photo');
     await openMenuFor(NO_PHOTO_DATE);
 
     expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeVisible();
@@ -346,6 +492,8 @@ describe('deleting a reading', () => {
 describe('sending a reading', () => {
   const SEND_NEWEST = `Send the reading of ${NEWEST_DATE}`;
   const SEND_DIALOG = 'Send this reading?';
+  const SUBJECT = 'test';
+  const NEWEST_BODY = 'Date: 1 October 2026\nReading: 00529';
 
   async function openNewestPreview() {
     await renderHome();
@@ -381,13 +529,13 @@ describe('sending a reading', () => {
     );
   }
 
-  it('previews exactly what will be sent: the address, the subject, the body and the photo', async () => {
+  it('previews what will be sent: the address, the subject and the body ready to edit, and the photo', async () => {
     const dialog = await openNewestPreview();
 
+    expect(within(dialog).getByText('me@hotmail.example')).toBeVisible();
     expect(within(dialog).getByText('readings@water-provider.example')).toBeVisible();
-    expect(within(dialog).getByText('test')).toBeVisible();
-    // The body's line break reads as a space once the text is normalised.
-    expect(within(dialog).getByText('Date: 1 October 2026 Reading: 00529')).toBeVisible();
+    expect(within(dialog).getByRole('textbox', { name: 'Subject' })).toHaveValue(SUBJECT);
+    expect(within(dialog).getByRole('textbox', { name: 'Message' })).toHaveValue(NEWEST_BODY);
     expect(within(dialog).getByRole('switch', { name: 'Attach photo' })).toBeChecked();
     expect(within(dialog).getByRole('img', { name: 'meter-2026-10-01.jpg' })).toHaveAttribute(
       'src',
@@ -404,7 +552,7 @@ describe('sending a reading', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument());
     await waitFor(() => expect(lastReadingCard()).toHaveTextContent(/Sent 2 Nov 2026/));
     expect(await findNotification('Reading sent')).toBeVisible();
-    expect(received).toEqual([{ attachPhoto: true }]);
+    expect(received).toEqual([{ attachPhoto: true, subject: SUBJECT, body: NEWEST_BODY }]);
     expect(within(lastReadingCard()).queryByRole('link', { name: SEND_NEWEST })).not.toBeInTheDocument();
   });
 
@@ -428,8 +576,42 @@ describe('sending a reading', () => {
     await userEvent.click(within(dialog).getByRole('switch', { name: 'Attach photo' }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
 
-    await waitFor(() => expect(received).toEqual([{ attachPhoto: false }]));
-    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
+    await waitFor(() => expect(received).toEqual([{ attachPhoto: false, subject: SUBJECT, body: NEWEST_BODY }]));
+    // Lets the send finish here, so it cannot land in the next test's fresh mock history.
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument());
+  });
+
+  it('sends the subject and message as the user edited them', async () => {
+    const received = recordSendRequests();
+    const dialog = await openNewestPreview();
+    const subject = within(dialog).getByRole('textbox', { name: 'Subject' });
+    const message = within(dialog).getByRole('textbox', { name: 'Message' });
+
+    await userEvent.clear(subject);
+    await userEvent.type(subject, 'Water meter reading');
+    await userEvent.clear(message);
+    await userEvent.type(message, 'Hello, the meter shows 00529.');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    await waitFor(() =>
+      expect(received).toEqual([
+        { attachPhoto: true, subject: 'Water meter reading', body: 'Hello, the meter shows 00529.' },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument());
+  });
+
+  it('marks an empty subject and sends nothing', async () => {
+    const received = recordSendRequests();
+    const dialog = await openNewestPreview();
+    const subject = within(dialog).getByRole('textbox', { name: 'Subject' });
+
+    await userEvent.clear(subject);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    expect(subject).toBeInvalid();
+    expect(subject).toHaveAccessibleDescription('Write a subject.');
+    expect(received).toEqual([]);
   });
 
   it('offers no photo to attach when the reading has none', async () => {
@@ -470,7 +652,10 @@ describe('sending a reading', () => {
     expect(failed).toHaveTextContent('Failed');
     await userEvent.click(within(failed).getByRole('link', { name: 'Try again: send the reading of 1 Sept 2026' }));
 
-    expect(await screen.findByRole('dialog', { name: SEND_DIALOG })).toHaveTextContent('Reading: 00520');
+    const dialog = await screen.findByRole('dialog', { name: SEND_DIALOG });
+    expect(within(dialog).getByRole('textbox', { name: 'Message' })).toHaveValue(
+      'Date: 1 September 2026\nReading: 00520',
+    );
   });
 
   it('disables Send and says why when Hotmail is not connected', async () => {

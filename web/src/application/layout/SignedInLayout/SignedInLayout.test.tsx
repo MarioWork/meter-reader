@@ -65,5 +65,5 @@ it('signs out from the header menu and opens the login page', async () => {
 
   await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
-  expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
 });

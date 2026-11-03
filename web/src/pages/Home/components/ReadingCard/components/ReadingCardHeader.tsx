@@ -2,27 +2,27 @@ import type { ReadingApiModel } from '@app-types/models';
 import { CardAction, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { formatIsoDate } from '@utils/dateUtils';
 import ReadingActionsMenu from '../../ReadingActionsMenu';
+import ReadingSendStatus from '../../ReadingSendStatus';
 
 type Props = {
   reading: ReadingApiModel;
-  titleId: string;
 };
 
-const TITLE = 'Last reading';
-
-// "Last reading", the day it was read, and its "⋯" menu.
-function LastReadingHeader({ reading, titleId }: Props) {
+// The day as the card's heading, the send status under it, and the "⋯" menu on the right.
+function ReadingCardHeader({ reading }: Props) {
   return (
     <CardHeader>
       <CardTitle>
-        <h2 id={titleId}>{TITLE}</h2>
+        <h3>{formatIsoDate(reading.date)}</h3>
       </CardTitle>
-      <CardDescription>{formatIsoDate(reading.date)}</CardDescription>
-      <CardAction>
+      <CardDescription>
+        <ReadingSendStatus reading={reading} />
+      </CardDescription>
+      <CardAction className="relative z-10">
         <ReadingActionsMenu reading={reading} />
       </CardAction>
     </CardHeader>
   );
 }
 
-export default LastReadingHeader;
+export default ReadingCardHeader;

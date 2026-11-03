@@ -15,6 +15,7 @@ const badgeVariants = cva(
         // Solid fills on the theme's checked pairs (src/themeContrast.test.ts), for status chips.
         success: 'bg-success text-success-foreground',
         error: 'bg-destructive text-destructive-foreground',
+        warning: 'bg-warning text-warning-foreground',
         outline: 'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
         ghost: 'hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50',
         link: 'text-primary underline-offset-4 hover:underline',

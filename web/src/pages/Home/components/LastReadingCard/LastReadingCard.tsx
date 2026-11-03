@@ -1,9 +1,6 @@
 import { useId } from 'react';
 import type { ReadingApiModel } from '@app-types/models';
-import { Card } from '@components/ui/card';
-import ReadingSummary from '../ReadingSummary';
-import SendReadingFooter from '../SendReadingFooter';
-import LastReadingHeader from './components/LastReadingHeader';
+import ReadingCard from '../ReadingCard';
 
 type Props = {
   reading: ReadingApiModel;
@@ -11,8 +8,9 @@ type Props = {
   ref: React.Ref<HTMLElement>;
 };
 
-// The newest reading, big: the number the meter showed, the day, whether it went out, and Send or Try again as the
-// page's main action while it can still go.
+const TITLE = 'Last reading';
+
+// The newest reading, under its own heading like the earlier ones: the same card, with bigger digits.
 function LastReadingCard({ reading, ref }: Props) {
   const titleId = useId();
 
@@ -21,13 +19,12 @@ function LastReadingCard({ reading, ref }: Props) {
       ref={ref}
       tabIndex={-1}
       aria-labelledby={titleId}
-      className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="flex flex-col gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <Card>
-        <LastReadingHeader reading={reading} titleId={titleId} />
-        <ReadingSummary reading={reading} isProminent />
-        <SendReadingFooter reading={reading} isProminent />
-      </Card>
+      <h2 id={titleId} className="text-lg font-semibold">
+        {TITLE}
+      </h2>
+      <ReadingCard reading={reading} isProminent />
     </section>
   );
 }

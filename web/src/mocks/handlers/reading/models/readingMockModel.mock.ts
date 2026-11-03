@@ -1,5 +1,6 @@
 import type { ReadingApiModel, ReadingId } from '@app-types/models';
 import { ReadingStatusUtil } from '@app-types/utility';
+import { createReadingEmailMockModel } from './readingEmailMockModel.mock';
 
 // Fixed, so every run serves the same rows and tests can assert them: one reading on the first of each month,
 // counting up as a meter does, starting September 2025.
@@ -43,28 +44,39 @@ export const createReadingMockModel = (overrides?: Partial<ReadingApiModel>): Re
   createdAt: `${monthStart(0)}${MOCK_READ_TIME}`,
   photoId: 1,
   sentAt: null,
+  sentEmail: null,
   ...overrides,
 });
 
-function sendOutcome(id: ReadingId, date: string): Pick<ReadingApiModel, 'status' | 'sentAt'> {
-  if (NOT_SENT_READING_IDS.includes(id)) return { status: ReadingStatusUtil.NOT_SENT, sentAt: null };
+type SendOutcome = Pick<ReadingApiModel, 'status' | 'sentAt' | 'sentEmail'>;
 
-  if (FAILED_READING_IDS.includes(id)) return { status: ReadingStatusUtil.FAILED, sentAt: null };
+// A sent mock reading went out as the API's own email, with its photo when it had one.
+function sendOutcome(reading: ReadingApiModel): SendOutcome {
+  if (NOT_SENT_READING_IDS.includes(reading.id)) {
+    return { status: ReadingStatusUtil.NOT_SENT, sentAt: null, sentEmail: null };
+  }
 
-  return { status: ReadingStatusUtil.SENT, sentAt: `${date}${MOCK_SENT_TIME}` };
+  if (FAILED_READING_IDS.includes(reading.id)) {
+    return { status: ReadingStatusUtil.FAILED, sentAt: null, sentEmail: null };
+  }
+
+  const { from, to, subject, body } = createReadingEmailMockModel(reading);
+  const sentEmail = { from, to, subject, body, hasPhoto: reading.photoId !== null };
+
+  return { status: ReadingStatusUtil.SENT, sentAt: `${reading.date}${MOCK_SENT_TIME}`, sentEmail };
 }
 
 // Oldest first, as they were saved.
 export const createReadingMockModelList = (length: number, overrides?: Partial<ReadingApiModel>): ReadingApiModel[] =>
-  Array.from({ length }, (_, index) =>
-    createReadingMockModel({
+  Array.from({ length }, (_, index) => {
+    const reading = createReadingMockModel({
       id: index + 1,
       digits: String(FIRST_DIGITS + index * MONTHLY_USE).padStart(DIGIT_COUNT, '0'),
       date: monthStart(index),
       createdAt: `${monthStart(index)}${MOCK_READ_TIME}`,
-      ...sendOutcome(index + 1, monthStart(index)),
       // A mock history photo has its reading's id (getPhoto.mock.handler.ts draws it).
       photoId: (index + 1) % NO_PHOTO_EVERY === NO_PHOTO_REMAINDER ? null : index + 1,
-      ...overrides,
-    }),
-  );
+    });
+
+    return { ...reading, ...sendOutcome(reading), ...overrides };
+  });

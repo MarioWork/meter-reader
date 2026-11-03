@@ -14,7 +14,7 @@ import { toSkipTake } from '../../lib/pagination.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
-import { readingsRepository, type ReadingFilter, type ReadingRow } from './readings.repository.ts';
+import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
 import type {
   CreateReading,
   ListReadingsQuery,
@@ -23,6 +23,7 @@ import type {
   ReadingResponse,
   ReadingStatus,
   SendReading,
+  EmailDefaultsResponse,
 } from './readings.schema.ts';
 
 const log = logger.child({ module: 'readings' });
@@ -77,6 +78,17 @@ function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
+// Null while any part is missing: a reading sent before the email was kept has none of them. `from` may be null on
+// its own: MAIL_FROM is optional.
+function toSentEmailResponse(row: ReadingRow): ReadingResponse['sentEmail'] {
+  const { sentFrom, sentTo, sentSubject, sentBody, sentWithPhoto } = row;
+  const isKept = sentTo !== null && sentSubject !== null && sentBody !== null && sentWithPhoto !== null;
+
+  if (!isKept) return null;
+
+  return { from: sentFrom, to: sentTo, subject: sentSubject, body: sentBody, hasPhoto: sentWithPhoto };
+}
+
 function toResponse(row: ReadingRow): ReadingResponse {
   return {
     id: row.id,
@@ -86,6 +98,7 @@ function toResponse(row: ReadingRow): ReadingResponse {
     createdAt: row.createdAt.toISOString(),
     photoId: row.photo?.id ?? null,
     sentAt: row.sentAt?.toISOString() ?? null,
+    sentEmail: toSentEmailResponse(row),
   };
 }
 
@@ -109,6 +122,10 @@ async function findReading(id: number): Promise<ReadingRow> {
   if (!row) throw new NotFoundError(ENTITY, id);
 
   return row;
+}
+
+export async function getReading(id: number): Promise<ReadingResponse> {
+  return toResponse(await findReading(id));
 }
 
 export async function addReading({ digits, date, photoId }: CreateReading): Promise<ReadingResponse> {
@@ -164,7 +181,12 @@ export async function getReadingEmail(id: number): Promise<ReadingEmailResponse>
   const row = await findReading(id);
   const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
 
-  return { ...toMailContent(row), attachment };
+  return { from: env.MAIL_FROM ?? null, ...toMailContent(row), attachment };
+}
+
+// The parts of every email that do not depend on a reading.
+export function getEmailDefaults(): EmailDefaultsResponse {
+  return { from: env.MAIL_FROM ?? null, to: env.PROVIDER_EMAIL, subject: env.MAIL_SUBJECT };
 }
 
 async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
@@ -175,8 +197,10 @@ async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
   return { name: toAttachmentName(row), contentType: JPEG_CONTENT_TYPE, contents };
 }
 
-async function toOutgoingMail(row: ReadingRow, { attachPhoto }: SendReading): Promise<OutgoingMail> {
-  const mail = toMailContent(row);
+// The server's subject and body, unless the user edited them in the preview. The address is never the user's to change.
+async function toOutgoingMail(row: ReadingRow, { attachPhoto, subject, body }: SendReading): Promise<OutgoingMail> {
+  const defaultMail = toMailContent(row);
+  const mail = { ...defaultMail, subject: subject ?? defaultMail.subject, body: body ?? defaultMail.body };
 
   if (!attachPhoto) return mail;
 
@@ -224,9 +248,9 @@ async function saveFailure(id: number): Promise<void> {
 
 // Microsoft has the email by now, so a database error here must be loud: the reading still looks unsent, and sending
 // it again would email the provider twice.
-async function saveSent(id: number): Promise<ReadingRow | null> {
+async function saveSent(id: number, email: SentEmail): Promise<ReadingRow | null> {
   try {
-    return await readingsRepository.markSent(id, new Date());
+    return await readingsRepository.markSent(id, new Date(), email);
   } catch (error: unknown) {
     log.error({ readingId: id, ...getErrorLogFields(error) }, 'reading sent, but not saved as sent');
 
@@ -236,9 +260,11 @@ async function saveSent(id: number): Promise<ReadingRow | null> {
 
 async function sendOnce(id: number, fields: SendReading): Promise<ReadingResponse> {
   const row = await findSendableReading(id, fields);
+  let mail: OutgoingMail;
 
   try {
-    await sendMail(await toOutgoingMail(row, fields));
+    mail = await toOutgoingMail(row, fields);
+    await sendMail(mail);
   } catch (error: unknown) {
     await saveFailure(id);
     // The id and the stable code only: the message may name the provider.
@@ -247,7 +273,14 @@ async function sendOnce(id: number, fields: SendReading): Promise<ReadingRespons
     throw toHttpSendError(error);
   }
 
-  const sent = await saveSent(id);
+  const sentEmail = {
+    from: env.MAIL_FROM ?? null,
+    to: mail.to,
+    subject: mail.subject,
+    body: mail.body,
+    withPhoto: mail.attachment !== undefined,
+  };
+  const sent = await saveSent(id, sentEmail);
 
   if (!sent) throw new NotFoundError(ENTITY, id);
 

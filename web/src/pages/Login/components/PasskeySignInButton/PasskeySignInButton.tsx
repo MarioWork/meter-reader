@@ -1,3 +1,4 @@
+import { KeyRoundIcon } from 'lucide-react';
 import { useFetcher } from 'react-router';
 import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
 import { Button } from '@components/ui/button';
@@ -17,7 +18,8 @@ function PasskeySignInButton() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button variant="outline" disabled={isSigningIn} onClick={signIn}>
+      <Button variant="outline" size="lg" disabled={isSigningIn} onClick={signIn}>
+        <KeyRoundIcon aria-hidden="true" />
         Sign in with a passkey
       </Button>
       {failureMessage && <ErrorAlert message={failureMessage} />}

@@ -4,13 +4,22 @@ import { ErrorResponseSchema } from '../../lib/errorHandler.ts';
 import {
   CreateReadingSchema,
   ListReadingsQuerySchema,
+  EmailDefaultsResponseSchema,
   ReadingEmailResponseSchema,
   ReadingListResponseSchema,
   ReadingParamsSchema,
   ReadingResponseSchema,
   SendReadingSchema,
 } from './readings.schema.ts';
-import { addReading, deleteReading, getReadingEmail, getReadings, sendReading } from './readings.service.ts';
+import {
+  addReading,
+  deleteReading,
+  getEmailDefaults,
+  getReading,
+  getReadingEmail,
+  getReadings,
+  sendReading,
+} from './readings.service.ts';
 
 const TAGS = ['readings'];
 
@@ -44,6 +53,36 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
 
       return reply.code(201).send(reading);
     },
+  );
+
+  app.get(
+    '/email-defaults',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'What every email starts with: from, to and the subject, for a reading not saved yet',
+        response: { 200: EmailDefaultsResponseSchema, 401: ErrorResponseSchema },
+      },
+    },
+    async () => getEmailDefaults(),
+  );
+
+  app.get(
+    '/:id',
+    {
+      schema: {
+        tags: TAGS,
+        summary: 'One reading, for its details',
+        params: ReadingParamsSchema,
+        response: {
+          200: ReadingResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request) => getReading(request.params.id),
   );
 
   app.delete(
