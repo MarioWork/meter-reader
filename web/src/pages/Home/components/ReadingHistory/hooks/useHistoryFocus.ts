@@ -15,7 +15,8 @@ function isOnlyAppended(shownReadings: ReadingApiModel[], readings: ReadingApiMo
 // A deleted reading takes its "⋯" button with it, and a sent one its Send link: focus drops back to the top of the
 // page. Once the history has re-rendered, focus goes to the part that changed instead, so a keyboard user carries on
 // from there: the last reading's card when the newest reading changed, the list of readings otherwise (and always
-// while a filter hides the last reading's card). Not on the first render, and not when "Load more" only added
+// while a filter hides the last reading's card, and on a wide screen, where the whole history is one table with no
+// last reading's card: the table is that list). Not on the first render, and not when "Load more" only added
 // readings: focus stays where it is.
 export function useHistoryFocus(readings: ReadingApiModel[]) {
   const lastReadingRef = useRef<HTMLElement>(null);

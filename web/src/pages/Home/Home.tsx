@@ -14,7 +14,7 @@ import { useIsFilteringHistory } from '@hooks/useIsFilteringHistory';
 import { cn } from '@utils/classNameUtils';
 
 // Phone first: the filters, the last reading on top, the earlier ones as cards below it, more as the user scrolls,
-// and New reading stuck to the bottom. A focused control scrolled to the bottom keeps clear of that bar (WCAG 2.4.11).
+// and New reading stuck to the bottom. A wide screen uses the whole column for the filters bar and a table. A focused control scrolled to the bottom keeps clear of that bar (WCAG 2.4.11).
 function Home() {
   const { readings, totalResultNumber, loadedPageCount, hasLoadMoreFailed } =
     useLoaderData<LoaderDataUtil<typeof loader>>();
@@ -37,7 +37,7 @@ function Home() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-6 **:scroll-mb-24">
+    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-6 **:scroll-mb-24 sm:max-w-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Water Readings</h1>
         {/* Only while readings are shown: an empty history, or a filter matching none, has nothing to export. */}

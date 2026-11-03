@@ -2,7 +2,7 @@ import type { ReadingApiModel } from '@app-types/models';
 import { CardContent } from '@components/ui/card';
 import { cn } from '@utils/classNameUtils';
 import ReadingCost from './ReadingCost';
-import SendReadingLink from './SendReadingLink';
+import SendReadingLink from '../../SendReadingLink';
 
 type Props = {
   reading: ReadingApiModel;

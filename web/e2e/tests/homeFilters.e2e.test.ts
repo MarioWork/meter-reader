@@ -3,6 +3,10 @@ import { HomePage } from '../pages/HomePage.page';
 
 // 15 October 2026: "Last 3 months" is 1 August to 15 October, which holds three mock readings, one of them sent.
 const TODAY = new Date(2026, 9, 15, 12);
+// The Filter button and its sheet, and the cards, are a phone's: an iPhone 14's screen, narrower than Tailwind's `sm`.
+const PHONE_VIEWPORT = { width: 390, height: 844 };
+
+test.use({ viewport: PHONE_VIEWPORT });
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(TODAY);
