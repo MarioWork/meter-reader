@@ -1,6 +1,4 @@
-import axios from 'axios';
-import type { BillContentType, BillId, ReadingBillApiModel } from '@app-types/models';
-import { BASE_BILLS_URL } from '@services/billService/billService';
+import type { BillContentType, ReadingBillApiModel } from '@app-types/models';
 
 const BYTES_PER_KILOBYTE = 1000;
 const BYTES_PER_MEGABYTE = 1_000_000;
@@ -13,12 +11,6 @@ const BILL_FILE_LABELS: Record<BillContentType, string> = {
   'image/jpeg': 'JPEG',
   'image/png': 'PNG',
 };
-
-// Where a saved bill opens from: the API's own origin, so the session cookie goes with it. Built from the service's
-// path and a numeric id only, never from text the API sent.
-export function getBillUrl(billId: BillId): string {
-  return `${axios.defaults.baseURL ?? ''}${BASE_BILLS_URL}/${billId}`;
-}
 
 // 1000 bytes to the kilobyte, as phones and Finder count: "180 KB", "2.4 MB".
 function formatFileSize(sizeBytes: number): string {

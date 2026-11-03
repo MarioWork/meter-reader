@@ -8,8 +8,7 @@ const NOT_FOUND_STATUS = 404;
 // Opened, not saved, under its name (RFC 8187: UTF-8, percent-encoded).
 const INLINE_NAMED = "inline; filename*=UTF-8''";
 
-// A bill uploaded in the demo comes back as it was sent, to open under its name. A link to it opens through
-// mockNewTabLinks.ts, as the mock network never sees a page opened in a new tab.
+// A bill uploaded in the demo comes back as it was sent, for the app's viewer to show under its name.
 export default (baseUrl: string) => [
   http.get(`${baseUrl}/bills/:id`, async ({ params }) => {
     await delay(MOCK_DELAY);

@@ -59,5 +59,5 @@ What one reading cost, in euros, with up to 2 decimals and never below 0. Added 
 _Avoid_: Total, price, amount, paid
 
 **Bill**:
-The provider's bill file for one reading, always a PDF, added after the reading is saved. Never part of its email; a reading may have none. The app shows it by the name the file had on the user's device (a bill kept before names were, by `bill-` and its reading's day), as one link that opens it in a new tab, or in the phone's viewer app.
+The provider's bill file for one reading, always a PDF, added after the reading is saved. Never part of its email; a reading may have none. The app shows it by the name the file had on the user's device (a bill kept before names were, by `bill-` and its reading's day), which opens it in the app's own full-screen viewer. Nothing is saved to the device unless the viewer's Download is tapped.
 _Avoid_: Invoice, attachment, receipt

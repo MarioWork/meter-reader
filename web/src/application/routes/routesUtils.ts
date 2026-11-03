@@ -46,6 +46,11 @@ export const COSTS_ROUTES_PATHS = {
   BASE: '/costs',
 };
 
+// Loader only, never a page: the bill viewer reads one bill through it, with a fetcher, wherever a bill shows.
+export const BILL_ROUTES_PATHS = {
+  view: (billId?: string) => `/bills/${billId ?? ':billId'}`,
+};
+
 export const SETTINGS_ROUTES_PATHS = {
   BASE: '/settings',
 };

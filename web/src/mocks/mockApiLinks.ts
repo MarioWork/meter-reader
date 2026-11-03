@@ -1,4 +1,4 @@
-// Mock mode only. What the link interceptors (mockDownloads.ts, mockNewTabLinks.ts) share: which clicks they take.
+// Mock mode only. Which clicks the download link interceptor (mockDownloads.ts) takes.
 
 // The path every API url starts with, from the base url the app calls ("/api").
 export function apiPrefixOf(baseApiUrl: string): string {

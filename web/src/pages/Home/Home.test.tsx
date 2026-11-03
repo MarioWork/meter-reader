@@ -949,7 +949,7 @@ describe("a reading's bill", () => {
   const NEWEST_ID = 14;
   const PDF_BYTES = 184_320;
   const BILL_NAME = 'Fatura de Outubro.pdf';
-  const BILL_LINK_NAME = `${BILL_NAME}, opens the bill in a new tab`;
+  const BILL_BUTTON_NAME = `${BILL_NAME}, opens the bill`;
   const NEW_PDF_BILL = new File([new Uint8Array(PDF_BYTES)], 'november-bill.pdf', { type: 'application/pdf' });
 
   // The newest reading with a bill already saved, as the API answers it once updated with one. (A bill picked in the
@@ -997,20 +997,19 @@ describe("a reading's bill", () => {
     return received;
   }
 
-  it('shows the bill in the details as one link, named after its file, that opens it in a new tab', async () => {
-    const billId = saveMockBill();
+  it("shows the bill in the details as one button, named after its file, that opens the app's viewer", async () => {
+    saveMockBill();
     await renderHome();
 
     const details = await openDetails();
 
     expect(within(details).getByText('Bill')).toBeVisible();
-    const link = within(details).getByRole('link', { name: BILL_LINK_NAME });
-    expect(link).toHaveTextContent(BILL_NAME);
-    expect(link).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${billId}`);
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    const button = within(details).getByRole('button', { name: BILL_BUTTON_NAME });
+    expect(button).toHaveTextContent(BILL_NAME);
+    expect(button).toHaveAttribute('aria-haspopup', 'dialog');
     expect(within(details).getByText('PDF, 184.3 KB')).toBeVisible();
-    expect(within(details).queryByRole('link', { name: /^(Open|Download)/ })).not.toBeInTheDocument();
+    expect(within(details).queryByRole('link', { name: new RegExp(BILL_NAME) })).not.toBeInTheDocument();
+    expect(within(details).queryByRole('button', { name: /^Download/ })).not.toBeInTheDocument();
   });
 
   it('shows no bill in the details while the reading has none', async () => {
@@ -1039,18 +1038,15 @@ describe("a reading's bill", () => {
     expect(within(dialog).queryByRole('button', { name: 'Remove bill' })).not.toBeInTheDocument();
   });
 
-  it('shows the saved bill as a link to it, and says a new file replaces it', async () => {
-    const billId = saveMockBill();
+  it('shows the saved bill as a button that opens it, and says a new file replaces it', async () => {
+    saveMockBill();
     await renderHome();
 
     const dialog = await openBillDialog();
     await userEvent.upload(billField(dialog), NEW_PDF_BILL);
 
     expect(within(dialog).getByText('Saved bill:')).toBeVisible();
-    expect(within(dialog).getByRole('link', { name: BILL_LINK_NAME })).toHaveAttribute(
-      'href',
-      `${TEST_BASE_API_URL}/bills/${billId}`,
-    );
+    expect(within(dialog).getByRole('button', { name: BILL_BUTTON_NAME })).toHaveAttribute('aria-haspopup', 'dialog');
     expect(within(dialog).getByText('PDF, 184.3 KB')).toBeVisible();
     expect(billField(dialog)).toHaveAccessibleDescription(/It replaces the saved bill/);
   });
@@ -1063,9 +1059,9 @@ describe("a reading's bill", () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Remove bill' }));
     expect(within(dialog).getByText('The saved bill is removed when you save.')).toBeVisible();
-    expect(within(dialog).queryByRole('link', { name: BILL_LINK_NAME })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: BILL_BUTTON_NAME })).not.toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Keep bill' }));
-    expect(within(dialog).getByRole('link', { name: BILL_LINK_NAME })).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: BILL_BUTTON_NAME })).toBeVisible();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Remove bill' }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 

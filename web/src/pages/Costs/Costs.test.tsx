@@ -104,25 +104,22 @@ describe('readings with a bill', () => {
     ).toBeVisible();
   });
 
-  it("links each row with a bill to it by the file's name, in a new tab, and the rows without one to nothing", async () => {
-    const onlyBillId = saveMockBill(NO_COST_READING_ID, 'september.pdf');
-    const costedBillId = saveMockBill(COSTED_READING_ID, 'august.pdf');
+  it("gives each row with a bill a button, by the file's name, that opens it, and the rows without one none", async () => {
+    saveMockBill(NO_COST_READING_ID, 'september.pdf');
+    saveMockBill(COSTED_READING_ID, 'august.pdf');
 
     await renderCosts();
 
-    const onlyBill = within(costItems()[0]).getByRole('link', {
-      name: 'september.pdf, opens the bill of 1 Sept 2026 in a new tab',
+    const onlyBill = within(costItems()[0]).getByRole('button', {
+      name: 'september.pdf, opens the bill of 1 Sept 2026',
     });
     expect(onlyBill).toHaveTextContent('september.pdf');
-    expect(onlyBill).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${onlyBillId}`);
-    expect(onlyBill).toHaveAttribute('target', '_blank');
-    expect(onlyBill).toHaveAttribute('rel', 'noopener noreferrer');
-    const costedBill = within(costItems()[1]).getByRole('link', {
-      name: 'august.pdf, opens the bill of 1 Aug 2026 in a new tab',
-    });
-    expect(costedBill).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${costedBillId}`);
+    expect(onlyBill).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(
+      within(costItems()[1]).getByRole('button', { name: 'august.pdf, opens the bill of 1 Aug 2026' }),
+    ).toBeVisible();
     expect(costItems()[1]).toHaveTextContent('€39.05');
-    expect(within(costItems()[2]).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(costItems()[2]).queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('lists the readings with only a bill when no reading in the dates has a cost', async () => {

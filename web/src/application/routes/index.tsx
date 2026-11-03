@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router';
 import RouteError from '@pages/Error/RouteError';
 import { authMiddleware } from './authMiddleware';
 import { authRoutes } from './featureRoutes/authRoutes';
+import { billRoutes } from './featureRoutes/billRoutes';
 import { costsRoutes } from './featureRoutes/costsRoutes';
 import { readingRoutes } from './featureRoutes/readingRoutes';
 import { settingsRoutes } from './featureRoutes/settingsRoutes';
@@ -59,6 +60,7 @@ const routes: RouteObject[] = [
           },
           ...readingRoutes,
           ...costsRoutes,
+          ...billRoutes,
           ...settingsRoutes,
         ],
       },

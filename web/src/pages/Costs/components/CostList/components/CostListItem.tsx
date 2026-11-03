@@ -1,5 +1,5 @@
 import type { ReadingApiModel } from '@app-types/models';
-import BillLink from '@components/BillLink';
+import BillButton from '@components/BillButton';
 import { formatCost } from '@utils/costUtils';
 import { formatIsoDate } from '@utils/dateUtils';
 
@@ -11,7 +11,7 @@ const READING_LABEL = 'Reading';
 // A reading listed for its Bill alone: said, so its empty amount does not read as €0.00.
 const NO_COST_TEXT = 'No cost';
 
-// One reading's date, its digits, what it cost and its Bill's file name, a link to it, when it has one. The amount sits
+// One reading's date, its digits, what it cost and its Bill's file name, which opens it, when it has one. The amount sits
 // on the right, where the eye runs down the amounts; a long file name is cut short before it pushes them off.
 function CostListItem({ reading }: Props) {
   return (
@@ -23,7 +23,7 @@ function CostListItem({ reading }: Props) {
         </span>
       </div>
       <div className="flex min-w-0 items-center gap-3">
-        {reading.bill !== null && <BillLink bill={reading.bill} readingDate={reading.date} />}
+        {reading.bill !== null && <BillButton bill={reading.bill} readingDate={reading.date} />}
         {reading.costCents === null ? (
           <span className="shrink-0 text-sm text-muted-foreground">{NO_COST_TEXT}</span>
         ) : (
