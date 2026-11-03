@@ -53,8 +53,9 @@ flowchart TD
 
     home -- "New reading" --> newReading["/readings/new"]
     newReading --> photo{"Add a photo?"}
-    photo -- "camera or file" --> shrink["Phone shrinks it:<br/>JPEG, ≤ 2000 px, ≤ 2.5 MB"]
-    shrink --> ocr["Tesseract reads the digits<br/>in the browser, offline"]
+    photo -- "camera or file" --> shrink["Phone shrinks it:<br/>JPEG, ≤ 2000 px, ≤ 2.5 MB<br/>(gives up after ~15 s)"]
+    shrink --> crop["User boxes the digit window<br/>and turns it upright, or skips"]
+    crop --> ocr["Tesseract reads that part<br/>in the browser, offline<br/>(gives up after ~20 s)"]
     ocr --> field["Reading field filled in<br/>(user checks and can fix it)"]
     photo -- "no" --> type["User types the reading"]
     field --> save

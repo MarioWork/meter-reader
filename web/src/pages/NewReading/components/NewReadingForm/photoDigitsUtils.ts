@@ -1,6 +1,7 @@
 import { READING_DIGITS_MAX_LENGTH } from '@utils/readingUtils';
 import { getDigitsWorker } from './digitsWorkerUtils';
 import { drawForReading } from './photoContrastUtils';
+import type { PhotoCrop } from './types';
 
 const LINE_BREAK = /\r?\n/;
 const NOT_A_DIGIT = /\D/g;
@@ -25,10 +26,10 @@ export function pickReadingDigits(ocrText: string): string {
   return longest;
 }
 
-// OCR on the phone: the photo is turned black and white, then Tesseract reads it with digits only allowed. Gives
-// back the reading's digits, or '' when none were found. Rejects when Tesseract cannot load or read.
-export async function readDigitsFromPhoto(photo: Blob): Promise<string> {
-  const [worker, canvas] = await Promise.all([getDigitsWorker(), drawForReading(photo)]);
+// OCR on the phone: the marked part of the photo is turned black and white, then Tesseract reads it with digits only
+// allowed. Gives back the reading's digits, or '' when none were found. Rejects when Tesseract cannot load or read.
+export async function readDigitsFromPhoto(photo: Blob, crop: PhotoCrop): Promise<string> {
+  const [worker, canvas] = await Promise.all([getDigitsWorker(), drawForReading(photo, crop)]);
   const { data } = await worker.recognize(canvas);
 
   return pickReadingDigits(data.text);

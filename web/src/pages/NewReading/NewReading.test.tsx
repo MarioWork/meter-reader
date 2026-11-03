@@ -5,6 +5,7 @@ import { READING_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes
 import { updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
+  act,
   deferred,
   findNotification,
   queryAllNotifications,
@@ -16,6 +17,9 @@ import {
 } from '@test-utils';
 import { formatIsoDate, todayAsIsoDate } from '@utils/dateUtils';
 import { formatMessageDate } from '@utils/messageDateFormatUtils';
+import { READ_TIME_LIMIT_MS } from './components/NewReadingForm/hooks/usePhotoDigits';
+import { SHRINK_TIME_LIMIT_MS } from './components/NewReadingForm/hooks/usePhotoPicker';
+import { WHOLE_PHOTO } from './components/NewReadingForm/photoCropUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
 import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
 
@@ -44,6 +48,13 @@ const MISREAD_IN_PHOTO = '00812';
 const TODAY_IN_EMAIL = formatMessageDate(todayAsIsoDate(), MessageDateFormatUtil.LONG_MONTH);
 const FINDING_DIGITS_STATUS = 'Reading the number from the photo…';
 const NOTHING_FOUND_STATUS = 'No number found in the photo. Type it in.';
+const READ_TIMED_OUT_STATUS = "Couldn't read the number from the photo. Type it in.";
+const SHRINK_TIMED_OUT_MESSAGE = "Couldn't get the photo ready. Try again or pick another.";
+const SHRINKING_STATUS = 'Shrinking the photo…';
+const CROP_STEP = 'Mark the digit window';
+const SKIP_CROP = 'Skip crop, read whole photo';
+const CLOSE_TO_DIGITS = 6;
+const ALMOST_THE_LIMIT_MS = 1000;
 
 async function renderNewReading() {
   renderRoutes(routes, { initialEntries: [READING_ROUTES_PATHS.NEW] });
@@ -56,6 +67,45 @@ function readingField() {
 
 async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Save reading' }));
+}
+
+async function takePhoto() {
+  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+}
+
+function cropStep() {
+  return screen.getByRole('group', { name: CROP_STEP });
+}
+
+async function takePhotoToCrop() {
+  await takePhoto();
+  await screen.findByRole('group', { name: CROP_STEP });
+}
+
+async function clickCropButton(name: string) {
+  await userEvent.click(within(cropStep()).getByRole('button', { name }));
+}
+
+async function pressCropButton(name: string) {
+  within(cropStep()).getByRole('button', { name }).focus();
+  await userEvent.keyboard('{Enter}');
+}
+
+// The crop step, skipped: the whole photo is read, as before there was a crop.
+async function takePhotoAndReadIt() {
+  await takePhoto();
+  await userEvent.click(await screen.findByRole('button', { name: SKIP_CROP }));
+}
+
+type BoxSides = Record<'x' | 'y' | 'width' | 'height', number>;
+
+// The part of the photo OCR was handed: turned by `turn`, cut to `box` (fractions of the turned photo).
+function expectReadPart(turn: number, box: BoxSides) {
+  const closeBox = Object.fromEntries(
+    Object.entries(box).map(([side, value]) => [side, expect.closeTo(value, CLOSE_TO_DIGITS)]),
+  );
+
+  expect(readDigitsFromPhoto).toHaveBeenCalledWith(SHRUNK_PHOTO, { turn, box: closeBox });
 }
 
 beforeEach(() => {
@@ -317,7 +367,7 @@ it('offers the camera and the files on the device for the photo', async () => {
 it('shrinks the picked photo and shows it before the save', async () => {
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
 
   expect(await screen.findByRole('img', { name: 'The meter, as it will be saved' })).toHaveAttribute(
     'src',
@@ -353,15 +403,94 @@ it('says why a file cannot be used and still saves the reading without it', asyn
   await expectNewestHasNoPhoto();
 });
 
+describe('marking the digit window', () => {
+  it('asks for the digit window once the photo is ready, before reading the number', async () => {
+    await renderNewReading();
+
+    await takePhoto();
+
+    expect(await screen.findByRole('group', { name: CROP_STEP })).toBeVisible();
+    expect(within(cropStep()).getByRole('img', { name: 'The meter, turned as it will be read' })).toHaveAttribute(
+      'src',
+      expect.stringMatching(/^data:image\/jpeg;base64,/),
+    );
+    expect(readDigitsFromPhoto).not.toHaveBeenCalled();
+  });
+
+  it('reads only the marked part, turned, and keeps the whole photo to save', async () => {
+    vi.mocked(readDigitsFromPhoto).mockResolvedValueOnce(READING_IN_PHOTO);
+    await renderNewReading();
+    await takePhotoToCrop();
+
+    // The box starts as a strip across the middle; a quarter turn right stands it on end, over the same part.
+    await clickCropButton('Rotate right');
+    await clickCropButton('Make box wider');
+    await clickCropButton('Move box down');
+    await clickCropButton('Read the number');
+
+    // OCR gets the shrunk photo itself, the one the save uploads, with the part to read beside it.
+    expectReadPart(90, { x: 0.375, y: 0.25, width: 0.25, height: 0.6 });
+    await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
+    expect(screen.queryByRole('group', { name: CROP_STEP })).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'The meter, as it will be saved' })).toBeVisible();
+  });
+
+  it('turns the photo a quarter each way with Rotate left and Rotate right', async () => {
+    await renderNewReading();
+    await takePhotoToCrop();
+
+    await clickCropButton('Rotate left');
+    await clickCropButton('Rotate left');
+    await clickCropButton('Rotate right');
+    await clickCropButton('Read the number');
+
+    expectReadPart(270, { x: 0.4, y: 0.2, width: 0.2, height: 0.6 });
+  });
+
+  it('moves and sizes the box from the keyboard alone, then puts focus in the reading field', async () => {
+    await renderNewReading();
+    await takePhotoToCrop();
+
+    await pressCropButton('Move box up');
+    await pressCropButton('Make box taller');
+    await pressCropButton('Read the number');
+
+    expectReadPart(0, { x: 0.2, y: 0.325, width: 0.6, height: 0.25 });
+    expect(readingField()).toHaveFocus();
+  });
+
+  it('names every button that moves or sizes the box', async () => {
+    await renderNewReading();
+    await takePhotoToCrop();
+
+    const moves = within(cropStep()).getByRole('group', { name: 'Move the box' });
+    const sizes = within(cropStep()).getByRole('group', { name: 'Size the box' });
+
+    for (const name of ['Move box left', 'Move box up', 'Move box down', 'Move box right']) {
+      expect(within(moves).getByRole('button', { name })).toBeEnabled();
+    }
+    for (const name of ['Make box narrower', 'Make box wider', 'Make box shorter', 'Make box taller']) {
+      expect(within(sizes).getByRole('button', { name })).toBeEnabled();
+    }
+  });
+
+  it('reads the whole photo, unturned, when the crop is skipped', async () => {
+    await renderNewReading();
+
+    await takePhotoAndReadIt();
+
+    expect(readDigitsFromPhoto).toHaveBeenCalledWith(SHRUNK_PHOTO, WHOLE_PHOTO);
+  });
+});
+
 it('reads the number from the picked photo into the reading field, saying so while it works', async () => {
   const digitsFound = deferred<string>();
   vi.mocked(readDigitsFromPhoto).mockReturnValueOnce(digitsFound.promise);
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
 
   expect(await screen.findByText(FINDING_DIGITS_STATUS)).toHaveRole('status');
-  expect(readDigitsFromPhoto).toHaveBeenCalledWith(SHRUNK_PHOTO);
   digitsFound.resolve(READING_IN_PHOTO);
   await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
   expect(screen.queryByText(FINDING_DIGITS_STATUS)).not.toBeInTheDocument();
@@ -371,7 +500,7 @@ it('lets the user fix the number read from the photo', async () => {
   vi.mocked(readDigitsFromPhoto).mockResolvedValueOnce(MISREAD_IN_PHOTO);
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
   await waitFor(() => expect(readingField()).toHaveValue(MISREAD_IN_PHOTO));
   await userEvent.clear(readingField());
   await userEvent.type(readingField(), READING_IN_PHOTO);
@@ -382,7 +511,7 @@ it('lets the user fix the number read from the photo', async () => {
 it('leaves the reading field empty for typing when the photo shows no number', async () => {
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
 
   expect(await screen.findByText(NOTHING_FOUND_STATUS)).toBeVisible();
   expect(readingField()).toHaveValue('');
@@ -392,7 +521,7 @@ it('leaves the reading field empty for typing when reading the photo fails', asy
   vi.mocked(readDigitsFromPhoto).mockRejectedValueOnce(new Error('The OCR engine did not load'));
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
 
   expect(await screen.findByText(NOTHING_FOUND_STATUS)).toBeVisible();
   expect(readingField()).toHaveValue('');
@@ -403,7 +532,7 @@ it('keeps what the user typed while the photo was being read', async () => {
   vi.mocked(readDigitsFromPhoto).mockReturnValueOnce(digitsFound.promise);
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
   await screen.findByText(FINDING_DIGITS_STATUS);
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
   digitsFound.resolve(READING_IN_PHOTO);
@@ -416,9 +545,65 @@ it('reads the next photo over the number the last photo filled in', async () => 
   vi.mocked(readDigitsFromPhoto).mockResolvedValueOnce(MISREAD_IN_PHOTO).mockResolvedValueOnce(READING_IN_PHOTO);
   await renderNewReading();
 
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
   await waitFor(() => expect(readingField()).toHaveValue(MISREAD_IN_PHOTO));
-  await userEvent.upload(screen.getByLabelText('Take a photo'), CAMERA_PHOTO);
+  await takePhotoAndReadIt();
 
   await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
+});
+
+describe('time limits', () => {
+  beforeEach(() => {
+    // Real time still runs (the mocks' delays, the router); each test jumps the clock up to a limit.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('stops getting the photo ready after the time limit and says so next to the photo', async () => {
+    vi.mocked(shrinkPhoto).mockReturnValueOnce(new Promise(() => {}));
+    await renderNewReading();
+
+    await takePhoto();
+    expect(await screen.findByText(SHRINKING_STATUS)).toHaveRole('status');
+    await act(() => vi.advanceTimersByTimeAsync(SHRINK_TIME_LIMIT_MS));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(SHRINK_TIMED_OUT_MESSAGE);
+    expect(screen.getByLabelText('Take a photo')).toHaveAccessibleDescription(SHRINK_TIMED_OUT_MESSAGE);
+    expect(screen.getByLabelText('Take a photo')).toBeEnabled();
+    expect(screen.queryByText(SHRINKING_STATUS)).not.toBeInTheDocument();
+  });
+
+  it('stops reading the number after the time limit, says so, and leaves the field to type in and save', async () => {
+    vi.mocked(readDigitsFromPhoto).mockReturnValueOnce(new Promise(() => {}));
+    await renderNewReading();
+
+    await takePhotoAndReadIt();
+    await screen.findByText(FINDING_DIGITS_STATUS);
+    await act(() => vi.advanceTimersByTimeAsync(READ_TIME_LIMIT_MS));
+
+    expect(screen.getByText(READ_TIMED_OUT_STATUS)).toHaveRole('status');
+    expect(screen.getByRole('img', { name: 'The meter, as it will be saved' })).toBeVisible();
+    expect(readingField()).toHaveValue('');
+    await userEvent.type(readingField(), HIGHER_THAN_LAST);
+    expect(readingField()).toHaveValue(HIGHER_THAN_LAST);
+    // Saving with a photo cannot run in jsdom (undici refuses jsdom's File when the router reads the form data):
+    // newReadingActions.test.ts and the e2e suite cover the upload.
+    expect(screen.getByRole('button', { name: 'Save reading' })).toBeEnabled();
+  });
+
+  it('keeps reading a slow photo that finishes within the time limit', async () => {
+    const digitsFound = deferred<string>();
+    vi.mocked(readDigitsFromPhoto).mockReturnValueOnce(digitsFound.promise);
+    await renderNewReading();
+
+    await takePhotoAndReadIt();
+    await act(() => vi.advanceTimersByTimeAsync(READ_TIME_LIMIT_MS - ALMOST_THE_LIMIT_MS));
+    digitsFound.resolve(READING_IN_PHOTO);
+
+    await waitFor(() => expect(readingField()).toHaveValue(READING_IN_PHOTO));
+    expect(screen.queryByText(READ_TIMED_OUT_STATUS)).not.toBeInTheDocument();
+  });
 });
