@@ -37,3 +37,11 @@ _Avoid_: Error, rejected
 **History**:
 The list of past readings, newest first, each with its date, photo and whether it was sent or failed.
 _Avoid_: Log, archive
+
+**Cost**:
+What one reading cost, in euros, with up to 2 decimals and never below 0. Added after the reading is saved; a reading may have none.
+_Avoid_: Total, price, amount, paid
+
+**Bill**:
+The provider's bill file for one reading (PDF, JPEG or PNG), added after the reading is saved. Never part of its email; a reading may have none.
+_Avoid_: Invoice, attachment, receipt
