@@ -17,6 +17,6 @@ export default (baseUrl: string) => [
 
     if (!reading) return HttpResponse.json(createReadingNotFoundMockModel(id), { status: NOT_FOUND });
 
-    return HttpResponse.json(createReadingEmailMockModel(reading, { to: getMockSettings().to }));
+    return HttpResponse.json(createReadingEmailMockModel(reading, getMockSettings()));
   }),
 ];

@@ -12,7 +12,8 @@ export const settingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: "The app's settings: the provider's address, and who the email is from",
+        summary:
+          "The app's settings: the provider's address, who the email is from, and the subject and body templates",
         response: { 200: SettingsResponseSchema, 401: ErrorResponseSchema },
       },
     },
@@ -24,7 +25,8 @@ export const settingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: "Save the provider's address, which every reading is emailed to",
+        summary:
+          "Save the provider's address and the subject and body templates every reading's email is filled in from",
         body: UpdateSettingsSchema,
         response: { 200: SettingsResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema },
       },

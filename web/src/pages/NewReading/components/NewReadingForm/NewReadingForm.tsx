@@ -18,7 +18,7 @@ import { useReadingPhoto } from './hooks/useReadingPhoto';
 import NewReadingButtons from './components/NewReadingButtons';
 import NewReadingEmailFields from './components/NewReadingEmailFields';
 import {
-  fillEmailBody,
+  fillEmail,
   getInitialValues,
   newReadingFormSchema,
   toEmail,
@@ -59,7 +59,7 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
 
   const { register, handleSubmit, formState, control, getValues, getFieldState, setValue, setFocus } =
     useForm<NewReadingFormValues>({
-      defaultValues: getInitialValues(emailDefaults.subject, emailDefaults.bodyTemplate),
+      defaultValues: getInitialValues(emailDefaults),
       resolver: yupResolver(newReadingFormSchema),
     });
 
@@ -83,12 +83,15 @@ function NewReadingForm({ lastReading, emailDefaults }: Props) {
 
   const digits = useWatch({ control, name: 'digits' });
 
-  // The message follows the digits, so it always reads as the email that would go out, until the user edits it.
+  // The subject and the message follow the digits, so they always read as the email that would go out, each until the
+  // user edits it.
   useEffect(() => {
-    if (getFieldState('body').isDirty) return;
+    const filled = fillEmail(emailDefaults, digits);
 
-    setValue('body', fillEmailBody(emailDefaults.bodyTemplate, digits));
-  }, [digits, emailDefaults.bodyTemplate, getFieldState, setValue]);
+    if (!getFieldState('subject').isDirty) setValue('subject', filled.subject);
+
+    if (!getFieldState('body').isDirty) setValue('body', filled.body);
+  }, [digits, emailDefaults, getFieldState, setValue]);
   const isLower = isLowerThanLast(digits, lastReading);
   const isSaving = fetcher.state !== 'idle';
   const canSave = !isSaving && !isShrinking;

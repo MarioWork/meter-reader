@@ -182,9 +182,13 @@ model Photo {
 model Settings {
   id            Int      @id @default(1)
   // The provider's one address: every reading is emailed here. No default: the user sets it.
-  providerEmail String?  @map("provider_email")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  providerEmail   String?  @map("provider_email")
+  // Every email's subject and body, with {reading} and {date} to fill in (docs/GLOSSARY.md: Template). The defaults
+  // are a fresh install's, the same as DEFAULT_SUBJECT_TEMPLATE and DEFAULT_BODY_TEMPLATE in settings.template.ts.
+  subjectTemplate String   @default("Leitura {date}") @map("subject_template")
+  bodyTemplate    String   @default("Leitura - {reading} - {date}") @map("body_template")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("settings")
 }

@@ -1,9 +1,9 @@
 import axios, { type AxiosRequestConfig } from 'axios';
-import type { ApiError } from '@app-types/models';
+import type { ApiError, ApiErrorIssue } from '@app-types/models';
 import type { JSONResponseUtil } from '@app-types/utility';
 
 // The API's error envelope (`{ code, message, issues? }`); only the fields the app shows are read.
-type ApiErrorBody = { code: string; message?: unknown };
+type ApiErrorBody = { code: string; message?: unknown; issues?: unknown };
 
 const UNAUTHORIZED_STATUS = 401;
 // The envelope code of a request made without a valid session. Other 401s (a wrong password, a wrong setup code)
@@ -14,13 +14,35 @@ function isApiErrorBody(data: unknown): data is ApiErrorBody {
   return typeof data === 'object' && data !== null && 'code' in data && typeof data.code === 'string';
 }
 
+function isApiErrorIssue(value: unknown): value is ApiErrorIssue {
+  const isObject = typeof value === 'object' && value !== null;
+
+  return (
+    isObject &&
+    'path' in value &&
+    typeof value.path === 'string' &&
+    'message' in value &&
+    typeof value.message === 'string'
+  );
+}
+
+// The refused fields, when the API named them; only well-formed ones are kept.
+function toIssues(issues: unknown): ApiErrorIssue[] | undefined {
+  if (!Array.isArray(issues)) return undefined;
+
+  return issues.filter(isApiErrorIssue).map(({ path, message }) => ({ path, message }));
+}
+
 // The only place a failed request becomes an ApiError.
 function toApiError(statusCode: number | undefined, data: unknown): ApiError {
   if (!isApiErrorBody(data)) return { statusCode };
 
   const message = typeof data.message === 'string' ? data.message : undefined;
+  const issues = toIssues(data.issues);
 
-  return { statusCode, code: data.code, message };
+  if (!issues) return { statusCode, code: data.code, message };
+
+  return { statusCode, code: data.code, message, issues };
 }
 
 // Only a failed request becomes `success: false`; any other error is a bug and still throws.

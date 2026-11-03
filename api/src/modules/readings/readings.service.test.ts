@@ -3,6 +3,7 @@ import { AppError } from '../../lib/errors.ts';
 import { NotFoundError } from '../../lib/httpErrors.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { sendMail } from '../mail/mail.service.ts';
+import type * as SettingsService from '../settings/settings.service.ts';
 import { addReading, deleteReading, getReadings, sendReading, updateReading } from './readings.service.ts';
 
 vi.mock('./readings.repository.ts', () => ({
@@ -21,8 +22,13 @@ vi.mock('../../lib/uploads.ts', () => ({ readUpload: vi.fn(), removeUpload: vi.f
 
 vi.mock('../mail/mail.service.ts', () => ({ assertMailConnected: vi.fn(), sendMail: vi.fn() }));
 
-vi.mock('../settings/settings.service.ts', () => ({
+// The template filling is the settings module's own, kept real; only what reads the database is faked.
+vi.mock('../settings/settings.service.ts', async (importOriginal) => ({
+  fillMessageTemplate: (await importOriginal<typeof SettingsService>()).fillMessageTemplate,
   getProviderEmail: vi.fn(),
+  getMessageTemplates: vi.fn(() =>
+    Promise.resolve({ subject: 'Leitura {date}', body: 'Leitura - {reading} - {date}' }),
+  ),
   requireProviderEmail: vi.fn(() => Promise.resolve('readings@water-provider.example')),
 }));
 

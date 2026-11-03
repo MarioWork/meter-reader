@@ -38,7 +38,7 @@ First time:
 5. Check it: `curl -k https://meter.home.arpa:8443/api/ready` answers `{"status":"ok"}` once the database is up.
 6. Trust Caddy's certificate on each device (Caddy uses its own local CA, `tls internal`). Copy it off the server with `docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./meter-reader-root.crt` and install it as a trusted root on the phone or laptop. HTTPS is needed for the camera and for installing the app.
 
-Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service applies any new migrations before the api starts. `PROVIDER_EMAIL` is no longer read from `.env` ([ADR 0003](./docs/adr/0003-email-settings-in-the-app.md)): after updating, set the provider's address on the Settings page, and remove the line from `.env`.
+Updating: `git pull`, then `docker compose up -d --build`. The `migrate` service applies any new migrations before the api starts. `PROVIDER_EMAIL` and `MAIL_SUBJECT` are no longer read from `.env` ([ADR 0003](./docs/adr/0003-email-settings-in-the-app.md)): after updating, set the provider's address and the subject template on the Settings page, and remove those lines from `.env`.
 
 Logs: `docker compose logs -f api` (or `web`, `db`, `migrate`).
 
@@ -80,7 +80,7 @@ Open the printed link and set up the login again, as in **First sign-in**. Anyon
 
 ## Connecting Hotmail (`mail:connect`)
 
-The app sends readings from your own Hotmail through Microsoft Graph (see [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md)). It asks for one mail permission only, `Mail.Send` (plus `offline_access`, so the token can renew itself): it can send mail as you, but never read, list or delete it. The provider's address is set in the app, on the Settings page ([ADR 0003](./docs/adr/0003-email-settings-in-the-app.md)); until it is, Send stays off. The subject (`MAIL_SUBJECT`, `test` by default) and your own Hotmail address (`MAIL_FROM`, optional: the app shows it as "From") live in the `.env` next to `compose.yaml`, or `api/.env` in local development.
+The app sends readings from your own Hotmail through Microsoft Graph (see [ADR 0001](./docs/adr/0001-send-mail-through-microsoft-graph.md)). It asks for one mail permission only, `Mail.Send` (plus `offline_access`, so the token can renew itself): it can send mail as you, but never read, list or delete it. The provider's address and the subject and body templates are set in the app, on the Settings page ([ADR 0003](./docs/adr/0003-email-settings-in-the-app.md)); until the address is, Send stays off. The templates start as `Leitura {date}` and `Leitura - {reading} - {date}`: `{reading}` becomes the reading as read, `{date}` its day, and nothing else in braces is taken. Your own Hotmail address (`MAIL_FROM`, optional: the app shows it as "From") lives in the `.env` next to `compose.yaml`, or `api/.env` in local development.
 
 Until Hotmail is connected, the app shows a banner: "Hotmail not connected". Connecting takes two one-time steps.
 
@@ -118,7 +118,7 @@ After that the server renews the token by itself, every 30 minutes, and saves ea
 
 ### Sending a reading
 
-In the history, **Send** on a reading opens its email exactly as it will go out: the provider's address, the subject, the body (the date and the reading as read) and, when the reading has a photo, an **Attach photo** toggle. **Send** emails it from your Hotmail; the reading then shows "Sent" with the time. If Microsoft does not take it, the preview says why, the reading shows "Failed", and **Try again** opens the preview again. Send is off while Hotmail is not connected.
+In the history, **Send** on a reading opens its email exactly as it will go out: the provider's address, the subject and the body (filled in from the templates in Settings with the date and the reading as read) and, when the reading has a photo, an **Attach photo** toggle. **Send** emails it from your Hotmail; the reading then shows "Sent" with the time. If Microsoft does not take it, the preview says why, the reading shows "Failed", and **Try again** opens the preview again. Send is off while Hotmail is not connected.
 
 Graph takes at most 4 MB per email, and the photo travels in it as base64, a third bigger than the file. A photo over about 2.9 MB cannot be attached: the app says so before asking Microsoft anything, and the reading can still be sent without it.
 
@@ -228,7 +228,7 @@ Each `.env` belongs to the folder that reads it:
 
 | File                   | Read by               | Holds                                                                                                |
 | ---------------------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`, `MICROSOFT_CLIENT_ID`, `MAIL_SUBJECT`, `MAIL_FROM`                   |
+| `.env` (repo root)     | `docker compose`      | Compose variables only: `POSTGRES_PASSWORD`, `MICROSOFT_CLIENT_ID`, `MAIL_FROM`                                   |
 | `web/.env.development` | `yarn dev` in `web/`  | The `VITE_*` dev values (committed, nothing secret)                                                  |
 | `web/.env.example`     | nobody                | Every `VITE_*` key; copy to `.env.development.local`                                                 |
 | `api/.env`             | `yarn dev` in `api/`  | The api's settings (copy `api/.env.example`, git-ignored)                                            |

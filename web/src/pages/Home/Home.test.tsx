@@ -3,7 +3,7 @@ import routes from '@application/routes';
 import { BASE_ROUTES_PATHS, SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { MailStateUtil } from '@app-types/utility';
 import { createReadingMockModel } from '@mocks/handlers/reading/models/readingMockModel.mock';
-import { setMockProviderEmail } from '@mocks/handlers/settings/settingsMockState';
+import { updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
   findNotification,
@@ -493,7 +493,8 @@ describe('deleting a reading', () => {
 describe('sending a reading', () => {
   const SEND_NEWEST = `Send the reading of ${NEWEST_DATE}`;
   const SEND_DIALOG = 'Send this reading?';
-  const SUBJECT = 'test';
+  // The mock settings' templates, filled in for the newest reading.
+  const SUBJECT = 'Meter reading 1 October 2026';
   const NEWEST_BODY = 'Date: 1 October 2026\nReading: 00529';
 
   async function openNewestPreview() {
@@ -529,6 +530,15 @@ describe('sending a reading', () => {
         }) as unknown as MediaQueryList,
     );
   }
+
+  it('fills the subject and the message from the templates saved in Settings when the preview opens', async () => {
+    updateMockSettings({ subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' });
+
+    const dialog = await openNewestPreview();
+
+    expect(within(dialog).getByRole('textbox', { name: 'Subject' })).toHaveValue('Leitura 1 October 2026');
+    expect(within(dialog).getByRole('textbox', { name: 'Message' })).toHaveValue('Leitura - 00529 - 1 October 2026');
+  });
 
   it('previews what will be sent: the address, the subject and the body ready to edit, and the photo', async () => {
     const dialog = await openNewestPreview();
@@ -671,7 +681,7 @@ describe('sending a reading', () => {
   });
 
   it("disables Send and says why when the provider's address is not set", async () => {
-    setMockProviderEmail(null);
+    updateMockSettings({ to: null });
 
     const dialog = await openNewestPreview();
 

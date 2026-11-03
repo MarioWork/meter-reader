@@ -1,43 +1,41 @@
 import { object, string, type InferType } from 'yup';
 import type { CreateReading } from '@services/readingService/readingService.type';
+import type { EmailDefaultsApiModel } from '@app-types/models';
 import type { NewReadingEmail } from '../../newReadingUtils';
-import { todayAsIsoDate } from '@utils/dateUtils';
+import { formatEmailDate, todayAsIsoDate } from '@utils/dateUtils';
+import {
+  BODY_TOO_LONG_MESSAGE,
+  EMAIL_BODY_MAX_LENGTH,
+  EMAIL_SUBJECT_MAX_LENGTH,
+  SUBJECT_TOO_LONG_MESSAGE,
+} from '@utils/emailUtils';
+import { fillMessageTemplate } from '@utils/messageTemplateUtils';
 import { readingDigitsSchema } from '@utils/readingUtils';
-
-const SUBJECT_MAX_LENGTH = 200;
-const BODY_MAX_LENGTH = 5000;
-const DATE_PLACEHOLDER = '{date}';
-const READING_PLACEHOLDER = '{reading}';
-// As the API spells the day in its emails: "3 November 2026", read as the calendar day it is.
-const EMAIL_DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 
 // A reading is always today's: the form has no date to pick. The email fields are optional: left empty, a send uses
 // the API's own subject and message. Save ignores them.
 export const newReadingFormSchema = object({
   digits: readingDigitsSchema,
-  subject: string().trim().max(SUBJECT_MAX_LENGTH, 'Keep the subject under 200 characters.').default(''),
-  body: string().trim().max(BODY_MAX_LENGTH, 'Keep the message under 5000 characters.').default(''),
+  subject: string().trim().max(EMAIL_SUBJECT_MAX_LENGTH, SUBJECT_TOO_LONG_MESSAGE).default(''),
+  body: string().trim().max(EMAIL_BODY_MAX_LENGTH, BODY_TOO_LONG_MESSAGE).default(''),
 });
 
 export type NewReadingFormValues = InferType<typeof newReadingFormSchema>;
 
-// The API's body template with today and the digits put in: exactly the message a send would go out with.
-export function fillEmailBody(bodyTemplate: string, digits: string): string {
-  const today = EMAIL_DATE_FORMAT.format(new Date(todayAsIsoDate()));
+// The subject and message as the templates in Settings make them, with today and the digits put in: exactly the email
+// a send would go out with.
+export function fillEmail(emailDefaults: EmailDefaultsApiModel, digits: string): NewReadingEmail {
+  const values = { reading: digits.trim(), date: formatEmailDate(todayAsIsoDate()) };
 
-  return bodyTemplate.replace(DATE_PLACEHOLDER, today).replace(READING_PLACEHOLDER, digits.trim());
+  return {
+    subject: fillMessageTemplate(emailDefaults.subjectTemplate, values),
+    body: fillMessageTemplate(emailDefaults.bodyTemplate, values),
+  };
 }
 
-// The subject starts as the API's, and the message as the one it would send.
-export const getInitialValues = (subject: string, bodyTemplate: string): NewReadingFormValues => ({
+export const getInitialValues = (emailDefaults: EmailDefaultsApiModel): NewReadingFormValues => ({
   digits: '',
-  subject,
-  body: fillEmailBody(bodyTemplate, ''),
+  ...fillEmail(emailDefaults, ''),
 });
 
 export const toEmail = (values: NewReadingFormValues): NewReadingEmail => ({

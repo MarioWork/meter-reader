@@ -11,7 +11,7 @@ The provider's address, the subject, the body and the date format move from `.en
 - The row is made the first time the user saves Settings. There is never more than one.
 - The provider's address has no default. Until it is saved, Send is off in the app, and the server refuses a send.
 - A reading already sent keeps the email it went out with (its saved `sent*` copy). Changing a setting never rewrites the history.
-- They move one at a time: the provider's address first (`PROVIDER_EMAIL` is gone from `.env`), then the subject and body, then the date format.
+- They move one at a time: the provider's address first (`PROVIDER_EMAIL` is gone from `.env`), then the subject and body as templates (`MAIL_SUBJECT` is gone too), then the date format.
 
 **From** does not move. Microsoft sends from whichever account `yarn mail:connect` signed in with, so changing "From" still means connecting another account. `MAIL_FROM` stays in `.env` as the label the app shows; Settings shows it, read-only.
 

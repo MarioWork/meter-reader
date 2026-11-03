@@ -13,7 +13,13 @@ import { logger } from '../../lib/logger.ts';
 import { toSkipTake } from '../../lib/pagination.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { assertMailConnected, sendMail } from '../mail/mail.service.ts';
-import { getProviderEmail, requireProviderEmail } from '../settings/settings.service.ts';
+import {
+  fillMessageTemplate,
+  getMessageTemplates,
+  getProviderEmail,
+  requireProviderEmail,
+} from '../settings/settings.service.ts';
+import type { MessageTemplates, MessageValues } from '../settings/settings.type.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
 import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
 import { readingsSpreadsheetFileName, toReadingsSpreadsheet, type ReadingSheetLine } from './readings.spreadsheet.ts';
@@ -113,28 +119,16 @@ function toResponse(row: ReadingRow): ReadingResponse {
   };
 }
 
-// The body is the date and the reading exactly as read (ADR 0001), leading zeros and all.
-// Every email's body, with the day and the reading put in. Sent as is to the New reading form, which fills it the
-// same way, so the message it shows is the one that goes out.
-const EMAIL_BODY_TEMPLATE = 'Date: {date}\nReading: {reading}';
-const DATE_PLACEHOLDER = '{date}';
-const READING_PLACEHOLDER = '{reading}';
-
-function toEmailBody(row: ReadingRow): string {
-  return EMAIL_BODY_TEMPLATE.replace(DATE_PLACEHOLDER, EMAIL_DATE_FORMAT.format(row.date)).replace(
-    READING_PLACEHOLDER,
-    row.digits,
-  );
-}
-
 function toAttachmentName(row: ReadingRow): string {
   return `meter-${toIsoDate(row.date)}.jpg`;
 }
 
-// The subject and the body: one builder for the preview and the send, so they cannot drift apart. The address is the
-// one saved in Settings.
-function toMailText(row: ReadingRow): Pick<OutgoingMail, 'subject' | 'body'> {
-  return { subject: env.MAIL_SUBJECT, body: toEmailBody(row) };
+// The subject and the body, filled in from the templates in Settings with the reading exactly as read (leading zeros
+// and all) and its day spelled out. One builder for the preview and the send, so they cannot drift apart.
+function toMailText(row: ReadingRow, templates: MessageTemplates): Pick<OutgoingMail, 'subject' | 'body'> {
+  const values: MessageValues = { reading: row.digits, date: EMAIL_DATE_FORMAT.format(row.date) };
+
+  return { subject: fillMessageTemplate(templates.subject, values), body: fillMessageTemplate(templates.body, values) };
 }
 
 async function findReading(id: number): Promise<ReadingRow> {
@@ -228,19 +222,16 @@ export async function deleteReading(id: number): Promise<void> {
 export async function getReadingEmail(id: number): Promise<ReadingEmailResponse> {
   const row = await findReading(id);
   const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
-  const to = await getProviderEmail();
+  const [to, templates] = await Promise.all([getProviderEmail(), getMessageTemplates()]);
 
-  return { from: env.MAIL_FROM ?? null, to, ...toMailText(row), attachment };
+  return { from: env.MAIL_FROM ?? null, to, ...toMailText(row, templates), attachment };
 }
 
-// The parts of every email that do not depend on a reading.
+// The parts of every email that do not depend on a reading, with the templates still to fill in.
 export async function getEmailDefaults(): Promise<EmailDefaultsResponse> {
-  return {
-    from: env.MAIL_FROM ?? null,
-    to: await getProviderEmail(),
-    subject: env.MAIL_SUBJECT,
-    bodyTemplate: EMAIL_BODY_TEMPLATE,
-  };
+  const [to, templates] = await Promise.all([getProviderEmail(), getMessageTemplates()]);
+
+  return { from: env.MAIL_FROM ?? null, to, subjectTemplate: templates.subject, bodyTemplate: templates.body };
 }
 
 async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
@@ -251,13 +242,13 @@ async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
   return { name: toAttachmentName(row), contentType: JPEG_CONTENT_TYPE, contents };
 }
 
-// The server's subject and body, unless the user edited them in the preview. The address is the one in Settings, never
-// the preview's to change.
+// The subject and body filled in from the current templates, unless the user edited them in the preview. The address
+// is the one in Settings, never the preview's to change.
 async function toOutgoingMail(
   { row, to }: SendableReading,
   { attachPhoto, subject, body }: SendReading,
 ): Promise<OutgoingMail> {
-  const defaultText = toMailText(row);
+  const defaultText = toMailText(row, await getMessageTemplates());
   const mail = { to, subject: subject ?? defaultText.subject, body: body ?? defaultText.body };
 
   if (!attachPhoto) return mail;

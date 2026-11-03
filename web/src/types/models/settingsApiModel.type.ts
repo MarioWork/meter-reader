@@ -5,4 +5,7 @@ export interface SettingsApiModel {
   from: string | null;
   // The provider's address, which every reading is emailed to. Null until the user saves one.
   to: string | null;
+  // Every email's subject and body, with {reading} and {date} to fill in. A fresh install's until the user saves.
+  subjectTemplate: string;
+  bodyTemplate: string;
 }

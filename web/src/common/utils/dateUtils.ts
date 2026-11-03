@@ -16,6 +16,13 @@ const MOMENT_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   hour: '2-digit',
   minute: '2-digit',
 });
+// As the API spells the day in its emails ({date} in a template): "3 November 2026".
+const EMAIL_DAY_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 // A calendar day read as the start of that day in UTC, so formatting in UTC shows the same day.
 const START_OF_DAY_UTC = 'T00:00:00.000Z';
 // YYYY-MM-DD, the shape a date input gives and the API takes.
@@ -38,6 +45,11 @@ export function todayAsIsoDate(now = new Date()): string {
 // "2026-10-31" → "31 Oct 2026".
 export function formatIsoDate(isoDate: string): string {
   return DAY_FORMAT.format(new Date(`${isoDate}${START_OF_DAY_UTC}`));
+}
+
+// "2026-11-03" → "3 November 2026", the way {date} reads in an email.
+export function formatEmailDate(isoDate: string): string {
+  return EMAIL_DAY_FORMAT.format(new Date(`${isoDate}${START_OF_DAY_UTC}`));
 }
 
 // "2026-11-02T09:00:00.000Z" → "2 Nov 2026, 09:00" (in the user's time zone).

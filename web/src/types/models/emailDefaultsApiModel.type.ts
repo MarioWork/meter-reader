@@ -4,7 +4,8 @@ export interface EmailDefaultsApiModel {
   from: string | null;
   // The provider's address saved in Settings; null until one is saved, and Send stays off until then.
   to: string | null;
-  subject: string;
-  // The body with {date} (spelled out, "3 November 2026") and {reading} (the digits as read) to fill in.
+  // The templates saved in Settings, with {date} (spelled out, "3 November 2026") and {reading} (the digits as read)
+  // to fill in.
+  subjectTemplate: string;
   bodyTemplate: string;
 }

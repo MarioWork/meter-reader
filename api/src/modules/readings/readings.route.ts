@@ -90,7 +90,8 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'What every email starts with: from, to and the subject, for a reading not saved yet',
+        summary:
+          'What every email starts with: from, to and the subject and body templates, for a reading not saved yet',
         response: { 200: EmailDefaultsResponseSchema, 401: ErrorResponseSchema },
       },
     },

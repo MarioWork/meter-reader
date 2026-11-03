@@ -1,35 +1,34 @@
-import type { EmailDefaultsApiModel, ReadingApiModel, ReadingEmailApiModel } from '@app-types/models';
-import { MOCK_PROVIDER_EMAIL } from '@mocks/handlers/settings/models/settingsMockModel.mock';
+import type { EmailDefaultsApiModel, ReadingApiModel, ReadingEmailApiModel, SettingsApiModel } from '@app-types/models';
+import { createSettingsMockModel } from '@mocks/handlers/settings/models/settingsMockModel.mock';
+import { formatEmailDate } from '@utils/dateUtils';
+import { fillMessageTemplate } from '@utils/messageTemplateUtils';
 
-// The api's settings for every email (MAIL_FROM and MAIL_SUBJECT in api/.env.example). The address is the one saved in
-// Settings: the handlers pass it in from the mock settings.
-const MOCK_FROM_EMAIL = 'me@hotmail.example';
-const MOCK_SUBJECT = 'test';
-// The api spells the day out: "1 October 2026".
-const EMAIL_DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-
-// The preview the api builds for a reading: the date and the reading as read, and its photo when it has one.
+// The preview the api builds for a reading: the templates in Settings filled in with the reading as read and its day
+// spelled out, and its photo when it has one. The handlers pass in the mock settings, so a save in the demo shows.
 export const createReadingEmailMockModel = (
   reading: ReadingApiModel,
+  settings: SettingsApiModel = createSettingsMockModel(),
   overrides?: Partial<ReadingEmailApiModel>,
-): ReadingEmailApiModel => ({
-  from: MOCK_FROM_EMAIL,
-  to: MOCK_PROVIDER_EMAIL,
-  subject: MOCK_SUBJECT,
-  body: `Date: ${EMAIL_DATE_FORMAT.format(new Date(reading.date))}\nReading: ${reading.digits}`,
-  attachment: reading.photoId === null ? null : { photoId: reading.photoId, name: `meter-${reading.date}.jpg` },
-  ...overrides,
-});
+): ReadingEmailApiModel => {
+  const values = { reading: reading.digits, date: formatEmailDate(reading.date) };
 
-export const createEmailDefaultsMockModel = (overrides?: Partial<EmailDefaultsApiModel>): EmailDefaultsApiModel => ({
-  from: MOCK_FROM_EMAIL,
-  to: MOCK_PROVIDER_EMAIL,
-  subject: MOCK_SUBJECT,
-  bodyTemplate: 'Date: {date}\nReading: {reading}',
+  return {
+    from: settings.from,
+    to: settings.to,
+    subject: fillMessageTemplate(settings.subjectTemplate, values),
+    body: fillMessageTemplate(settings.bodyTemplate, values),
+    attachment: reading.photoId === null ? null : { photoId: reading.photoId, name: `meter-${reading.date}.jpg` },
+    ...overrides,
+  };
+};
+
+export const createEmailDefaultsMockModel = (
+  settings: SettingsApiModel = createSettingsMockModel(),
+  overrides?: Partial<EmailDefaultsApiModel>,
+): EmailDefaultsApiModel => ({
+  from: settings.from,
+  to: settings.to,
+  subjectTemplate: settings.subjectTemplate,
+  bodyTemplate: settings.bodyTemplate,
   ...overrides,
 });

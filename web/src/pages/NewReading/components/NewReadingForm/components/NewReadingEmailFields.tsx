@@ -13,7 +13,7 @@ type Props = {
 };
 
 const LEGEND = 'Email';
-const LEGEND_HINT = 'Goes out when you press Send reading.';
+const LEGEND_HINT = 'Goes out when you press Send reading. Filled in from the templates in Settings.';
 const SUBJECT_ID = 'new-reading-subject';
 const SUBJECT_ERROR_ID = 'new-reading-subject-error';
 const BODY_ID = 'new-reading-body';
@@ -22,9 +22,13 @@ const BODY_ERROR_ID = 'new-reading-body-error';
 const BODY_HINT = 'The message that goes out. It follows the reading until you change it.';
 const BODY_ROWS = 3;
 
-// The email a send straight away goes out with: who it is from and to, the subject (the API's to start with) and an
-// optional message. Save alone ignores it.
+// The email a send straight away goes out with: who it is from and to, and the subject and message, filled in from the
+// templates in Settings. Save alone ignores it.
 function NewReadingEmailFields({ emailDefaults, register, errors }: Props) {
+  // react-hook-form drives uncontrolled inputs through the `ref` callback `register()` returns on every render.
+  // The React Compiler would memoize that spread, so the input would stop reaching the form state.
+  'use no memo';
+
   const subjectError = errors.subject?.message;
   const bodyError = errors.body?.message;
   const hasSubjectError = subjectError !== undefined;

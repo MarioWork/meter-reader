@@ -20,6 +20,14 @@ _Avoid_: Image, picture, scan
 The water company that receives the readings by email, at one fixed address.
 _Avoid_: Supplier, utility, company
 
+**Template**:
+The subject or the body every reading's email starts from, set in Settings, with placeholders where the reading and its date go. A reading not sent yet is filled in from the current templates; a sent one keeps the email it went out with.
+_Avoid_: Format, pattern, default message
+
+**Placeholder**:
+A name in braces in a template, filled in when the email is made: `{reading}` is the reading as read, `{date}` the day it was read. Only these two exist, in the subject and in the body; anything else in braces is refused.
+_Avoid_: Variable, tag, token, field
+
 **Send**:
 Emailing one reading, with its photo unless the user leaves it out, from the user's own mail account to the provider.
 _Avoid_: Submit, upload, report
