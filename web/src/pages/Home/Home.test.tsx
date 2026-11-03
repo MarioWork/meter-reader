@@ -10,6 +10,7 @@ import { server, TEST_BASE_API_URL } from '@mocks/server';
 import {
   findNotification,
   fireEvent,
+  mockWideScreen,
   queryAllNotifications,
   renderRoutes,
   screen,
@@ -501,7 +502,8 @@ describe('sending a reading', () => {
 
   async function openNewestPreview() {
     await renderHome();
-    await userEvent.click(within(lastReadingCard()).getByRole('link', { name: SEND_NEWEST }));
+    // The only Send link for the newest reading, on its card on a phone and in its row on a wide screen.
+    await userEvent.click(screen.getByRole('link', { name: SEND_NEWEST }));
 
     return screen.findByRole('dialog', { name: SEND_DIALOG });
   }
@@ -1356,6 +1358,144 @@ describe('filtering the history', () => {
     expect(matchingCards()).toHaveLength(10);
     expect(activeFilters().map((chip) => chip.textContent)).toEqual(['Sent']);
   });
+});
+
+describe('the history on a wide screen', () => {
+  beforeEach(() => {
+    mockWideScreen();
+  });
+
+  function readingTable(name = 'Readings') {
+    return screen.getByRole('table', { name });
+  }
+
+  // Every row but the header row, newest first.
+  function readingRows(name?: string) {
+    const [, ...bodyRows] = within(readingTable(name)).getAllByRole('row');
+
+    return bodyRows;
+  }
+
+  function detailsLinkName(readingDate: string) {
+    return `${readingDate} reading details`;
+  }
+
+  function rowFor(readingDate: string) {
+    const row = readingRows().find((bodyRow) =>
+      within(bodyRow).queryByRole('link', { name: detailsLinkName(readingDate) }),
+    );
+
+    if (!row) throw new Error(`No row for the ${readingDate} reading`);
+
+    return row;
+  }
+
+  it('shows the readings as a table, newest first, with the date, the digits, the status, the cost and the bill', async () => {
+    await renderHome();
+
+    const headers = within(readingTable()).getAllByRole('columnheader');
+    expect(headers.map((header) => header.textContent)).toEqual([
+      'Date',
+      'Reading',
+      'Status',
+      'Cost',
+      'Bill',
+      'Actions',
+    ]);
+    // The first page of ten readings, every one a row: no separate last reading card.
+    expect(readingRows()).toHaveLength(10);
+    expect(screen.queryByRole('region', { name: 'Last reading' })).not.toBeInTheDocument();
+
+    const [date, digits, status, cost, bill] = within(rowFor('1 Aug 2026')).getAllByRole('cell');
+    expect(date).toHaveTextContent('1 Aug 2026');
+    expect(digits).toHaveTextContent('00511');
+    expect(status).toHaveTextContent('Sent 1 Aug 2026');
+    expect(cost).toHaveTextContent('€39.05');
+    expect(bill).toHaveTextContent('No bill');
+    expect(within(rowFor(NEWEST_DATE)).getAllByRole('cell')[3]).toHaveTextContent('No cost');
+  });
+
+  it("shows a reading's bill as a link that opens it", async () => {
+    const { id, name, contentType, sizeBytes } = addMockBill(new Blob(['%PDF']), 'application/pdf', 'October.pdf');
+    updateMockReading(14, { bill: { id, name, contentType, sizeBytes } });
+
+    await renderHome();
+
+    expect(
+      within(rowFor(NEWEST_DATE)).getByRole('link', {
+        name: `October.pdf, opens the bill of ${NEWEST_DATE} in a new tab`,
+      }),
+    ).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${id}`);
+  });
+
+  it("opens a reading's details from its row", async () => {
+    await renderHome();
+
+    await userEvent.click(within(rowFor(NEWEST_DATE)).getByRole('link', { name: detailsLinkName(NEWEST_DATE) }));
+
+    expect(await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` })).toHaveTextContent('00529');
+  });
+
+  it('keeps Send and the ⋯ actions on each row', async () => {
+    await renderHome();
+
+    const row = rowFor(NEWEST_DATE);
+    expect(within(row).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` })).toBeVisible();
+    await userEvent.click(within(row).getByRole('button', { name: `More actions for the reading of ${NEWEST_DATE}` }));
+
+    expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  });
+
+  it("opens the cost & bill dialog from a row's ⋯ menu", async () => {
+    await renderHome();
+
+    await openMenuFor(NEWEST_DATE);
+    await chooseMenuItem('Add cost & bill');
+
+    expect(await screen.findByRole('dialog', { name: 'Add cost & bill' })).toBeVisible();
+  });
+
+  it('sits below the filters bar', async () => {
+    await renderHome();
+
+    const filterBar = screen.getByRole('region', { name: 'Filters' });
+    expect(filterBar.compareDocumentPosition(readingTable())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('adds the older readings as rows with Load more', async () => {
+    await renderHome();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    await waitFor(() => expect(readingRows()).toHaveLength(14));
+    expect(readingRows()[13]).toHaveTextContent('00412');
+    expect(historyCount()).toHaveTextContent('Showing 14 of 14 readings');
+  });
+
+  it('names the table after the filters while they are on', async () => {
+    await renderHome(`${BASE_ROUTES_PATHS.HOME}?status=failed`);
+
+    expect(readingRows('Matching readings')).toHaveLength(1);
+    expect(readingRows('Matching readings')[0]).toHaveTextContent('Failed');
+  });
+
+  it('gives focus to the table once a deleted reading took its ⋯ button away', async () => {
+    await renderHome();
+
+    const dialog = await openDeleteDialogFor(NEWEST_DATE);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(readingRows()).toHaveLength(10));
+    expect(screen.getByRole('region', { name: 'Readings' })).toHaveFocus();
+    expect(readingTable()).not.toHaveTextContent('00529');
+  });
+});
+
+it('shows the history as cards, not a table, on a phone', async () => {
+  await renderHome();
+
+  expect(lastReadingCard()).toHaveTextContent('00529');
+  expect(screen.queryByRole('table')).not.toBeInTheDocument();
 });
 
 describe('exporting the history', () => {

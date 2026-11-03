@@ -17,7 +17,8 @@ test('a reading typed in by hand tops the history with its leading zeros', async
 
   await newReadingPage.save('00600');
 
-  const newest = new HomePage(page).lastReadingCard;
+  // The table's first row on purpose: the new reading tops the history.
+  const newest = new HomePage(page).readingRows.first();
   await expect(newest).toContainText('31 Oct 2026');
   await expect(newest).toContainText('00600');
   await expect(newest).toContainText('Not sent');

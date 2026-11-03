@@ -5,7 +5,7 @@ import { ReadingStatusUtil, type LoaderDataUtil } from '@app-types/utility';
 import { formatIsoDate } from '@utils/dateUtils';
 import { getPhotoUrl } from '@pages/Home/readingPhotoUtils';
 import ResponsiveDialog from '@components/ResponsiveDialog';
-import SendReadingLink from '../ReadingCard/components/SendReadingLink';
+import SendReadingLink from '../SendReadingLink';
 import PhotoReveal from './components/PhotoReveal';
 import ReadingDetailsList from './components/ReadingDetailsList';
 import SentEmailSection from './components/SentEmailSection';

@@ -28,6 +28,26 @@ export class HomePage {
     return this.earlierReadings.getByRole('listitem');
   }
 
+  // A wide screen's history: the region around the table, focused once a send or a delete took focus away.
+  get readingHistory() {
+    return this.page.getByRole('region', { name: 'Readings' });
+  }
+
+  // Every row of the wide screen's table but its header row, newest first.
+  get readingRows() {
+    return this.page
+      .getByRole('table', { name: 'Readings' })
+      .getByRole('row')
+      .filter({ has: this.page.getByRole('cell') });
+  }
+
+  // A reading's row, by its details link, named after the day it shows.
+  rowFor(readingDate: string) {
+    const detailsLink = this.page.getByRole('link', { name: `${readingDate} reading details`, exact: true });
+
+    return this.readingRows.filter({ has: detailsLink });
+  }
+
   get matchingCards() {
     return this.page.getByRole('region', { name: 'Matching readings' }).getByRole('listitem');
   }

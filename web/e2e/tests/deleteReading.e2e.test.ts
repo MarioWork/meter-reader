@@ -19,9 +19,10 @@ test('a reading is deleted from the history with the keyboard alone', async ({ p
 
   await expect(homePage.deleteDialog).toBeHidden();
   await expect(homePage.notification('Reading deleted')).toBeVisible();
-  await expect(homePage.lastReadingCard).toContainText('1 Sept 2026');
+  // The table's first row on purpose: the next reading now tops the history.
+  await expect(homePage.readingRows.first()).toContainText('1 Sept 2026');
   await expect(homePage.main).not.toContainText('00529');
-  await expect(homePage.lastReadingCard).toBeFocused();
+  await expect(homePage.readingHistory).toBeFocused();
 });
 
 test('focus stays inside the open dialog, and Escape cancels and keeps the reading', async ({ page }) => {
@@ -41,5 +42,5 @@ test('focus stays inside the open dialog, and Escape cancels and keeps the readi
 
   await expect(homePage.deleteDialog).toBeHidden();
   await expect(homePage.menuButtonFor(NEWEST_DATE)).toBeFocused();
-  await expect(homePage.lastReadingCard).toContainText('00529');
+  await expect(homePage.rowFor(NEWEST_DATE)).toContainText('00529');
 });
