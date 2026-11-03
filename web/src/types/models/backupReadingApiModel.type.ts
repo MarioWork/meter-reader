@@ -12,9 +12,3 @@ export interface BackupReadingApiModel {
   sentEmail: SentEmailApiModel | null;
   photoFileName: string | null;
 }
-
-// The JSON backup: every reading, newest first, whatever Home is filtered to. `exportedAt` is an ISO timestamp.
-export interface BackupApiModel {
-  exportedAt: string;
-  readings: BackupReadingApiModel[];
-}

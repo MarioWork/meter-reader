@@ -1,6 +1,6 @@
 import { useId } from 'react';
-import backupService from '@services/backupService/backupService';
-import { Card, CardContent, CardDescription, CardHeader } from '@components/ui/card';
+import readingService from '@services/readingService/readingService';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import DownloadLink from './components/DownloadLink';
 
 const TITLE = 'Data';
@@ -12,21 +12,20 @@ const CSV_LABEL = 'Export everything (CSV)';
 function DataBackup() {
   const titleId = useId();
 
+  // Card is a div, so the role makes it the page's named Data section.
   return (
-    <section aria-labelledby={titleId}>
-      <Card>
-        <CardHeader>
-          <h2 id={titleId} className="text-base/snug font-medium">
-            {TITLE}
-          </h2>
-          <CardDescription>{DESCRIPTION}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <DownloadLink href={backupService.getBackupJsonUrl()} label={JSON_LABEL} />
-          <DownloadLink href={backupService.getBackupCsvUrl()} label={CSV_LABEL} />
-        </CardContent>
-      </Card>
-    </section>
+    <Card role="region" aria-labelledby={titleId}>
+      <CardHeader>
+        <CardTitle>
+          <h2 id={titleId}>{TITLE}</h2>
+        </CardTitle>
+        <CardDescription>{DESCRIPTION}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <DownloadLink href={readingService.getReadingsBackupJsonUrl()} label={JSON_LABEL} />
+        <DownloadLink href={readingService.getReadingsBackupCsvUrl()} label={CSV_LABEL} />
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,9 +1,12 @@
-import type { BackupApiModel, BackupReadingApiModel } from '@app-types/models';
+import type { BackupReadingApiModel, ReadingsBackupApiModel } from '@app-types/models';
 
-// The API's columns (api/src/modules/backup/backup.csv.ts), so the mock file opens the same way.
+// The API's file (api/src/modules/readings/readings.backup.ts and api/src/lib/csv.ts), so the mock opens the same
+// way: the same columns, quoting and formula guard.
 const CSV_SEPARATOR = ',';
 const CSV_LINE_BREAK = '\r\n';
 const NEEDS_QUOTING = /[",\r\n]/;
+const FORMULA_START = /^[=+\-@\t\r]/;
+const FORMULA_ESCAPE = "'";
 
 type CsvCell = string | boolean | number | null;
 
@@ -24,7 +27,9 @@ const CSV_COLUMNS: Record<string, (reading: BackupReadingApiModel) => CsvCell> =
 function toCsvCell(value: CsvCell): string {
   if (value === null) return '';
 
-  const text = String(value);
+  const raw = String(value);
+  const isFormula = typeof value === 'string' && FORMULA_START.test(raw);
+  const text = isFormula ? `${FORMULA_ESCAPE}${raw}` : raw;
 
   if (!NEEDS_QUOTING.test(text)) return text;
 
@@ -38,7 +43,7 @@ function toCsvLine(reading: BackupReadingApiModel): string {
 }
 
 // A header line, then one line per reading, each ending in CRLF.
-export const createBackupCsvMockModel = ({ readings }: BackupApiModel): string => {
+export const createReadingsBackupCsvMockModel = ({ readings }: ReadingsBackupApiModel): string => {
   const header = Object.keys(CSV_COLUMNS).join(CSV_SEPARATOR);
   const lines = readings.map(toCsvLine);
 

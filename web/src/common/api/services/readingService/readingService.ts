@@ -13,6 +13,8 @@ import type { CreateReading, SendReading, UpdateReading } from './readingService
 
 const BASE_READINGS_URL = '/readings';
 const READINGS_SPREADSHEET_SEGMENT = 'export.xlsx';
+const READINGS_BACKUP_JSON_SEGMENT = 'backup.json';
+const READINGS_BACKUP_CSV_SEGMENT = 'backup.csv';
 // The API takes several statuses in one param, the way it takes several sorting fields.
 const STATUS_SEPARATOR = ',';
 
@@ -80,6 +82,13 @@ export default {
 
     return `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_SPREADSHEET_SEGMENT}?${searchParams.toString()}`;
   },
+
+  // The backup, plain downloads like the spreadsheet: every reading, whatever Home is filtered to, so no params.
+  getReadingsBackupJsonUrl: (): string =>
+    `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_BACKUP_JSON_SEGMENT}`,
+
+  getReadingsBackupCsvUrl: (): string =>
+    `${axios.defaults.baseURL ?? ''}${BASE_READINGS_URL}/${READINGS_BACKUP_CSV_SEGMENT}`,
 
   // What a new reading's email starts with, before the reading is saved.
   getEmailDefaults: async (): Promise<EmailDefaultsApiModel> => {

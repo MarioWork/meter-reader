@@ -4,12 +4,21 @@ import { NotFoundError } from '../../lib/httpErrors.ts';
 import { readUpload, removeUpload } from '../../lib/uploads.ts';
 import { sendMail } from '../mail/mail.service.ts';
 import type * as SettingsService from '../settings/settings.service.ts';
-import { addReading, deleteReading, getReadings, sendReading, updateReading } from './readings.service.ts';
+import {
+  addReading,
+  deleteReading,
+  getReadings,
+  getReadingsBackup,
+  getReadingsBackupCsv,
+  sendReading,
+  updateReading,
+} from './readings.service.ts';
 
 vi.mock('./readings.repository.ts', () => ({
   readingsRepository: {
     create: vi.fn(),
     findPage: vi.fn(),
+    findAll: vi.fn(),
     findById: vi.fn(),
     update: vi.fn(),
     markSent: vi.fn(),
@@ -265,5 +274,52 @@ describe('sendReading', () => {
     const sending = sendReading(7, { attachPhoto: false });
 
     await expect(sending).rejects.toMatchObject({ code: 'MAIL_SERVICE_BUSY', statusCode: 502 });
+  });
+});
+
+describe('getReadingsBackup', () => {
+  const BACKUP_MADE_AT = new Date('2026-11-03T21:15:00.000Z');
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: BACKUP_MADE_AT, toFake: ['Date'] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('names the file after the day and dates it now when a backup is made', async () => {
+    vi.mocked(readingsRepository.findAll).mockResolvedValueOnce([]);
+
+    const backup = await getReadingsBackup();
+
+    expect(backup.fileName).toBe('water-readings-backup-2026-11-03.json');
+    expect(backup.content.exportedAt).toBe(BACKUP_MADE_AT.toISOString());
+  });
+
+  it('asks for every reading, with no filter, when a backup is made', async () => {
+    vi.mocked(readingsRepository.findAll).mockResolvedValueOnce([]);
+
+    await getReadingsBackup();
+
+    expect(readingsRepository.findAll).toHaveBeenCalledWith({});
+  });
+
+  it('answers no sent email when only part of it was kept', async () => {
+    vi.mocked(readingsRepository.findAll).mockResolvedValueOnce([
+      { ...SAVED_ROW, status: 'SENT', sentAt: BACKUP_MADE_AT, sentTo: 'readings@water-provider.example' },
+    ]);
+
+    const backup = await getReadingsBackup();
+
+    expect(backup.content.readings[0]?.sentEmail).toBeNull();
+  });
+
+  it('names the CSV file after the day when a CSV backup is made', async () => {
+    vi.mocked(readingsRepository.findAll).mockResolvedValueOnce([]);
+
+    const backup = await getReadingsBackupCsv();
+
+    expect(backup.fileName).toBe('water-readings-backup-2026-11-03.csv');
   });
 });
