@@ -1,5 +1,5 @@
 import type { ReadingApiModel } from '@app-types/models';
-import BillLink from '@components/BillLink';
+import BillButton from '@components/BillButton';
 import { TableCell } from '@components/ui/table';
 import { cn } from '@utils/classNameUtils';
 import { ABOVE_DETAILS_LINK } from '../readingTableUtils';
@@ -11,7 +11,7 @@ type Props = {
 
 const NO_BILL = 'No bill';
 
-// A row's bill, as the link that opens it, named with the reading's day; a dash until the reading has one.
+// A row's bill, as the button that opens it in the viewer, named with the reading's day; a dash until it has one.
 function BillCell({ reading }: Props) {
   if (reading.bill === null) {
     return (
@@ -23,7 +23,7 @@ function BillCell({ reading }: Props) {
 
   return (
     <TableCell className={cn(ABOVE_DETAILS_LINK, 'max-w-56')}>
-      <BillLink bill={reading.bill} readingDate={reading.date} />
+      <BillButton bill={reading.bill} readingDate={reading.date} />
     </TableCell>
   );
 }

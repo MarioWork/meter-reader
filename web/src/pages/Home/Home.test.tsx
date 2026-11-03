@@ -1411,17 +1411,15 @@ describe('the history on a wide screen', () => {
     expect(within(rowFor(NEWEST_DATE)).getAllByRole('cell')[3]).toHaveTextContent('No cost');
   });
 
-  it("shows a reading's bill as a link that opens it", async () => {
+  it("shows a reading's bill as a button that opens it in the viewer", async () => {
     const { id, name, contentType, sizeBytes } = addMockBill(new Blob(['%PDF']), 'application/pdf', 'October.pdf');
     updateMockReading(14, { bill: { id, name, contentType, sizeBytes } });
 
     await renderHome();
 
     expect(
-      within(rowFor(NEWEST_DATE)).getByRole('link', {
-        name: `October.pdf, opens the bill of ${NEWEST_DATE} in a new tab`,
-      }),
-    ).toHaveAttribute('href', `${TEST_BASE_API_URL}/bills/${id}`);
+      within(rowFor(NEWEST_DATE)).getByRole('button', { name: `October.pdf, opens the bill of ${NEWEST_DATE}` }),
+    ).toHaveAttribute('aria-haspopup', 'dialog');
   });
 
   it("opens a reading's details from its row", async () => {
