@@ -526,7 +526,7 @@ describe('GET /readings/export.xlsx', () => {
     expect(rows.map((row) => row[4])).toEqual(['Cost', null, 0, 42.1]);
   });
 
-  it('shows the Cost with a euro sign and 2 decimals', async () => {
+  it('shows the Cost with a euro sign and 2 decimals when a reading has one', async () => {
     await addReadingWithCost('00100', '2026-08-01', 4210);
 
     const response = await exportReadings();
@@ -626,7 +626,7 @@ describe('GET /readings/costs', () => {
     });
   });
 
-  it('lists the readings with only a bill too, newest first, and adds nothing to the sum for them', async () => {
+  it('lists a reading too, newest first, and adds nothing to the sum for it, when it has only a bill', async () => {
     await addReadingWithCost('00100', '2026-08-01', 4210);
     const billId = await addReadingWithBill('00200', '2026-09-01');
     await addReading({ digits: '00300', date: '2026-10-01' });
@@ -722,7 +722,7 @@ describe('GET /readings/costs/export.xlsx', () => {
     expect(response.headers['content-disposition']).toBe('attachment; filename="water-costs.xlsx"');
   });
 
-  it('holds the date, the digits as text, the Cost and an Open link to the Bill, newest first, then the sum', async () => {
+  it('holds the date, the digits as text, the Cost and an Open link to the Bill, then the sum, when readings have either', async () => {
     await addReadingWithCost('00100', '2026-08-01', 4210);
     const onlyBillId = await addReadingWithBill('00200', '2026-09-01');
     const bothBillId = await addReadingWithBill('00300', '2026-10-01', 3990);
@@ -741,7 +741,7 @@ describe('GET /readings/costs/export.xlsx', () => {
     expect(sheetLinks(response.rawPayload)).toEqual({ D2: billUrl(bothBillId), D3: billUrl(onlyBillId) });
   });
 
-  it('adds up the Costs in a sum row whose formula covers every reading row', async () => {
+  it('adds up the Costs in a sum row whose formula covers every reading row when some have only a bill', async () => {
     await addReadingWithCost('00100', '2026-08-01', 1000);
     await addReadingWithBill('00200', '2026-09-01');
     await addReadingWithCost('00300', '2026-10-01', 2550);
@@ -752,7 +752,7 @@ describe('GET /readings/costs/export.xlsx', () => {
     expect(sheetFormulas(response.rawPayload)).toEqual({ C5: 'SUM(C2:C4)' });
   });
 
-  it('holds exactly the readings the Costs page lists for the same day range, and is named after it', async () => {
+  it('holds exactly the readings the Costs page lists, and is named after the range, when a day range is given', async () => {
     await addReadingWithCost('00100', '2026-08-31', 1000);
     await addReadingWithCost('00200', '2026-09-01', 2000);
     await addReadingWithBill('00300', '2026-09-15');
@@ -762,9 +762,9 @@ describe('GET /readings/costs/export.xlsx', () => {
     const range = '?from=2026-09-01&to=2026-09-30';
 
     const response = await exportCosts(range);
+    const rows = await readSheet(response.rawPayload);
     const listed = (await getCosts(range)).json<{ data: { digits: string }[] }>().data;
 
-    const rows = await readSheet(response.rawPayload);
     expect(digitsColumn(rows)).toEqual(['00400', '00300', '00200']);
     expect(digitsColumn(rows)).toEqual(listed.map((reading) => reading.digits));
     expect(rows.at(-1)).toEqual(['Total', null, 50, null]);

@@ -4,6 +4,8 @@ import { CENTS_PER_EURO } from '@utils/costUtils';
 
 export const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 export const XLSX_EXTENSION = '.xlsx';
+// A header or total cell's weight.
+export const BOLD = 'bold' as const;
 
 const DATE_FORMAT = 'yyyy-mm-dd';
 // Euros with 2 decimals, as the API writes a Cost: €42.10.

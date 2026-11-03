@@ -96,18 +96,18 @@ describe('getReadings', () => {
   });
 });
 
+const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+// Reads the whole file, as a browser saving it would. A body left unread keeps the mocked socket open.
+async function download(url: string): Promise<Response> {
+  const response = await fetch(url);
+
+  await response.arrayBuffer();
+
+  return response;
+}
+
 describe('getReadingsSpreadsheetUrl', () => {
-  const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-  // Reads the whole file, as a browser saving it would. A body left unread keeps the mocked socket open.
-  async function download(url: string): Promise<Response> {
-    const response = await fetch(url);
-
-    await response.arrayBuffer();
-
-    return response;
-  }
-
   it('points at the spreadsheet under the API base url, the filters and time zone under their wire names, when filtered', () => {
     const url = new URL(
       readingService.getReadingsSpreadsheetUrl({
@@ -156,15 +156,12 @@ describe('getCostsSpreadsheetUrl', () => {
   });
 
   it('downloads an .xlsx file named after the days when followed', async () => {
-    const response = await fetch(
+    const response = await download(
       readingService.getCostsSpreadsheetUrl({ dateFrom: '2026-01-01', dateTo: '2026-03-31' }),
     );
-    await response.arrayBuffer();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
+    expect(response.headers.get('content-type')).toBe(XLSX_CONTENT_TYPE);
     expect(response.headers.get('content-disposition')).toBe(
       'attachment; filename="water-costs-2026-01-01-to-2026-03-31.xlsx"',
     );

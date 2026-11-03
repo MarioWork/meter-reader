@@ -159,7 +159,7 @@ describe('getCosts', () => {
     expect(costs).toMatchObject({ totalCostCents: 8200, data: [{ id: 8, costCents: 3990 }, { id: 7 }] });
   });
 
-  it('answers a reading with only a bill but adds nothing to the sum for it', async () => {
+  it('answers the reading but adds nothing to the sum for it when a reading has only a bill', async () => {
     vi.mocked(readingsRepository.findWithCostOrBill).mockResolvedValueOnce([
       { ...SAVED_ROW, id: 8, costCents: null, bill: BILL },
       { ...SAVED_ROW, id: 7, costCents: 4210 },

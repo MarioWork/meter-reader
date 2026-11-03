@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import readingService from '@services/readingService/readingService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
-import DownloadLink from './components/DownloadLink';
+import DownloadLink from '@components/DownloadLink';
 
 const TITLE = 'Data';
 const DESCRIPTION =

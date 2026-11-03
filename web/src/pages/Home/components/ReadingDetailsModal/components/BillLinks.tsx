@@ -1,5 +1,5 @@
-import { DownloadIcon } from 'lucide-react';
 import type { ReadingBillApiModel } from '@app-types/models';
+import DownloadLink from '@components/DownloadLink';
 import NewTabLink from '@components/NewTabLink';
 import { buttonVariants } from '@components/ui/button';
 import { describeBill, getBillDownloadUrl, getBillUrl } from '@utils/billUtils';
@@ -25,10 +25,7 @@ function BillLinks({ bill }: Props) {
         <NewTabLink href={getBillUrl(bill.id)} accessibleName={OPEN_LABEL} className={LINK_CLASSES}>
           {OPEN_TEXT}
         </NewTabLink>
-        <a className={LINK_CLASSES} href={getBillDownloadUrl(bill.id)} download aria-label={DOWNLOAD_LABEL}>
-          <DownloadIcon aria-hidden="true" />
-          {DOWNLOAD_TEXT}
-        </a>
+        <DownloadLink href={getBillDownloadUrl(bill.id)} label={DOWNLOAD_TEXT} accessibleName={DOWNLOAD_LABEL} />
       </div>
     </div>
   );
