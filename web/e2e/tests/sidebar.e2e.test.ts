@@ -3,6 +3,7 @@ import { thisYearCostsPath } from '../../src/common/utils/historyFilterUtils';
 import { expect, test } from '../fixtures/app.fixture';
 import { pageRoot } from '../fixtures/theme.fixture';
 import { AppSidebar } from '../pages/AppSidebar.page';
+import { SettingsPage } from '../pages/SettingsPage.page';
 
 const DARK_CLASS = /\bdark\b/;
 // WCAG 2.2 target size (minimum), in CSS px.
@@ -79,4 +80,17 @@ test.describe('by keyboard', () => {
 
     await expect(page.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   });
+});
+
+test('starts collapsed once Settings says so, from the next time the app opens', async ({ page }) => {
+  const settingsPage = new SettingsPage(page);
+  const sidebar = new AppSidebar(page);
+  await settingsPage.goto();
+  await expect(sidebar.collapseButton).toHaveAttribute('aria-expanded', 'true');
+
+  await settingsPage.chooseSidebarStart('Collapsed');
+  await expect(settingsPage.sidebarStartChoice('Collapsed')).toHaveAttribute('aria-pressed', 'true');
+  await settingsPage.reload();
+
+  await expect(sidebar.expandButton).toHaveAttribute('aria-expanded', 'false');
 });

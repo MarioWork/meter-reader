@@ -4,7 +4,8 @@ import { SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { getMockSettings, updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { findNotification, renderRoutes, screen, userEvent, within } from '@test-utils';
-import { MessageDateFormatUtil } from '@app-types/utility';
+import { MessageDateFormatUtil, SidebarStartUtil } from '@app-types/utility';
+import { SIDEBAR_START_STORAGE_KEY } from '@hooks/useSidebarStart';
 import { todayAsIsoDate } from '@utils/dateUtils';
 import { formatMessageDate } from '@utils/messageDateFormatUtils';
 
@@ -238,7 +239,52 @@ it('splits the page into cards, each with its own heading, in reading order', as
 
   const cardHeadings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
 
-  expect(cardHeadings).toEqual(['Email addresses', 'Message', 'Preview', 'Data']);
+  expect(cardHeadings).toEqual(['Email addresses', 'Message', 'Preview', 'Appearance', 'Data']);
+});
+
+describe('the Appearance card', () => {
+  function appearanceGroup(name: string) {
+    return within(screen.getByRole('region', { name: 'Appearance' })).getByRole('group', { name });
+  }
+
+  afterEach(() => {
+    window.localStorage.clear();
+    document.documentElement.className = '';
+  });
+
+  it('says the sidebar starts expanded until changed, and saves Collapsed on this device at once', async () => {
+    await renderSettings();
+
+    const sidebarStart = appearanceGroup('Sidebar starts');
+    expect(within(sidebarStart).getByRole('button', { name: 'Expanded' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('On a computer, each time the app opens.')).toBeVisible();
+
+    await userEvent.click(within(sidebarStart).getByRole('button', { name: 'Collapsed' }));
+
+    expect(within(sidebarStart).getByRole('button', { name: 'Collapsed' })).toHaveAttribute('aria-pressed', 'true');
+    expect(window.localStorage.getItem(SIDEBAR_START_STORAGE_KEY)).toBe(SidebarStartUtil.COLLAPSED);
+  });
+
+  it('keeps a choice pressed when it is pressed again', async () => {
+    await renderSettings();
+
+    const sidebarStart = appearanceGroup('Sidebar starts');
+    await userEvent.click(within(sidebarStart).getByRole('button', { name: 'Expanded' }));
+
+    expect(within(sidebarStart).getByRole('button', { name: 'Expanded' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('switches the theme from the card, with the current one pressed', async () => {
+    await renderSettings();
+
+    const theme = appearanceGroup('Theme');
+    expect(within(theme).getByRole('button', { name: 'System' })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(within(theme).getByRole('button', { name: 'Dark' }));
+
+    expect(document.documentElement).toHaveClass('dark');
+    expect(within(theme).getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });
 
 it('says From comes from the server, in the Email addresses card', async () => {
