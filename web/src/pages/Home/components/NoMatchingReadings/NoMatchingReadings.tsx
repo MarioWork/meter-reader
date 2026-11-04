@@ -1,3 +1,4 @@
+import { FunnelXIcon } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Empty, EmptyContent } from '@components/ui/empty';
 import NoMatchingReadingsHeader from './components/NoMatchingReadingsHeader';
@@ -16,6 +17,7 @@ function NoMatchingReadings({ onClearFilters }: Props) {
       <NoMatchingReadingsHeader />
       <EmptyContent>
         <Button variant="outline" onClick={onClearFilters}>
+          <FunnelXIcon data-icon="inline-start" aria-hidden="true" />
           {CLEAR_LABEL}
         </Button>
       </EmptyContent>

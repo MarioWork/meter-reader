@@ -28,13 +28,13 @@ function PuzzledFace() {
   );
 }
 
-// Dizzy: crossed eyes, a little "o" of a mouth, and a drop (the primary colour) leaking from its pipe.
+// Dizzy: crossed eyes, a little "o" of a mouth, and two twinkles (the primary colour) spinning round its head.
 function DizzyFace() {
   return (
     <>
       <path d="M32 34l6 6m0 -6l-6 6M50 34l6 6m0 -6l-6 6" strokeWidth="2.5" />
       <circle cx="44" cy="47" r="2.5" strokeWidth="2.5" />
-      <path className="text-primary" d="M86 55q-4.5 5.5 0 8.5q4.5 -3 0 -8.5z" strokeWidth="2.5" />
+      <path className="text-primary" d="M80 12v10M75 17h10M70 28v6M67 31h6" strokeWidth="2.5" />
     </>
   );
 }
@@ -44,14 +44,15 @@ const POSE_MAP: Record<RouteErrorKind, Pose> = {
   broken: { digits: '000', Face: DizzyFace },
 };
 
-// The app's water meter as a little character, in dashed line art: a round body with a pipe on each side, rosy
-// cheeks, its digit window, and a face that matches what went wrong. Decorative: the page's text says it all.
+// A meter as a little character, in dashed line art: a round body, rosy cheeks, its digit window, and a face that
+// matches what went wrong. Any meter, not only a water one, so it fits whatever the app reads. Decorative: the page's
+// text says it all.
 function MeterMascot({ pose, className }: Props) {
   const { digits, Face } = POSE_MAP[pose];
 
   return (
     <svg
-      viewBox="0 0 96 96"
+      viewBox="8 0 88 96"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
@@ -60,7 +61,6 @@ function MeterMascot({ pose, className }: Props) {
       className={className}
     >
       <circle cx="44" cy="44" r="28" strokeWidth="3" strokeDasharray="6 5" />
-      <path d="M6 44h10M72 44h10M6 38v12M82 38v12" strokeWidth="3" />
       <g className="text-primary opacity-40" fill="currentColor" stroke="none">
         <ellipse cx="29" cy="45" rx="3.5" ry="2" />
         <ellipse cx="59" cy="45" rx="3.5" ry="2" />

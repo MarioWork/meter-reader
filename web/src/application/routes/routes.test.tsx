@@ -37,7 +37,7 @@ describe('a page that breaks while opening', () => {
 
     renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Something sprang a leak' })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Something skipped a beat' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', BASE_ROUTES_PATHS.HOME);
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
