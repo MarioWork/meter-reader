@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw/http';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
-import { MessageDateFormatUtil } from '@app-types/utility';
+import { MessageDateFormatUtil, MessageDateLanguageUtil } from '@app-types/utility';
 import settingsService from './settingsService';
 
 const API = TEST_BASE_API_URL;
@@ -9,6 +9,7 @@ const MESSAGE_SETTINGS = {
   subjectTemplate: 'Leitura {date}',
   bodyTemplate: 'Leitura - {reading} - {date}',
   dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR,
+  dateLanguage: MessageDateLanguageUtil.PORTUGUESE,
 };
 const SETTINGS = { from: 'me@hotmail.example', to: 'readings@water-provider.example', ...MESSAGE_SETTINGS };
 
@@ -37,9 +38,13 @@ describe('updateSettings', () => {
       }),
     );
 
-    const result = await settingsService.updateSettings({ to: SETTINGS.to, ...MESSAGE_SETTINGS });
+    const result = await settingsService.updateSettings({
+      to: SETTINGS.to,
+      clientNumber: '0042-7',
+      ...MESSAGE_SETTINGS,
+    });
 
-    expect(receivedBody).toEqual({ to: SETTINGS.to, ...MESSAGE_SETTINGS });
+    expect(receivedBody).toEqual({ to: SETTINGS.to, clientNumber: '0042-7', ...MESSAGE_SETTINGS });
     expect(result).toEqual({ success: true, data: SETTINGS });
   });
 
@@ -50,7 +55,11 @@ describe('updateSettings', () => {
       ),
     );
 
-    const result = await settingsService.updateSettings({ to: 'not an address', ...MESSAGE_SETTINGS });
+    const result = await settingsService.updateSettings({
+      to: 'not an address',
+      clientNumber: '',
+      ...MESSAGE_SETTINGS,
+    });
 
     expect(result).toEqual({
       success: false,

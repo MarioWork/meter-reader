@@ -28,13 +28,21 @@ _Avoid_: Supplier, utility, company
 The subject or the body every reading's email starts from, set in Settings, with placeholders where the reading and its date go. A reading not sent yet is filled in from the current templates; a sent one keeps the email it went out with.
 _Avoid_: Format, pattern, default message
 
+**Client number**:
+The user's own number with the provider, saved in Settings and filled in for `{client}`. Optional: some providers file a reading by it.
+_Avoid_: Account number, customer ID
+
 **Placeholder**:
-A name in braces in a template, filled in when the email is made: `{reading}` is the reading as read, `{date}` the day it was read. Only these two exist, in the subject and in the body; anything else in braces is refused.
+A name in braces in a template, filled in when the email is made: `{reading}` is the reading as read, `{date}` the day it was read, `{client}` the client number saved in Settings (empty while none is). Only these three exist, in the subject and in the body; anything else in braces is refused.
 _Avoid_: Variable, tag, token, field
 
 **Date format**:
 How `{date}` is written in every email, chosen in Settings: `31 October 2026` (a fresh install's), `31 Oct 2026`, `31/10/2026` or `2026-10-31`. Only the email follows it; the app shows its own dates its own way.
 _Avoid_: Date style, date pattern
+
+**Date language**:
+The language the month is written in, in `{date}`, chosen in Settings next to the Date format: English (`31 October 2026`, a fresh install's) or Portuguese (`31 de outubro de 2026`). The numbers-only formats read the same in both.
+_Avoid_: Locale, date locale
 
 **Send**:
 Emailing one reading, with its photo unless the user leaves it out, from the user's own mail account to the provider.

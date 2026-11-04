@@ -5,6 +5,7 @@ type Placeholder = { name: string; meaning: string };
 const PLACEHOLDERS: Placeholder[] = [
   { name: MESSAGE_PLACEHOLDERS.reading, meaning: 'the reading, as read from the meter' },
   { name: MESSAGE_PLACEHOLDERS.date, meaning: 'the day it was read, written in the date format chosen' },
+  { name: MESSAGE_PLACEHOLDERS.client, meaning: 'your client number, as saved above' },
 ];
 
 // What each placeholder a template can hold turns into, shown just above the templates.

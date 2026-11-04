@@ -217,12 +217,18 @@ model Settings {
   id              Int               @id @default(1)
   // The provider's one address: every reading is emailed here. No default: the user sets it.
   providerEmail   String?           @map("provider_email")
-  // Every email's subject and body, with {reading} and {date} to fill in (docs/GLOSSARY.md: Template). The defaults
+  // The user's client number with the provider, filled in for {client}. No default: the user sets it, if the
+  // provider asks for one.
+  clientNumber    String?           @map("client_number")
+  // Every email's subject and body, with {reading}, {date} and {client} to fill in (docs/GLOSSARY.md: Template). The defaults
   // are a fresh install's, the same as DEFAULT_SUBJECT_TEMPLATE and DEFAULT_BODY_TEMPLATE in settings.template.ts.
   subjectTemplate String            @default("Leitura {date}") @map("subject_template")
-  bodyTemplate    String            @default("Leitura - {reading} - {date}") @map("body_template")
+  bodyTemplate    String            @default("Leitura - {reading} - {date} - {client}") @map("body_template")
   // How {date} is written in every email (docs/GLOSSARY.md: Date format). A fresh install's is "31 October 2026".
   dateFormat      MessageDateFormat @default(LONG_MONTH) @map("date_format")
+  // The language a month's name is written in, in {date} (docs/GLOSSARY.md: Date language). A fresh install's is
+  // English.
+  dateLanguage    MessageDateLanguage @default(ENGLISH) @map("date_language")
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -231,6 +237,12 @@ model Settings {
 
 // The ways {date} can be written (settings.dateFormat.ts): "31 October 2026", "31 Oct 2026", "31/10/2026",
 // "2026-10-31". Only these: the database refuses any other.
+// The languages {date} can be written in (settings.dateFormat.ts): "31 October 2026", "31 de outubro de 2026".
+enum MessageDateLanguage {
+  ENGLISH
+  PORTUGUESE
+}
+
 enum MessageDateFormat {
   LONG_MONTH
   SHORT_MONTH

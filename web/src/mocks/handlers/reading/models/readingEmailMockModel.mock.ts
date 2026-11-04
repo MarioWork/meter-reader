@@ -12,7 +12,11 @@ export const createReadingEmailMockModel = (
   settings: SettingsApiModel = createSettingsMockModel(),
   overrides?: Partial<ReadingEmailApiModel>,
 ): ReadingEmailApiModel => {
-  const values = { reading: reading.digits, date: formatMessageDate(reading.date, settings.dateFormat) };
+  const values = {
+    reading: reading.digits,
+    date: formatMessageDate(reading.date, settings.dateFormat, settings.dateLanguage),
+    client: settings.clientNumber,
+  };
 
   return {
     from: settings.from,
@@ -48,5 +52,7 @@ export const createEmailDefaultsMockModel = (
   subjectTemplate: settings.subjectTemplate,
   bodyTemplate: settings.bodyTemplate,
   dateFormat: settings.dateFormat,
+  dateLanguage: settings.dateLanguage,
+  clientNumber: settings.clientNumber,
   ...overrides,
 });

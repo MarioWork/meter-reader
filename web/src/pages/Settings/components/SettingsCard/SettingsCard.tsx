@@ -16,7 +16,7 @@ function SettingsCard({ title, description, children }: Props) {
   return (
     <TileCard role="region" aria-labelledby={titleId}>
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="text-lg font-semibold">
           <h2 id={titleId}>{title}</h2>
         </CardTitle>
         <CardDescription>{description}</CardDescription>

@@ -1,4 +1,4 @@
-import { MessageDateFormatUtil } from '@app-types/utility';
+import { MessageDateFormatUtil, MessageDateLanguageUtil } from '@app-types/utility';
 import {
   bodyTemplateSchema,
   fillMessageTemplate,
@@ -7,7 +7,7 @@ import {
   subjectTemplateSchema,
 } from './messageTemplateUtils';
 
-const VALUES = { reading: '00123', date: '3 November 2026' };
+const VALUES = { reading: '00123', date: '3 November 2026', client: '0042-7' };
 const TODAY = new Date(2026, 10, 3, 12);
 
 describe('fillMessageTemplate', () => {
@@ -15,6 +15,11 @@ describe('fillMessageTemplate', () => {
     expect(fillMessageTemplate('Leitura - {reading} - {date} ({reading})', VALUES)).toBe(
       'Leitura - 00123 - 3 November 2026 (00123)',
     );
+  });
+
+  it('puts the client number in place of {client}, or nothing when none is saved', () => {
+    expect(fillMessageTemplate('Client {client}: {reading}', VALUES)).toBe('Client 0042-7: 00123');
+    expect(fillMessageTemplate('Client {client}.', { ...VALUES, client: null })).toBe('Client .');
   });
 
   it('leaves anything else in braces as it is', () => {
@@ -37,6 +42,8 @@ describe('fillTodaysEmail', () => {
       subjectTemplate: 'Leitura {date}',
       bodyTemplate: 'Leitura - {reading} - {date}',
       dateFormat: MessageDateFormatUtil.LONG_MONTH,
+      dateLanguage: MessageDateLanguageUtil.ENGLISH,
+      clientNumber: null,
     };
 
     expect(fillTodaysEmail(settings, ' 00123 ')).toEqual({
@@ -50,9 +57,23 @@ describe('fillTodaysEmail', () => {
       subjectTemplate: 'Leitura {date}',
       bodyTemplate: '{reading}',
       dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR,
+      dateLanguage: MessageDateLanguageUtil.ENGLISH,
+      clientNumber: null,
     };
 
     expect(fillTodaysEmail(settings, '00123').subject).toBe('Leitura 03/11/2026');
+  });
+
+  it('writes today in Portuguese when Portuguese is chosen', () => {
+    const settings = {
+      subjectTemplate: 'Leitura {date}',
+      bodyTemplate: '{reading}',
+      dateFormat: MessageDateFormatUtil.LONG_MONTH,
+      dateLanguage: MessageDateLanguageUtil.PORTUGUESE,
+      clientNumber: null,
+    };
+
+    expect(fillTodaysEmail(settings, '00123').subject).toBe('Leitura 3 de novembro de 2026');
   });
 });
 
@@ -73,7 +94,7 @@ describe('subjectTemplateSchema and bodyTemplateSchema', () => {
 
   it('refuses an unknown placeholder, naming it', async () => {
     await expect(bodyTemplateSchema.validate('Leitura {readng}')).rejects.toThrow(
-      '{readng} is not a placeholder. Use {reading} or {date}.',
+      '{readng} is not a placeholder. Use {reading}, {date} or {client}.',
     );
   });
 

@@ -12,6 +12,8 @@ const SAVED_ROW = {
   subjectTemplate: 'Meter {date}',
   bodyTemplate: 'Reading {reading}',
   dateFormat: 'ISO',
+  dateLanguage: 'PORTUGUESE',
+  clientNumber: '0042-7',
 } as const;
 
 describe('getProviderEmail', () => {
@@ -51,18 +53,22 @@ describe('getMessageSettings', () => {
 
     expect(await getMessageSettings()).toEqual({
       subject: 'Leitura {date}',
-      body: 'Leitura - {reading} - {date}',
+      body: 'Leitura - {reading} - {date} - {client}',
       dateFormat: 'longMonth',
+      dateLanguage: 'en',
+      clientNumber: null,
     });
   });
 
-  it('answers the saved templates and date format when they were saved', async () => {
+  it('answers the saved templates, date format and client number when they were saved', async () => {
     vi.mocked(settingsRepository.find).mockResolvedValueOnce(SAVED_ROW);
 
     expect(await getMessageSettings()).toEqual({
       subject: 'Meter {date}',
       body: 'Reading {reading}',
       dateFormat: 'iso',
+      dateLanguage: 'pt',
+      clientNumber: '0042-7',
     });
   });
 });

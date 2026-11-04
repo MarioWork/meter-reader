@@ -1,4 +1,4 @@
-import type { MessageDateFormatUtil } from '@app-types/utility';
+import type { MessageDateFormatUtil, MessageDateLanguageUtil } from '@app-types/utility';
 
 // The app's settings, set on the Settings page (ADR 0003).
 export interface SettingsApiModel {
@@ -7,9 +7,13 @@ export interface SettingsApiModel {
   from: string | null;
   // The provider's address, which every reading is emailed to. Null until the user saves one.
   to: string | null;
-  // Every email's subject and body, with {reading} and {date} to fill in. A fresh install's until the user saves.
+  // The user's client number with the provider, filled in for {client}. Null until the user saves one.
+  clientNumber: string | null;
+  // Every email's subject and body, with {reading}, {date} and {client} to fill in. A fresh install's until the user saves.
   subjectTemplate: string;
   bodyTemplate: string;
   // How {date} is written in every email. A fresh install's ("31 October 2026") until the user saves.
   dateFormat: MessageDateFormatUtil;
+  // The language {date} is written in. English until the user saves another.
+  dateLanguage: MessageDateLanguageUtil;
 }

@@ -6,8 +6,8 @@ import SettingsForm from './components/SettingsForm';
 import type { loader } from './settingsLoader';
 
 // The app's settings (ADR 0003). One user, so being signed in is the only lock (ADR 0002). A phone gets one narrow
-// column of cards. From lg the page widens so the form can put its preview card beside its field cards (see
-// SettingsForm). Appearance and Data stay below the form either way.
+// column of cards. From lg the page widens so the Email card can put its preview beside its fields (see
+// SettingsForm). Appearance and Data stay below it either way.
 function Settings() {
   const { settings } = useLoaderData<LoaderDataUtil<typeof loader>>();
 
