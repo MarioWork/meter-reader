@@ -6,12 +6,12 @@ import type { ReadingApiModel } from '@app-types/models';
 import { Button } from '@components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { formatIsoDate } from '@utils/dateUtils';
-import { getCostAndBillLabel } from '@pages/Home/costAndBillUtils';
-import { getPhotoUrl } from '@pages/Home/readingPhotoUtils';
-import DeleteReadingDialog from './components/DeleteReadingDialog';
+import { getCostAndBillLabel } from '@utils/costAndBillUtils';
+import { getPhotoUrl } from '@utils/readingPhotoUtils';
+import DeleteReadingDialog from '@components/DeleteReadingDialog';
 import PhotoDialog from './components/PhotoDialog';
 import ReadingMenuItems from './components/ReadingMenuItems';
-import { useDeleteReading } from './hooks/useDeleteReading';
+import { useDeleteReading } from '@hooks/useDeleteReading';
 
 type Props = {
   reading: ReadingApiModel;
@@ -30,7 +30,7 @@ function ReadingActionsMenu({ reading }: Props) {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { search } = useLocation();
   const { isOpen, isDeleting, failureMessage, openDialog, handleOpenChange, deleteReading } = useDeleteReading(
-    reading.id,
+    READING_ROUTES_PATHS.delete(String(reading.id)),
   );
 
   const readingDate = formatIsoDate(reading.date);

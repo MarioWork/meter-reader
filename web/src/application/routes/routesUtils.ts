@@ -33,12 +33,18 @@ export const READING_ROUTES_PATHS = {
   NEW: '/readings/new',
   NEW_MODAL: `${BASE_ROUTES_PATHS.HOME}/readings/new`,
   delete: (readingId?: string) => (readingId ? `/readings/${readingId}/delete` : '/readings/:readingId/delete'),
-  // A routed modal over the history: everything about one reading.
-  details: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}`,
+  // One reading's own page: everything about it. It carries Home's search, so "← Readings" goes back to the same
+  // filters and page of the history.
+  details: (readingId?: string) => `/readings/${readingId ?? ':readingId'}`,
+  // Where the details were a modal over the history, before they had a page: an old link there redirects to it.
+  detailsModal: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}`,
   // A routed modal over the history: the email preview, and the send.
   send: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/send`,
   // A routed modal over the history: what the reading cost, added after it is saved.
   costAndBill: (readingId?: string) => `${BASE_ROUTES_PATHS.HOME}/readings/${readingId ?? ':readingId'}/cost-and-bill`,
+  // The same two modals over the reading's own page.
+  detailsSend: (readingId?: string) => `${READING_ROUTES_PATHS.details(readingId)}/send`,
+  detailsCostAndBill: (readingId?: string) => `${READING_ROUTES_PATHS.details(readingId)}/cost-and-bill`,
 };
 
 // What the readings cost, over time, narrowed by the same day range as Home's history.

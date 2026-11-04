@@ -1,0 +1,33 @@
+import { useState } from 'react';
+import { useFetcher } from 'react-router';
+import { HttpVerbsUtil, type JSONResponseUtil } from '@app-types/utility';
+import { useFetcherFailure } from '@hooks/useFetcherFailure';
+
+const FAILURE_MESSAGE = 'The reading could not be deleted. Please try again.';
+
+// The confirm dialog's open state and the delete's submit to `deleteActionPath`. On Home that action answers, Home's
+// loader runs again and the row is gone; on the reading's own page it goes back to Home.
+export function useDeleteReading(deleteActionPath: string) {
+  const [isOpen, setIsOpen] = useState(false);
+  const fetcher = useFetcher<JSONResponseUtil>();
+  const failureMessage = useFetcherFailure(fetcher, FAILURE_MESSAGE);
+  const isDeleting = fetcher.state !== 'idle';
+
+  // A failure from an earlier try is not shown again when the dialog reopens.
+  const openDialog = () => {
+    fetcher.reset();
+    setIsOpen(true);
+  };
+
+  // The dialog asks to close on Escape and on Cancel. Once the delete is under way it cannot be called back, so the
+  // dialog stays open until it is done.
+  const handleOpenChange = (isOpening: boolean) => {
+    if (isOpening || isDeleting) return;
+
+    setIsOpen(false);
+  };
+
+  const deleteReading = () => void fetcher.submit(null, { method: HttpVerbsUtil.DELETE, action: deleteActionPath });
+
+  return { isOpen, isDeleting, failureMessage, openDialog, handleOpenChange, deleteReading };
+}

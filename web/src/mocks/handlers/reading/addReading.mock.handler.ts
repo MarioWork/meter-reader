@@ -21,6 +21,8 @@ export default (baseUrl: string) => [
       photoId: photoId ?? null,
       sentAt: null,
       sentEmail: null,
+      failedAt: null,
+      failureReason: null,
       costCents: null,
       bill: null,
     });

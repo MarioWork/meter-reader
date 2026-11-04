@@ -114,103 +114,24 @@ it('lists the earlier readings as cards, newest first, with the date, the readin
   expect(earlierReadings()).not.toHaveFocus();
 });
 
-describe("a reading's details", () => {
-  it('opens from a tap on the card, with the digits, the day, the save time, the status and the photo on request', async () => {
-    await renderHome();
+describe("a reading's page", () => {
+  it('opens at its own url from a tap on the card, keeping the filters in it', async () => {
+    const router = await renderHome(`${BASE_ROUTES_PATHS.HOME}?status=notSent`);
 
-    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
+    await userEvent.click(await screen.findByRole('link', { name: 'Details of the 1 Jun 2026 reading' }));
 
-    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
-    // The photo stays hidden until asked for.
-    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
-    const showPhoto = within(dialog).getByRole('button', { name: 'Show photo' });
-    await userEvent.click(showPhoto);
-    expect(showPhoto).toHaveAttribute('aria-expanded', 'true');
-    await userEvent.click(showPhoto);
-    expect(showPhoto).toHaveAttribute('aria-expanded', 'false');
-    await userEvent.click(showPhoto);
-    expect(within(dialog).getByRole('img', { name: `The meter showing 00529 on ${NEWEST_DATE}` })).toHaveAttribute(
-      'src',
-      `${TEST_BASE_API_URL}/photos/14`,
-    );
-    expect(dialog).toHaveTextContent('00529');
-    expect(dialog).toHaveTextContent('Not sent');
-    expect(within(dialog).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` })).toHaveTextContent('Send');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reading of 1 Jun 2026' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/readings/10');
+    expect(router.state.location.search).toBe('?status=notSent');
   });
 
-  it('offers no way to send a reading that was sent', async () => {
-    await renderHome();
-
-    // The mock history's 1 Aug 2026 reading was sent.
-    await userEvent.click(screen.getByRole('link', { name: 'Details of the 1 Aug 2026 reading' }));
-
-    const dialog = await screen.findByRole('dialog', { name: 'Reading of 1 Aug 2026' });
-    expect(dialog).toHaveTextContent(/Sent 1 Aug 2026/);
-    expect(within(dialog).queryByRole('link', { name: /Send|Try again/ })).not.toBeInTheDocument();
-  });
-
-  it('shows the email a sent reading went out with', async () => {
-    await renderHome();
-
-    await userEvent.click(screen.getByRole('link', { name: 'Details of the 1 Aug 2026 reading' }));
-
-    const dialog = await screen.findByRole('dialog', { name: 'Reading of 1 Aug 2026' });
-    const email = within(dialog).getByRole('region', { name: 'Email sent' });
-    expect(email).toHaveTextContent('Fromme@hotmail.example');
-    expect(email).toHaveTextContent('Toreadings@water-provider.example');
-    expect(email).toHaveTextContent('Date: 1 August 2026');
-    expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
-
-    await userEvent.click(within(email).getByRole('button', { name: 'Photo attached' }));
-
-    expect(within(email).getByRole('img', { name: 'The meter showing 00511 on 1 Aug 2026' })).toBeVisible();
-    // The email shows the photo, so there is no second way to it.
-    expect(within(dialog).queryByRole('button', { name: 'Show photo' })).not.toBeInTheDocument();
-  });
-
-  it('shows the edited subject and message once a reading is sent with them', async () => {
-    await renderHome();
-    await userEvent.click(within(lastReadingCard()).getByRole('link', { name: `Send the reading of ${NEWEST_DATE}` }));
-    const preview = await screen.findByRole('dialog', { name: 'Send this reading?' });
-    const subject = within(preview).getByRole('textbox', { name: 'Subject' });
-    await userEvent.clear(subject);
-    await userEvent.type(subject, 'Water meter reading');
-    await userEvent.click(within(preview).getByRole('button', { name: 'Send' }));
-    await waitFor(() => expect(lastReadingCard()).toHaveTextContent(/Sent 2 Nov 2026/));
-
-    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
-
-    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
-    expect(within(dialog).getByRole('region', { name: 'Email sent' })).toHaveTextContent('Water meter reading');
-  });
-
-  it('shows no email section for a reading not sent yet', async () => {
-    await renderHome();
-
-    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
-
-    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
-    expect(within(dialog).queryByRole('region', { name: 'Email sent' })).not.toBeInTheDocument();
-  });
-
-  it('closes with Close and leaves the history as it was', async () => {
-    await renderHome();
-    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
-    const dialog = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
-
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
-
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(lastReadingCard()).toHaveTextContent('00529');
-  });
-
-  it("keeps the card's own buttons working: the menu opens, not the details", async () => {
-    await renderHome();
+  it("keeps the card's own buttons working: the menu opens, not the page", async () => {
+    const router = await renderHome();
 
     await openMenuFor(NEWEST_DATE);
 
     expect(await screen.findByRole('menuitem', { name: 'View photo' })).toBeVisible();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(BASE_ROUTES_PATHS.HOME);
   });
 });
 
@@ -783,13 +704,10 @@ describe("a reading's cost", () => {
     return received;
   }
 
-  it('shows no cost on a card or in the details while the reading has none', async () => {
+  it('shows no cost on a card while the reading has none', async () => {
     await renderHome();
 
     expect(lastReadingCard()).not.toHaveTextContent('€');
-    await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
-    const details = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
-    expect(details).not.toHaveTextContent('Cost');
   });
 
   it('opens from the "⋯" menu as a dialog with its own url', async () => {
@@ -836,7 +754,7 @@ describe("a reading's cost", () => {
     expect(lastReadingCard()).toHaveTextContent('Cost €42.10');
   });
 
-  it('saves a cost typed with a comma, in cents, and shows it on the card and in the details', async () => {
+  it("saves a cost typed with a comma, in cents, and shows it on the card and on the reading's page", async () => {
     const received = recordUpdateRequests();
     await renderHome();
     const dialog = await openCostDialog();
@@ -848,9 +766,8 @@ describe("a reading's cost", () => {
     expect(await findNotification('Cost saved')).toBeVisible();
     await waitFor(() => expect(lastReadingCard()).toHaveTextContent('Cost €42.10'));
     await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
-    const details = await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
-    expect(within(details).getByText('Cost')).toBeVisible();
-    expect(within(details).getByText('€42.10')).toBeVisible();
+    const costAndBill = await screen.findByRole('region', { name: 'Cost & bill' });
+    expect(within(costAndBill).getByText('€42.10')).toBeVisible();
   });
 
   it('changes a cost already set, starting from it, typed with a point', async () => {
@@ -978,10 +895,11 @@ describe("a reading's bill", () => {
     return within(dialog).getByLabelText('Bill');
   }
 
-  async function openDetails() {
+  // The cost & bill card on the reading's own page.
+  async function openReadingPage() {
     await userEvent.click(screen.getByRole('link', { name: `Details of the ${NEWEST_DATE} reading` }));
 
-    return screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` });
+    return screen.findByRole('region', { name: 'Cost & bill' });
   }
 
   // Keeps what the app asked to save, then lets the mock API answer it as usual.
@@ -996,27 +914,6 @@ describe("a reading's bill", () => {
 
     return received;
   }
-
-  it("shows the bill in the details as one button, named after its file, that opens the app's viewer", async () => {
-    saveMockBill();
-    await renderHome();
-
-    const details = await openDetails();
-
-    expect(within(details).getByText('Bill')).toBeVisible();
-    const button = within(details).getByRole('button', { name: BILL_BUTTON_NAME });
-    expect(button).toHaveTextContent(BILL_NAME);
-    expect(button).toHaveAttribute('aria-haspopup', 'dialog');
-    expect(within(details).getByText('PDF, 184.3 KB')).toBeVisible();
-    expect(within(details).queryByRole('link', { name: new RegExp(BILL_NAME) })).not.toBeInTheDocument();
-    expect(within(details).queryByRole('button', { name: /^Download/ })).not.toBeInTheDocument();
-  });
-
-  it('shows no bill in the details while the reading has none', async () => {
-    await renderHome();
-
-    expect(await openDetails()).not.toHaveTextContent('Bill');
-  });
 
   it('calls the menu item "Edit" once the reading has a bill, even with no cost', async () => {
     saveMockBill();
@@ -1068,7 +965,8 @@ describe("a reading's bill", () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: EDIT_COST_AND_BILL })).not.toBeInTheDocument());
     expect(await findNotification('Bill removed')).toBeVisible();
     expect(received).toEqual([{ costCents: null, billId: null }]);
-    expect(await openDetails()).not.toHaveTextContent('Bill');
+    // Neither a cost nor a bill is left, so the card offers to add them.
+    expect(within(await openReadingPage()).getByRole('link', { name: 'Add cost & bill' })).toBeVisible();
   });
 
   it('keeps the saved bill when only the cost changes', async () => {
@@ -1083,7 +981,7 @@ describe("a reading's bill", () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: EDIT_COST_AND_BILL })).not.toBeInTheDocument());
     expect(await findNotification('Cost saved')).toBeVisible();
     expect(received).toEqual([{ costCents: 4210 }]);
-    expect(within(await openDetails()).getByText('PDF, 184.3 KB')).toBeVisible();
+    expect(within(await openReadingPage()).getByText('PDF, 184.3 KB')).toBeVisible();
   });
 
   it("keeps the bill out of the reading's email", async () => {
@@ -1422,12 +1320,13 @@ describe('the history on a wide screen', () => {
     ).toHaveAttribute('aria-haspopup', 'dialog');
   });
 
-  it("opens a reading's details from its row", async () => {
-    await renderHome();
+  it("opens a reading's page from its row", async () => {
+    const router = await renderHome();
 
     await userEvent.click(within(rowFor(NEWEST_DATE)).getByRole('link', { name: detailsLinkName(NEWEST_DATE) }));
 
-    expect(await screen.findByRole('dialog', { name: `Reading of ${NEWEST_DATE}` })).toHaveTextContent('00529');
+    expect(await screen.findByRole('heading', { level: 1, name: `Reading of ${NEWEST_DATE}` })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/readings/14');
   });
 
   it('keeps Send and the ⋯ actions on each row', async () => {

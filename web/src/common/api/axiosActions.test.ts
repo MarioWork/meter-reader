@@ -2,7 +2,7 @@ import axios from 'axios';
 import { http, HttpResponse } from 'msw/http';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { HttpVerbsUtil } from '@app-types/utility';
-import { axiosActions, isUnauthorizedFailure } from './axiosActions';
+import { axiosActions, isNotFoundFailure, isUnauthorizedFailure } from './axiosActions';
 
 const TEST_PATH = '/actions-test';
 const TEST_URL = `${TEST_BASE_API_URL}${TEST_PATH}`;
@@ -74,6 +74,22 @@ it('rethrows an error that is not a request failure', async () => {
   vi.spyOn(axios, 'request').mockRejectedValueOnce(new TypeError('bug'));
 
   await expect(axiosActions({ url: TEST_PATH, method: HttpVerbsUtil.POST })).rejects.toThrow('bug');
+});
+
+describe('isNotFoundFailure', () => {
+  it('is true for a read that found nothing', async () => {
+    server.use(http.get(TEST_URL, () => HttpResponse.json({ code: 'NOT_FOUND' }, { status: 404 })));
+
+    const reading = axios.get(TEST_PATH);
+
+    await expect(reading).rejects.toSatisfy(isNotFoundFailure);
+  });
+
+  it('is false for a read that broke', async () => {
+    server.use(http.get(TEST_URL, () => HttpResponse.json({ code: 'INTERNAL_ERROR' }, { status: 500 })));
+
+    await expect(axios.get(TEST_PATH)).rejects.not.toSatisfy(isNotFoundFailure);
+  });
 });
 
 describe('isUnauthorizedFailure', () => {

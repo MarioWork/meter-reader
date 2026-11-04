@@ -6,6 +6,7 @@ import type { JSONResponseUtil } from '@app-types/utility';
 type ApiErrorBody = { code: string; message?: unknown; issues?: unknown };
 
 const UNAUTHORIZED_STATUS = 401;
+const NOT_FOUND_STATUS = 404;
 // The envelope code of a request made without a valid session. Other 401s (a wrong password, a wrong setup code)
 // carry their own code and belong to the page that made them.
 export const UNAUTHORIZED_ERROR_CODE = 'UNAUTHORIZED';
@@ -70,4 +71,9 @@ export function isUnauthorizedFailure(value: unknown): boolean {
   if (isFailedEnvelope(value)) return value.error?.code === UNAUTHORIZED_ERROR_CODE;
 
   return false;
+}
+
+// Whether a loader's thrown read found nothing there (a reading deleted, a mistyped link). Here for the same reason.
+export function isNotFoundFailure(value: unknown): boolean {
+  return axios.isAxiosError(value) && value.response?.status === NOT_FOUND_STATUS;
 }

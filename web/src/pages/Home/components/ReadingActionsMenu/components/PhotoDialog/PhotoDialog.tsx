@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { XIcon } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { useModalDialog } from '@hooks/useModalDialog';
-import PhotoFrame from '../../../PhotoFrame';
+import PhotoFrame from '@components/PhotoFrame';
 
 type Props = {
   isOpen: boolean;

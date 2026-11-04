@@ -16,6 +16,8 @@ const READING_SELECT = {
   sentSubject: true,
   sentBody: true,
   sentWithPhoto: true,
+  failedAt: true,
+  failureReason: true,
   costCents: true,
   createdAt: true,
   // The file name, so deleting a reading can remove its photo from the uploads folder too, and sending it can attach it.
@@ -60,8 +62,16 @@ type SentEmailColumns = {
   sentWithPhoto: boolean | null;
 };
 
-// What a send ends in: sent at a time with its email, or failed (and so not sent at any time, with no email).
-type SendOutcome = ({ status: 'SENT'; sentAt: Date } | { status: 'FAILED'; sentAt: null }) & SentEmailColumns;
+// Why the last send failed, and when; both null unless the reading is failed.
+type FailureColumns = { failedAt: Date | null; failureReason: string | null };
+
+// What a send ends in: sent at a time with its email (and no failure), or failed at a time with its reason (and so not
+// sent at any time, with no email).
+type SendOutcome = ({ status: 'SENT'; sentAt: Date } | { status: 'FAILED'; sentAt: null }) &
+  SentEmailColumns &
+  FailureColumns;
+
+const NO_FAILURE: FailureColumns = { failedAt: null, failureReason: null };
 
 const NO_SENT_EMAIL: SentEmailColumns = {
   sentFrom: null,
@@ -197,10 +207,11 @@ export const readingsRepository = {
   },
 
   markSent: (id: number, sentAt: Date, email: SentEmail): Promise<ReadingRow | null> =>
-    updateReading(id, { status: 'SENT', sentAt, ...toSentEmailColumns(email) }),
+    updateReading(id, { status: 'SENT', sentAt, ...toSentEmailColumns(email), ...NO_FAILURE }),
 
-  markFailed: (id: number): Promise<ReadingRow | null> =>
-    updateReading(id, { status: 'FAILED', sentAt: null, ...NO_SENT_EMAIL }),
+  // `failureReason` is what the user was told; null when the failure was a bug, whose message is never kept.
+  markFailed: (id: number, failedAt: Date, failureReason: string | null): Promise<ReadingRow | null> =>
+    updateReading(id, { status: 'FAILED', sentAt: null, ...NO_SENT_EMAIL, failedAt, failureReason }),
 
   // The deleted row, or null when there was none. One statement, so two deletes at once cannot both find the row:
   // the second gets null, never a database error.

@@ -47,8 +47,12 @@ A reading that is saved but whose email has not gone out yet. Every reading star
 A reading whose email the mail service accepted.
 
 **Failed**:
-A reading whose email the mail service refused or never got; it can be sent again.
+A reading whose email the mail service refused or never got; it can be tried again (Retry). The app keeps when it failed and the reason the user was told then.
 _Avoid_: Error, rejected
+
+**Resend**:
+Sending a sent reading again, from its page, starting from the email it went out with. Once it goes, the reading keeps the new email and time; if it does not, the reading stays sent with the first one.
+_Avoid_: Re-submit, re-send
 
 **History**:
 The list of past readings, newest first, each with its date, photo and whether it was sent or failed.
