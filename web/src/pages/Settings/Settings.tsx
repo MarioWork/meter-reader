@@ -1,25 +1,19 @@
 import { useLoaderData } from 'react-router';
 import type { LoaderDataUtil } from '@app-types/utility';
-import { Card, CardContent } from '@components/ui/card';
 import DataBackup from './components/DataBackup';
 import SettingsForm from './components/SettingsForm';
 import type { loader } from './settingsLoader';
 
 // The app's settings (ADR 0003). One user, so being signed in is the only lock (ADR 0002). A phone gets one narrow
-// column. From lg the page widens so the form can put the preview beside its fields; the Card lets go of its
-// overflow there, as a clipping box would stop the preview sticking (see SettingsForm). Data stays below the form
-// either way.
+// column of cards. From lg the page widens so the form can put its preview card beside its field cards (see
+// SettingsForm). Data stays below the form either way.
 function Settings() {
   const { settings } = useLoaderData<LoaderDataUtil<typeof loader>>();
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-6 lg:max-w-5xl">
       <h1 className="text-2xl font-bold">Settings</h1>
-      <Card className="lg:overflow-visible">
-        <CardContent>
-          <SettingsForm settings={settings} />
-        </CardContent>
-      </Card>
+      <SettingsForm settings={settings} />
       <DataBackup />
     </main>
   );

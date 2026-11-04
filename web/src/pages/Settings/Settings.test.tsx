@@ -72,7 +72,7 @@ it("shows the saved provider's address ready to edit, and From as text that cann
   await renderSettings();
 
   expect(toField()).toHaveValue(SAVED_ADDRESS);
-  expect(within(screen.getByRole('group', { name: 'Email' })).getByText('me@hotmail.example')).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'Email addresses' })).getByText('me@hotmail.example')).toBeVisible();
   expect(screen.queryByRole('textbox', { name: 'From' })).not.toBeInTheDocument();
 });
 
@@ -231,6 +231,40 @@ it('has one main heading', async () => {
   await renderSettings();
 
   expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+});
+
+it('splits the page into cards, each with its own heading, in reading order', async () => {
+  await renderSettings();
+
+  const cardHeadings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+
+  expect(cardHeadings).toEqual(['Email addresses', 'Message', 'Preview', 'Data']);
+});
+
+it('says From comes from the server, in the Email addresses card', async () => {
+  await renderSettings();
+
+  const emailAddresses = screen.getByRole('region', { name: 'Email addresses' });
+
+  expect(within(emailAddresses).getByText(/set on the server/i)).toBeVisible();
+});
+
+it('explains both placeholders in the Message card, next to the templates', async () => {
+  await renderSettings();
+
+  const message = screen.getByRole('region', { name: 'Message' });
+
+  expect(within(message).getByText('{reading}')).toBeVisible();
+  expect(within(message).getByText('{date}')).toBeVisible();
+  expect(within(message).getByRole('textbox', { name: 'Body template' })).toBeVisible();
+});
+
+it('says Save stores both the addresses and the message', async () => {
+  await renderSettings();
+
+  expect(screen.getByRole('button', { name: 'Save' })).toHaveAccessibleDescription(
+    'Saves the email addresses and the message together.',
+  );
 });
 
 it.each([
