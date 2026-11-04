@@ -29,6 +29,19 @@ const READING_SELECT = {
 // Newest first: the latest day on top, and on the same day the one saved last.
 const NEWEST_FIRST = [{ date: 'desc' }, { id: 'desc' }] as const satisfies Prisma.ReadingOrderByWithRelationInput[];
 
+// Oldest first, the other way round: the reading just after one is the first of those newer than it.
+const OLDEST_FIRST = [{ date: 'asc' }, { id: 'asc' }] as const satisfies Prisma.ReadingOrderByWithRelationInput[];
+
+const NEIGHBOUR_SELECT = { id: true, digits: true, date: true } as const satisfies Prisma.ReadingSelect;
+
+export type NeighbourRow = Prisma.ReadingGetPayload<{ select: typeof NEIGHBOUR_SELECT }>;
+
+// The readings just before and just after one in the history; null at either end.
+type Neighbours = { previous: NeighbourRow | null; next: NeighbourRow | null };
+
+// Where a reading sits in the history's order: its day, then its id for two readings of one day.
+type HistoryPosition = Pick<ReadingRow, 'id' | 'date'>;
+
 export type NewReading = { digits: string; date: Date; photoId?: number };
 
 // What can change on a saved reading. A field left out stays as it is. `billId` links an uploaded bill in place of the
@@ -83,6 +96,16 @@ const NO_SENT_EMAIL: SentEmailColumns = {
 
 function toWhere({ from, to, statuses }: ReadingFilter): Prisma.ReadingWhereInput {
   return { date: { gte: from, lte: to }, status: statuses ? { in: statuses } : undefined };
+}
+
+// Older than the reading in the history's order: an earlier day, or the same day saved before it.
+function olderThan({ id, date }: HistoryPosition): Prisma.ReadingWhereInput {
+  return { OR: [{ date: { lt: date } }, { date, id: { lt: id } }] };
+}
+
+// Newer than the reading in the history's order: a later day, or the same day saved after it.
+function newerThan({ id, date }: HistoryPosition): Prisma.ReadingWhereInput {
+  return { OR: [{ date: { gt: date } }, { date, id: { gt: id } }] };
 }
 
 function toSentEmailColumns({ from, to, subject, body, withPhoto }: SentEmail): SentEmailColumns {
@@ -192,6 +215,16 @@ export const readingsRepository = {
 
   findById: (id: number): Promise<ReadingRow | null> =>
     prisma.reading.findUnique({ where: { id }, select: READING_SELECT }),
+
+  // Both in one transaction, so they are read from the same history. The whole history, never Home's filters.
+  findNeighbours: async (reading: HistoryPosition): Promise<Neighbours> => {
+    const [previous, next] = await prisma.$transaction([
+      prisma.reading.findFirst({ where: olderThan(reading), orderBy: [...NEWEST_FIRST], select: NEIGHBOUR_SELECT }),
+      prisma.reading.findFirst({ where: newerThan(reading), orderBy: [...OLDEST_FIRST], select: NEIGHBOUR_SELECT }),
+    ]);
+
+    return { previous, next };
+  },
 
   // One transaction: a bill that cannot be linked changes nothing, the cost included.
   update: async (id: number, changes: ReadingChanges): Promise<ReadingUpdate> => {

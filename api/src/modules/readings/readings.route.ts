@@ -12,6 +12,7 @@ import {
   EmailDefaultsResponseSchema,
   ReadingEmailResponseSchema,
   ReadingListResponseSchema,
+  ReadingDetailsResponseSchema,
   ReadingParamsSchema,
   ReadingResponseSchema,
   ReadingsBackupResponseSchema,
@@ -26,7 +27,7 @@ import {
   getCosts,
   getCostsSpreadsheet,
   getEmailDefaults,
-  getReading,
+  getReadingDetails,
   getReadingEmail,
   getReadings,
   getReadingsBackup,
@@ -202,17 +203,17 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'One reading, for its details',
+        summary: 'One reading for its page, with the readings just before and after it by date',
         params: ReadingParamsSchema,
         response: {
-          200: ReadingResponseSchema,
+          200: ReadingDetailsResponseSchema,
           400: ErrorResponseSchema,
           401: ErrorResponseSchema,
           404: ErrorResponseSchema,
         },
       },
     },
-    async (request) => getReading(request.params.id),
+    async (request) => getReadingDetails(request.params.id),
   );
 
   app.patch(

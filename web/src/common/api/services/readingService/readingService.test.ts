@@ -2,11 +2,13 @@ import { unzipSync } from 'fflate';
 import { http, HttpResponse } from 'msw/http';
 import { HttpVerbsUtil, ReadingStatusUtil } from '@app-types/utility';
 import type { ReadingsBackupApiModel } from '@app-types/models';
+import { createReadingMockModel } from '@mocks/handlers/reading/models/readingMockModel.mock';
 import { getMockReadings } from '@mocks/handlers/reading/readingMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import readingService from './readingService';
 
 const EMPTY_PAGE = { data: [], currentPage: 1, totalResultNumber: 0 };
+const NEIGHBOUR = { id: 12, digits: '00511', date: '2026-08-01' };
 
 // Answers the list with an empty page and hands back the query it received.
 function captureListQuery(): { query: URLSearchParams } {
@@ -22,6 +24,24 @@ function captureListQuery(): { query: URLSearchParams } {
 }
 
 const API = TEST_BASE_API_URL;
+
+describe('getReading', () => {
+  it('asks for the reading by its id and returns it with the readings just before and after it', async () => {
+    let receivedPath = '';
+    server.use(
+      http.get(`${API}/readings/:id`, ({ request }) => {
+        receivedPath = new URL(request.url).pathname;
+        return HttpResponse.json({ ...createReadingMockModel({ id: 13 }), previous: NEIGHBOUR, next: null });
+      }),
+    );
+
+    const reading = await readingService.getReading(13);
+
+    expect(receivedPath).toBe('/api/readings/13');
+    expect(reading.previous).toEqual(NEIGHBOUR);
+    expect(reading.next).toBeNull();
+  });
+});
 
 describe('getCosts', () => {
   it('sends the day range under its wire names', async () => {

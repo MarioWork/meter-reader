@@ -4,6 +4,7 @@ import type {
   CostListApiModel,
   EmailDefaultsApiModel,
   ReadingApiModel,
+  ReadingDetailsApiModel,
   ReadingEmailApiModel,
   ReadingId,
 } from '@app-types/models';
@@ -143,8 +144,9 @@ export default {
     return response.data;
   },
 
-  getReading: async (id: ReadingId): Promise<ReadingApiModel> => {
-    const response = await axios.get<ReadingApiModel>(`${BASE_READINGS_URL}/${id}`);
+  // The reading with the ones just before and after it by date, for its page.
+  getReading: async (id: ReadingId): Promise<ReadingDetailsApiModel> => {
+    const response = await axios.get<ReadingDetailsApiModel>(`${BASE_READINGS_URL}/${id}`);
 
     return response.data;
   },

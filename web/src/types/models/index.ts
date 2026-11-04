@@ -5,6 +5,8 @@ export type { ReadingsBackupApiModel } from './readingsBackupApiModel.type';
 export type { AuthStatusApiModel } from './authStatusApiModel.type';
 export type { CostListApiModel } from './costListApiModel.type';
 export type { ReadingApiModel, ReadingId } from './readingApiModel.type';
+export type { ReadingDetailsApiModel } from './readingDetailsApiModel.type';
+export type { ReadingNeighbourApiModel } from './readingNeighbourApiModel.type';
 export type { ReadingEmailApiModel } from './readingEmailApiModel.type';
 export type { SentEmailApiModel } from './sentEmailApiModel.type';
 export type { EmailDefaultsApiModel } from './emailDefaultsApiModel.type';

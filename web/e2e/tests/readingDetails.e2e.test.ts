@@ -1,3 +1,4 @@
+import { READING_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 import { expect, test } from '../fixtures/app.fixture';
 import { HomePage } from '../pages/HomePage.page';
 import { ReadingDetailsPage } from '../pages/ReadingDetailsPage.page';
@@ -7,6 +8,9 @@ const SENT_ID = 12;
 const SENT_DATE = '1 Aug 2026';
 const SENT_FILTER = '?status=sent';
 const SENT_DIGITS = '00511';
+// The reading just after it by date, in the whole history whatever Home is filtered to: 1 Sept 2026, which failed.
+const NEXT_ID = 13;
+const NEXT_DATE = '1 Sept 2026';
 const PHONE_VIEWPORT = { width: 390, height: 844 };
 // Enough to go round the full-screen photo's one button a few times.
 const TAB_PRESSES = 3;
@@ -28,6 +32,24 @@ test('a reading opens as its own page from Home, and goes back to the same filte
   await expect(readingPage.title).toHaveText(`Reading of ${SENT_DATE}`);
   await homePage.goBack();
   await expect(page).toHaveURL(filteredUrl);
+});
+
+test("steps to the next reading and back with the arrow key, keeping Home's filters, and shows the water used", async ({
+  page,
+}) => {
+  const readingPage = new ReadingDetailsPage(page);
+  await readingPage.goto(SENT_ID, SENT_FILTER);
+  await expect(readingPage.usage('+9 m³ in 31 days')).toBeVisible();
+
+  await readingPage.goToNext();
+  await expect(readingPage.title).toHaveText(`Reading of ${NEXT_DATE}`);
+  await expect(page).toHaveURL(`${READING_ROUTES_PATHS.details(String(NEXT_ID))}${SENT_FILTER}`);
+  await expect(readingPage.usage('+9 m³ in 31 days')).toBeVisible();
+
+  await readingPage.pressLeftArrow();
+  await expect(readingPage.title).toHaveText(`Reading of ${SENT_DATE}`);
+  await expect(page).toHaveURL(`${READING_ROUTES_PATHS.details(String(SENT_ID))}${SENT_FILTER}`);
+  await expect(readingPage.previousLink).toBeVisible();
 });
 
 test('the photo opens full screen, keeps focus inside, and Escape gives focus back to it', async ({ page }) => {

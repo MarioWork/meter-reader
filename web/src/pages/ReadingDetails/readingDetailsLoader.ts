@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs, Params } from 'react-router';
 import { ValidationError } from 'yup';
 import readingService from '@services/readingService/readingService';
 import { ReadingParamsSchema } from '@services/readingService/readingService.type';
-import type { ReadingApiModel, ReadingId } from '@app-types/models';
+import type { ReadingDetailsApiModel, ReadingId } from '@app-types/models';
 
 // The reading's id from the url, or null when the url names none ("/readings/abc").
 async function readingIdIn(params: Params): Promise<ReadingId | null> {
@@ -19,7 +19,7 @@ async function readingIdIn(params: Params): Promise<ReadingId | null> {
 
 // The reading, or null when the url names none. A read the API refuses (a deleted reading's 404 included) rejects,
 // and the page's failure state sorts it out.
-async function findReading(params: Params): Promise<ReadingApiModel | null> {
+async function findReading(params: Params): Promise<ReadingDetailsApiModel | null> {
   const readingId = await readingIdIn(params);
 
   if (readingId === null) return null;

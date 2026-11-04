@@ -9,8 +9,9 @@ export class ReadingDetailsPage {
     this.page = page;
   }
 
-  async goto(readingId: number) {
-    await this.page.goto(READING_ROUTES_PATHS.details(String(readingId)));
+  // `search` is Home's filters, as a reading opened from a filtered history carries them.
+  async goto(readingId: number, search = '') {
+    await this.page.goto(`${READING_ROUTES_PATHS.details(String(readingId))}${search}`);
   }
 
   get title() {
@@ -40,6 +41,31 @@ export class ReadingDetailsPage {
 
   card(name: string) {
     return this.page.getByRole('region', { name });
+  }
+
+  // The water used since the previous reading, under the digits.
+  usage(text: string) {
+    return this.page.getByRole('main').getByText(text, { exact: true });
+  }
+
+  get previousLink() {
+    return this.otherReadings.getByRole('link', { name: 'Previous', exact: true });
+  }
+
+  get nextLink() {
+    return this.otherReadings.getByRole('link', { name: 'Next', exact: true });
+  }
+
+  private get otherReadings() {
+    return this.page.getByRole('navigation', { name: 'Other readings' });
+  }
+
+  async goToNext() {
+    await this.nextLink.click();
+  }
+
+  async pressLeftArrow() {
+    await this.page.keyboard.press('ArrowLeft');
   }
 
   async goBackToReadings() {

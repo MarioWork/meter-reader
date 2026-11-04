@@ -7,6 +7,7 @@ const DAY_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   timeZone: 'UTC',
 });
 const MONTH_OFFSET = 1;
+const DAY_MS = 86_400_000;
 const PAD_LENGTH = 2;
 // A moment (when a reading was sent), in the user's own time zone.
 const MOMENT_FORMAT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
@@ -38,6 +39,15 @@ export function todayAsIsoDate(now = new Date()): string {
 // "2026-10-31" → "31 Oct 2026".
 export function formatIsoDate(isoDate: string): string {
   return DAY_FORMAT.format(new Date(`${isoDate}${START_OF_DAY_UTC}`));
+}
+
+// The whole days from one calendar day to a later one: "2026-09-01" to "2026-10-01" is 30. Both are read in UTC, so a
+// change to or from summer time never makes a day 23 or 25 hours long.
+export function daysBetween(fromIsoDate: string, untilIsoDate: string): number {
+  const from = Date.parse(`${fromIsoDate}${START_OF_DAY_UTC}`);
+  const until = Date.parse(`${untilIsoDate}${START_OF_DAY_UTC}`);
+
+  return Math.round((until - from) / DAY_MS);
 }
 
 // "2026-11-02T09:00:00.000Z" → "2 Nov 2026, 09:00" (in the user's time zone).
