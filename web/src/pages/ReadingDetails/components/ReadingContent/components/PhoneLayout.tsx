@@ -21,7 +21,7 @@ function PhoneLayout() {
         </div>
       </header>
       <ReadingDigits />
-      <ReadingSendAction className="w-full" />
+      <ReadingSendAction className="w-full" hasText />
       <ReadingPhoto />
       <CostAndBillCard />
       <EmailCard />

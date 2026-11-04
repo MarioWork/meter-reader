@@ -14,10 +14,11 @@ type Props = {
 const NO_COST = 'No cost';
 
 // One reading as a row: its day (the link to its details, stretched over the row), the digits, the status, the cost
-// and the bill, then Send or Try again while it can still go, and the "⋯" menu.
+// and the bill, then Send or Try again while it can still go, and the "⋯" menu. The whole row opens the details, so
+// it lights up under the pointer: the accent, as the table's faint muted hover vanishes on the card in dark mode.
 function ReadingTableRow({ reading }: Props) {
   return (
-    <TableRow className="relative">
+    <TableRow className="relative hover:bg-accent">
       <TableCell>
         <RowDetailsLink reading={reading} />
       </TableCell>

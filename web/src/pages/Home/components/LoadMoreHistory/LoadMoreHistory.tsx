@@ -36,7 +36,8 @@ function LoadMoreHistory({ shownCount, totalResultNumber, loadedPageCount, hasFa
           size="lg"
           aria-disabled={isLoadingMore}
           onClick={loadMore}
-          className="w-full"
+          // As wide as its words, in the middle; wide enough for the longer label, so it does not jump while it loads.
+          className="min-w-36 px-6"
         >
           {isLoadingMore ? LOADING_MORE_LABEL : LOAD_MORE_LABEL}
         </Button>

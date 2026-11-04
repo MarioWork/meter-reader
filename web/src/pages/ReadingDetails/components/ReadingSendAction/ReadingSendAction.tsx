@@ -3,12 +3,15 @@ import { Link } from 'react-router';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { ReadingStatusUtil } from '@app-types/utility';
 import { buttonVariants } from '@components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
 import { useToWithSearch } from '@hooks/useToWithSearch';
 import { cn } from '@utils/classNameUtils';
 import { useReading } from '../../hooks/useReading';
 
 type Props = {
   className?: string;
+  // The word beside the icon: on a phone's full-width button, where a touch shows no tooltip.
+  hasText?: boolean;
 };
 
 type SendAction = {
@@ -23,8 +26,9 @@ const SEND_ACTIONS: Partial<Record<ReadingStatusUtil, SendAction>> = {
   [ReadingStatusUtil.FAILED]: { label: 'Retry', Icon: RotateCcwIcon },
 };
 
-// Opens the email preview over this page, which it comes back to. A link, as it goes somewhere; its word is its name.
-function ReadingSendAction({ className }: Props) {
+// Opens the email preview over this page, which it comes back to. A link, as it goes somewhere. Icon only, its label
+// is its name and shows as a tooltip on hover and on keyboard focus; 36 px square, over the 24 px minimum target.
+function ReadingSendAction({ className, hasText = false }: Props) {
   const reading = useReading();
   const sendPreview = useToWithSearch(READING_ROUTES_PATHS.detailsSend(String(reading.id)));
   const sendAction = SEND_ACTIONS[reading.status];
@@ -33,11 +37,26 @@ function ReadingSendAction({ className }: Props) {
 
   const { label, Icon } = sendAction;
 
+  if (hasText) {
+    return (
+      <Link to={sendPreview} className={cn(buttonVariants({ size: 'lg' }), className)}>
+        <Icon aria-hidden="true" />
+        {label}
+      </Link>
+    );
+  }
+
   return (
-    <Link to={sendPreview} className={cn(buttonVariants({ size: 'lg' }), className)}>
-      <Icon aria-hidden="true" />
-      {label}
-    </Link>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Link to={sendPreview} aria-label={label} className={cn(buttonVariants({ size: 'icon-lg' }), className)} />
+        }
+      >
+        <Icon aria-hidden="true" />
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
