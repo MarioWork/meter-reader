@@ -1,7 +1,8 @@
 import type { Page } from '@playwright/test';
 import { SETTINGS_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
-// Settings: the Email addresses and Message cards, the live Preview card, the save bar, and the Data card below them.
+// Settings: the Email addresses and Message cards, the live Preview card, the save bar, then the Appearance and Data
+// cards below them.
 export class SettingsPage {
   private readonly page: Page;
 
@@ -37,13 +38,30 @@ export class SettingsPage {
     return this.page.getByRole('region', { name: 'Data' });
   }
 
+  get appearance() {
+    return this.page.getByRole('region', { name: 'Appearance' });
+  }
+
+  sidebarStartChoice(label: 'Expanded' | 'Collapsed') {
+    return this.appearance.getByRole('group', { name: 'Sidebar starts' }).getByRole('button', { name: label });
+  }
+
+  async chooseSidebarStart(label: 'Expanded' | 'Collapsed') {
+    await this.sidebarStartChoice(label).click();
+  }
+
+  async reload() {
+    await this.page.reload();
+  }
+
   async goto() {
     await this.page.goto(SETTINGS_ROUTES_PATHS.BASE);
   }
 
-  // Into the body template, then down to the bottom of the page, as when editing on a short window.
+  // Into the body template, then down to the end of the form (its Save bar at the bottom of the window), as when
+  // editing on a short window. The Appearance and Data cards below the form are not part of the editing.
   async editBodyTemplateScrolledDown() {
     await this.bodyTemplateField.click();
-    await this.page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await this.saveButton.evaluate((saveButton) => saveButton.scrollIntoView({ block: 'end' }));
   }
 }

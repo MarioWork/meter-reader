@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw/http';
 import routes from '@application/routes';
 import { BASE_ROUTES_PATHS } from '@application/routes/routesUtils';
-import { MailStateUtil, ThemeUtil } from '@app-types/utility';
+import { MailStateUtil, SidebarStartUtil, ThemeUtil } from '@app-types/utility';
+import { SIDEBAR_START_STORAGE_KEY } from '@hooks/useSidebarStart';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { mockWideScreen, renderRoutes, screen, userEvent, within } from '@test-utils';
 import { thisYearCostsPath } from '@utils/historyFilterUtils';
@@ -125,6 +126,27 @@ it('signs out from the sidebar and opens the login page', async () => {
   await userEvent.click(within(sidebarNavigation()).getByRole('button', { name: 'Sign out' }));
 
   expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
+});
+
+describe('how the sidebar starts', () => {
+  it('starts expanded when nothing is saved', async () => {
+    await renderHomeOnWideScreen();
+
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('starts collapsed when Settings says so, and its edge still expands it for the visit', async () => {
+    window.localStorage.setItem(SIDEBAR_START_STORAGE_KEY, SidebarStartUtil.COLLAPSED);
+    await renderHomeOnWideScreen();
+
+    const expandButton = screen.getByRole('button', { name: 'Expand sidebar' });
+    expect(expandButton).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(expandButton);
+
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toHaveAttribute('aria-expanded', 'true');
+    expect(window.localStorage.getItem(SIDEBAR_START_STORAGE_KEY)).toBe(SidebarStartUtil.COLLAPSED);
+  });
 });
 
 it('signs out from the header menu and opens the login page', async () => {

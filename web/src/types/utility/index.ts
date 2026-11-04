@@ -9,6 +9,7 @@ export { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from './paginationU
 export type { PaginationUtil } from './paginationUtil.type';
 export { ReadingStatusUtil } from './readingStatusUtil.type';
 export type { ResponseWithPaginationUtil } from './responseWithPaginationUtil.type';
+export { SidebarStartUtil } from './sidebarStartUtil.type';
 export { SortingDirectionUtil } from './sortingDirectionUtil.type';
 export { ThemeUtil } from './themeUtil.type';
 export type { AppliedThemeUtil } from './themeUtil.type';

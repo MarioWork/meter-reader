@@ -5,7 +5,7 @@ import {
   DropdownMenuRadioItem,
 } from '@components/ui/dropdown-menu';
 import { useTheme } from '@hooks/useTheme';
-import { THEME_OPTIONS } from './themeOptions';
+import { THEME_OPTIONS } from '@utils/themeOptionUtils';
 
 // Light, dark or the device's setting, in the phone's menu and the sidebar's Theme menu alike. The menu stays open
 // after a pick, so the check mark shows what took.
