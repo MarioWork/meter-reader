@@ -5,7 +5,7 @@ import { chooseMenuItemWithKeyboard, THEME_LABELS } from './AppHeader.page';
 
 type SidebarPageName = 'Home' | 'Costs' | 'Settings';
 
-// The signed-in sidebar on a wide screen: the app name, Home, Costs and Settings, then Theme and Sign out, and the
+// The signed-in sidebar on a wide screen: the app name, Home, Costs and Settings, then Sign out and Theme, and the
 // edge that collapses it.
 export class AppSidebar {
   private readonly page: Page;
