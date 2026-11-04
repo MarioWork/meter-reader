@@ -16,7 +16,7 @@ type Props = {
 const CLOSE_LABEL = 'Close';
 
 // The photo across the whole screen, in a native modal <dialog>: the browser keeps keyboard focus inside it and the
-// page behind out of reach. Escape or Close shuts it, and focus goes back to the photo on the page.
+// page behind out of reach. Escape or the X button shuts it, and focus goes back to the photo on the page.
 function FullScreenPhoto({ isOpen, title, photoUrl, photoDescription, returnFocusRef, onClose }: Props) {
   const dialogRef = useModalDialog(isOpen);
   const titleId = useId();
@@ -41,12 +41,12 @@ function FullScreenPhoto({ isOpen, title, photoUrl, photoDescription, returnFocu
       {isOpen && <img src={photoUrl} alt={photoDescription} className="size-full object-contain" />}
       <Button
         variant="secondary"
-        size="lg"
+        size="icon-lg"
+        aria-label={CLOSE_LABEL}
         onClick={onClose}
         className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4"
       >
         <XIcon aria-hidden="true" />
-        {CLOSE_LABEL}
       </Button>
     </dialog>
   );

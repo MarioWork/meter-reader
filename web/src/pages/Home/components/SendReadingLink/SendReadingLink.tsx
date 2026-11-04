@@ -4,6 +4,7 @@ import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { ReadingApiModel } from '@app-types/models';
 import { ReadingStatusUtil } from '@app-types/utility';
 import { buttonVariants } from '@components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
 import { cn } from '@utils/classNameUtils';
 import { formatIsoDate } from '@utils/dateUtils';
 
@@ -18,7 +19,7 @@ type Props = {
 type SendLink = {
   // The word beside the icon when there is room for it.
   text: string;
-  // The start of the name screen readers hear, and the tooltip on hover.
+  // The start of the name screen readers hear, and the tooltip on hover and on keyboard focus.
   label: string;
   Icon: LucideIcon;
 };
@@ -45,15 +46,21 @@ function SendReadingLink({ reading, isProminent, hasText = false }: Props) {
   const size = hasText ? 'default' : 'icon-lg';
 
   return (
-    <Link
-      className={cn('relative z-10', buttonVariants({ variant, size }))}
-      to={{ pathname: READING_ROUTES_PATHS.send(String(reading.id)), search }}
-      aria-label={accessibleName}
-      title={accessibleName}
-    >
-      <Icon aria-hidden="true" />
-      {hasText && text}
-    </Link>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Link
+            className={cn('relative z-10', buttonVariants({ variant, size }))}
+            to={{ pathname: READING_ROUTES_PATHS.send(String(reading.id)), search }}
+            aria-label={accessibleName}
+          />
+        }
+      >
+        <Icon aria-hidden="true" />
+        {hasText && text}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
