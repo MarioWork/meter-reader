@@ -6,9 +6,11 @@ const SETTINGS_ID = 1;
 
 const SETTINGS_SELECT = {
   providerEmail: true,
+  clientNumber: true,
   subjectTemplate: true,
   bodyTemplate: true,
   dateFormat: true,
+  dateLanguage: true,
 } as const satisfies Prisma.SettingsSelect;
 
 export type SettingsRow = Prisma.SettingsGetPayload<{ select: typeof SETTINGS_SELECT }>;

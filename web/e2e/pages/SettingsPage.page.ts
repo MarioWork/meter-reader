@@ -3,8 +3,8 @@ import { SETTINGS_ROUTES_PATHS } from '../../src/application/routes/routesUtils'
 
 type SidebarStartLabel = 'Expanded' | 'Collapsed';
 
-// Settings: the Email addresses and Message cards, the live Preview card, the save bar, then the Appearance and Data
-// cards below them.
+// Settings: the Email card (its Provider, Message and live Preview, Save in its footer), then the Appearance and Data
+// cards below it.
 export class SettingsPage {
   private readonly page: Page;
 
@@ -17,7 +17,7 @@ export class SettingsPage {
   }
 
   get emailAddressesCard() {
-    return this.page.getByRole('region', { name: 'Email addresses' });
+    return this.page.getByRole('region', { name: 'Provider' });
   }
 
   get messageCard() {

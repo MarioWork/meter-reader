@@ -4,7 +4,7 @@ import { SETTINGS_ROUTES_PATHS } from '@application/routes/routesUtils';
 import { getMockSettings, updateMockSettings } from '@mocks/handlers/settings/settingsMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { findNotification, renderRoutes, screen, userEvent, within } from '@test-utils';
-import { MessageDateFormatUtil, SidebarStartUtil } from '@app-types/utility';
+import { MessageDateFormatUtil, MessageDateLanguageUtil, SidebarStartUtil } from '@app-types/utility';
 import { SIDEBAR_START_STORAGE_KEY } from '@hooks/useSidebarStart';
 import { todayAsIsoDate } from '@utils/dateUtils';
 import { formatMessageDate } from '@utils/messageDateFormatUtils';
@@ -73,7 +73,7 @@ it("shows the saved provider's address ready to edit, and From as text that cann
   await renderSettings();
 
   expect(toField()).toHaveValue(SAVED_ADDRESS);
-  expect(within(screen.getByRole('region', { name: 'Email addresses' })).getByText('me@hotmail.example')).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'Provider' })).getByText('me@hotmail.example')).toBeVisible();
   expect(screen.queryByRole('textbox', { name: 'From' })).not.toBeInTheDocument();
 });
 
@@ -186,7 +186,7 @@ it('marks an unknown placeholder under its template and saves nothing', async ()
 
   expect(subjectTemplateField()).toHaveAttribute('aria-invalid', 'true');
   expect(subjectTemplateField()).toHaveAccessibleDescription(
-    /\{readng\} is not a placeholder\. Use \{reading\} or \{date\}\./,
+    /\{readng\} is not a placeholder\. Use \{reading\}, \{date\} or \{client\}\./,
   );
   expect(bodyTemplateField()).toHaveAccessibleDescription(/\{dat\} is not a placeholder/);
   expect(getMockSettings().subjectTemplate).toBe('Meter reading {date}');
@@ -205,7 +205,7 @@ it('marks an empty template under its field and saves nothing', async () => {
 });
 
 it("marks the template the server refuses with the server's reason", async () => {
-  const reason = '{day} is not a placeholder. Use {reading} or {date}.';
+  const reason = '{day} is not a placeholder. Use {reading}, {date} or {client}.';
   server.use(
     http.put(`${TEST_BASE_API_URL}/settings`, () =>
       HttpResponse.json(
@@ -239,7 +239,18 @@ it('splits the page into cards, each with its own heading, in reading order', as
 
   const cardHeadings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
 
-  expect(cardHeadings).toEqual(['Email addresses', 'Message', 'Preview', 'Appearance', 'Data']);
+  expect(cardHeadings).toEqual(['Email', 'Appearance', 'Data']);
+});
+
+it('splits the Email card into its parts, a heading level below it, in reading order', async () => {
+  await renderSettings();
+
+  const email = screen.getByRole('region', { name: 'Email' });
+  const sectionHeadings = within(email)
+    .getAllByRole('heading', { level: 3 })
+    .map((heading) => heading.textContent);
+
+  expect(sectionHeadings).toEqual(['Provider', 'Message', 'Preview']);
 });
 
 describe('the Appearance card', () => {
@@ -287,21 +298,22 @@ describe('the Appearance card', () => {
   });
 });
 
-it('says From comes from the server, in the Email addresses card', async () => {
+it('says From comes from the server, under Provider', async () => {
   await renderSettings();
 
-  const emailAddresses = screen.getByRole('region', { name: 'Email addresses' });
+  const emailAddresses = screen.getByRole('region', { name: 'Provider' });
 
   expect(within(emailAddresses).getByText(/set on the server/i)).toBeVisible();
 });
 
-it('explains both placeholders in the Message card, next to the templates', async () => {
+it('explains every placeholder under Message, next to the templates', async () => {
   await renderSettings();
 
   const message = screen.getByRole('region', { name: 'Message' });
 
   expect(within(message).getByText('{reading}')).toBeVisible();
   expect(within(message).getByText('{date}')).toBeVisible();
+  expect(within(message).getByText('{client}')).toBeVisible();
   expect(within(message).getByRole('textbox', { name: 'Body template' })).toBeVisible();
 });
 
@@ -309,7 +321,7 @@ it('says Save stores both the addresses and the message', async () => {
   await renderSettings();
 
   expect(screen.getByRole('button', { name: 'Save' })).toHaveAccessibleDescription(
-    'Saves the email addresses and the message together.',
+    'Saves the addresses and the message together.',
   );
 });
 
@@ -347,6 +359,62 @@ it('updates the preview while typing, before saving', async () => {
   expect(previewRow('Subject')).toHaveTextContent(`Leitura ${SAMPLE_READING}`);
   expect(previewRow('Body')).toHaveTextContent(`Leitura - ${SAMPLE_READING} - ${today()}`);
   expect(getMockSettings().subjectTemplate).toBe('Meter reading {date}');
+});
+
+describe('the client number', () => {
+  function clientNumberField() {
+    return screen.getByRole('textbox', { name: 'Client number' });
+  }
+
+  it('shows the saved client number ready to edit', async () => {
+    await renderSettings();
+
+    expect(clientNumberField()).toHaveValue('0042-7');
+  });
+
+  it('saves the client number trimmed', async () => {
+    await renderSettings();
+
+    await userEvent.clear(clientNumberField());
+    await userEvent.type(clientNumberField(), ' 9981 ');
+    await save();
+
+    expect(await findNotification('Settings saved')).toBeVisible();
+    expect(getMockSettings().clientNumber).toBe('9981');
+  });
+
+  it('saves an emptied client number as not set', async () => {
+    await renderSettings();
+
+    await userEvent.clear(clientNumberField());
+    await save();
+
+    expect(await findNotification('Settings saved')).toBeVisible();
+    expect(getMockSettings().clientNumber).toBeNull();
+  });
+
+  it('fills {client} in the preview while typing, before saving', async () => {
+    await renderSettings();
+
+    await typeTemplate(bodyTemplateField(), 'Client {client}: {reading}');
+    await userEvent.clear(clientNumberField());
+    await userEvent.type(clientNumberField(), '9981');
+
+    expect(previewRow('Body')).toHaveTextContent(`Client 9981: ${SAMPLE_READING}`);
+    expect(getMockSettings().clientNumber).toBe('0042-7');
+  });
+
+  it('marks a client number that is too long under its field and saves nothing', async () => {
+    await renderSettings();
+
+    await userEvent.clear(clientNumberField());
+    await userEvent.type(clientNumberField(), '1'.repeat(51));
+    await save();
+
+    expect(clientNumberField()).toHaveAttribute('aria-invalid', 'true');
+    expect(clientNumberField()).toHaveAccessibleDescription('Keep it to 50 characters or fewer');
+    expect(getMockSettings().clientNumber).toBe('0042-7');
+  });
 });
 
 it('keeps an unknown placeholder in the preview as typed', async () => {
@@ -395,6 +463,35 @@ it('saves the chosen date format with the rest and says so', async () => {
 
   expect(await findNotification('Settings saved')).toBeVisible();
   expect(getMockSettings()).toMatchObject({ to: SAVED_ADDRESS, dateFormat: MessageDateFormatUtil.DAY_MONTH_YEAR });
+});
+
+it('offers English and Portuguese as the date language, English chosen until another is saved', async () => {
+  await renderSettings();
+
+  const dateLanguageField = screen.getByRole('combobox', { name: 'Date language' });
+
+  expect(dateLanguageField).toHaveDisplayValue('English');
+  expect(
+    within(dateLanguageField)
+      .getAllByRole('option')
+      .map((option) => option.textContent),
+  ).toEqual(['English', 'Português']);
+});
+
+it('writes the date in Portuguese in the preview and the format samples, and saves it, when Portuguese is picked', async () => {
+  await renderSettings();
+
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Date language' }), 'Português');
+
+  expect(previewRow('Subject')).toHaveTextContent(
+    `Meter reading ${formatMessageDate(todayAsIsoDate(), MessageDateFormatUtil.LONG_MONTH, MessageDateLanguageUtil.PORTUGUESE)}`,
+  );
+  expect(within(dateFormatField()).getByRole('option', { name: '31 de outubro de 2026' })).toBeInTheDocument();
+
+  await save();
+
+  expect(await findNotification('Settings saved')).toBeVisible();
+  expect(getMockSettings().dateLanguage).toBe(MessageDateLanguageUtil.PORTUGUESE);
 });
 
 it('writes the date in the preview in the chosen format, before saving', async () => {

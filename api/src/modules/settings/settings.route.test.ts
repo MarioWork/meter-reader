@@ -6,12 +6,24 @@ import { resetAuthTables, setUpWithPassword, withSession } from '../auth/auth.fi
 const PROVIDER_EMAIL = 'readings@water-provider.example';
 // MAIL_FROM in .env.test.
 const MAIL_FROM = 'me@hotmail.example';
-// A fresh install's templates (the issue: "Leitura {date}" and "Leitura - {reading} - {date}").
-const DEFAULT_TEMPLATES = { subjectTemplate: 'Leitura {date}', bodyTemplate: 'Leitura - {reading} - {date}' };
+// A fresh install's templates (the issue: "Leitura {date}" and "Leitura - {reading} - {date} - {client}").
+const DEFAULT_TEMPLATES = {
+  subjectTemplate: 'Leitura {date}',
+  bodyTemplate: 'Leitura - {reading} - {date} - {client}',
+};
 const TEMPLATES = { subjectTemplate: 'Meter reading {date}', bodyTemplate: 'Date: {date}\nReading: {reading}' };
 // A fresh install's date format: "31 October 2026".
 const DEFAULT_DATE_FORMAT = 'longMonth';
-const SETTINGS = { to: PROVIDER_EMAIL, ...TEMPLATES, dateFormat: 'dayMonthYear' };
+// A fresh install's date language.
+const DEFAULT_DATE_LANGUAGE = 'en';
+const CLIENT_NUMBER = '0042-7';
+const SETTINGS = {
+  to: PROVIDER_EMAIL,
+  clientNumber: CLIENT_NUMBER,
+  ...TEMPLATES,
+  dateFormat: 'dayMonthYear',
+  dateLanguage: 'pt',
+};
 
 let app: App;
 let token: string;
@@ -46,8 +58,10 @@ describe('GET /settings', () => {
     expect(response.json()).toEqual({
       from: MAIL_FROM,
       to: null,
+      clientNumber: null,
       ...DEFAULT_TEMPLATES,
       dateFormat: DEFAULT_DATE_FORMAT,
+      dateLanguage: DEFAULT_DATE_LANGUAGE,
     });
   });
 
@@ -67,8 +81,10 @@ describe('GET /settings', () => {
     expect(response.json()).toEqual({
       from: MAIL_FROM,
       to: PROVIDER_EMAIL,
+      clientNumber: null,
       ...DEFAULT_TEMPLATES,
       dateFormat: DEFAULT_DATE_FORMAT,
+      dateLanguage: DEFAULT_DATE_LANGUAGE,
     });
   });
 
@@ -83,18 +99,65 @@ describe('PUT /settings', () => {
   it('saves every field, the templates trimmed, and answers the settings when they are valid', async () => {
     const response = await updateSettings({
       to: `  ${PROVIDER_EMAIL}  `,
+      clientNumber: ` ${CLIENT_NUMBER} `,
       subjectTemplate: `  ${TEMPLATES.subjectTemplate} `,
       bodyTemplate: `\n${TEMPLATES.bodyTemplate}  `,
       dateFormat: SETTINGS.dateFormat,
+      dateLanguage: SETTINGS.dateLanguage,
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ from: MAIL_FROM, ...SETTINGS });
     expect(
       await prisma.settings.findMany({
-        select: { providerEmail: true, subjectTemplate: true, bodyTemplate: true, dateFormat: true },
+        select: {
+          providerEmail: true,
+          clientNumber: true,
+          subjectTemplate: true,
+          bodyTemplate: true,
+          dateFormat: true,
+          dateLanguage: true,
+        },
       }),
-    ).toEqual([{ providerEmail: PROVIDER_EMAIL, ...TEMPLATES, dateFormat: 'DAY_MONTH_YEAR' }]);
+    ).toEqual([
+      {
+        providerEmail: PROVIDER_EMAIL,
+        clientNumber: CLIENT_NUMBER,
+        ...TEMPLATES,
+        dateFormat: 'DAY_MONTH_YEAR',
+        dateLanguage: 'PORTUGUESE',
+      },
+    ]);
+  });
+
+  it('saves English when the date language is left out', async () => {
+    const response = await updateSettings({ ...SETTINGS, dateLanguage: undefined });
+
+    expect(response.json()).toMatchObject({ dateLanguage: 'en' });
+  });
+
+  it.each(['english', 'fr', ''])(
+    'returns 400 VALIDATION_ERROR naming the field when the date language is %j',
+    async (dateLanguage) => {
+      const response = await updateSettings({ ...SETTINGS, dateLanguage });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR', issues: [{ path: '/dateLanguage' }] });
+    },
+  );
+
+  it.each([['   '], [undefined]])('saves no client number when it is %j', async (clientNumber) => {
+    const response = await updateSettings({ ...SETTINGS, clientNumber });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ clientNumber: null });
+  });
+
+  it('returns 400 VALIDATION_ERROR naming the field when the client number is too long', async () => {
+    const response = await updateSettings({ ...SETTINGS, clientNumber: '1'.repeat(51) });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR', issues: [{ path: '/clientNumber' }] });
   });
 
   it.each(['longMonth', 'shortMonth', 'dayMonthYear', 'iso'])(
@@ -157,7 +220,7 @@ describe('PUT /settings', () => {
       expect(response.statusCode).toBe(400);
       expect(response.json()).toMatchObject({
         code: 'VALIDATION_ERROR',
-        issues: [{ path: `/${field}`, message: '{readng} is not a placeholder. Use {reading} or {date}.' }],
+        issues: [{ path: `/${field}`, message: '{readng} is not a placeholder. Use {reading}, {date} or {client}.' }],
       });
       expect(await prisma.settings.count()).toBe(0);
     },

@@ -1,4 +1,5 @@
 import type { UseFormRegisterReturn } from 'react-hook-form';
+import type { MessageDateLanguageUtil } from '@app-types/utility';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@components/ui/field';
 import { NativeSelect, NativeSelectOption } from '@components/ui/native-select';
 import { describedByIds } from '@utils/ariaUtils';
@@ -8,6 +9,8 @@ import { formatMessageDate, MESSAGE_DATE_FORMAT_OPTIONS } from '@utils/messageDa
 type Props = {
   error?: string;
   registration: UseFormRegisterReturn;
+  // The language picked beside it, so each sample reads as the email would.
+  dateLanguage: MessageDateLanguageUtil;
 };
 
 const FIELD_ID = 'settings-date-format';
@@ -18,8 +21,8 @@ const HINT = `How ${MESSAGE_PLACEHOLDERS.date} is written in the email. Dates in
 // The day every option is shown with: two-digit day and month, so each format reads apart from the others.
 const SAMPLE_DATE = '2026-10-31';
 
-// The four ways {date} can be written, each option a sample of itself.
-function DateFormatField({ error, registration }: Props) {
+// The four ways {date} can be written, each option a sample of itself in the language chosen.
+function DateFormatField({ error, registration, dateLanguage }: Props) {
   // react-hook-form drives uncontrolled inputs through the `ref` callback `register()` returns on every render.
   // The React Compiler would memoize that spread, so the input would stop reaching the form state.
   'use no memo';
@@ -37,7 +40,7 @@ function DateFormatField({ error, registration }: Props) {
       >
         {MESSAGE_DATE_FORMAT_OPTIONS.map((dateFormat) => (
           <NativeSelectOption key={dateFormat} value={dateFormat}>
-            {formatMessageDate(SAMPLE_DATE, dateFormat)}
+            {formatMessageDate(SAMPLE_DATE, dateFormat, dateLanguage)}
           </NativeSelectOption>
         ))}
       </NativeSelect>

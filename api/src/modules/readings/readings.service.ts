@@ -167,10 +167,14 @@ function toAttachmentName(row: ReadingRow): string {
 }
 
 // The subject and the body, filled in from the templates in Settings with the reading exactly as read (leading zeros
-// and all) and its day written in the date format chosen there. One builder for the preview and the send, so they
+// and all), its day written in the date format chosen there, and the client number saved there. One builder for the preview and the send, so they
 // cannot drift apart.
 function toMailText(row: ReadingRow, settings: MessageSettings): Pick<OutgoingMail, 'subject' | 'body'> {
-  const values: MessageValues = { reading: row.digits, date: formatMessageDate(row.date, settings.dateFormat) };
+  const values: MessageValues = {
+    reading: row.digits,
+    date: formatMessageDate(row.date, settings.dateFormat, settings.dateLanguage),
+    client: settings.clientNumber,
+  };
 
   return { subject: fillMessageTemplate(settings.subject, values), body: fillMessageTemplate(settings.body, values) };
 }
@@ -434,9 +438,20 @@ export async function getReadingEmail(id: number): Promise<ReadingEmailResponse>
 // The parts of every email that do not depend on a reading, with the templates still to fill in and the date format
 // to fill {date} in with.
 export async function getEmailDefaults(): Promise<EmailDefaultsResponse> {
-  const [to, { subject, body, dateFormat }] = await Promise.all([getProviderEmail(), getMessageSettings()]);
+  const [to, { subject, body, dateFormat, dateLanguage, clientNumber }] = await Promise.all([
+    getProviderEmail(),
+    getMessageSettings(),
+  ]);
 
-  return { from: env.MAIL_FROM ?? null, to, subjectTemplate: subject, bodyTemplate: body, dateFormat };
+  return {
+    from: env.MAIL_FROM ?? null,
+    to,
+    subjectTemplate: subject,
+    bodyTemplate: body,
+    dateFormat,
+    dateLanguage,
+    clientNumber,
+  };
 }
 
 async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {

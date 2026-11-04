@@ -158,7 +158,9 @@ async function connectHotmail(): Promise<void> {
 
 // The provider's address, the templates and the date format, as the user saves them on the Settings page.
 // Any field left out is the tests' own address or template, or a fresh install's date format.
-type SettingsChanges = Partial<typeof TEMPLATES & { to: string; dateFormat: string }>;
+type SettingsChanges = Partial<
+  typeof TEMPLATES & { to: string; dateFormat: string; dateLanguage: string; clientNumber: string }
+>;
 
 async function saveSettings(settings: SettingsChanges = {}): Promise<void> {
   const payload = { to: PROVIDER_EMAIL, ...TEMPLATES, dateFormat: DEFAULT_DATE_FORMAT, ...settings };
@@ -884,6 +886,8 @@ describe('GET /readings/email-defaults', () => {
       to: PROVIDER_EMAIL,
       ...TEMPLATES,
       dateFormat: 'iso',
+      dateLanguage: 'en',
+      clientNumber: null,
     });
   });
 
@@ -895,8 +899,9 @@ describe('GET /readings/email-defaults', () => {
     expect(response.json()).toMatchObject({
       to: null,
       subjectTemplate: 'Leitura {date}',
-      bodyTemplate: 'Leitura - {reading} - {date}',
+      bodyTemplate: 'Leitura - {reading} - {date} - {client}',
       dateFormat: DEFAULT_DATE_FORMAT,
+      clientNumber: null,
     });
   });
 
@@ -1202,6 +1207,24 @@ describe('PATCH /readings/:id', () => {
 });
 
 describe('GET /readings/:id/email', () => {
+  it('writes {date} in the language saved in Settings', async () => {
+    await saveSettings({ dateLanguage: 'pt' });
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31' })).json<{ id: number }>().id;
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ body: 'Date: 31 de outubro de 2026\nReading: 00123' });
+  });
+
+  it('fills in the client number saved in Settings for {client}', async () => {
+    await saveSettings({ clientNumber: '0042-7', bodyTemplate: 'Client {client}: {reading}' });
+    const readingId = await addReadingId('00123');
+
+    const response = await getReadingEmail(readingId);
+
+    expect(response.json()).toMatchObject({ body: 'Client 0042-7: 00123' });
+  });
+
   it('leaves the cost out of the email when the reading has one', async () => {
     const readingId = await addReadingId('000045');
     await updateReading(readingId, { costCents: 4210 });
@@ -1236,7 +1259,7 @@ describe('GET /readings/:id/email', () => {
 
     expect(response.json()).toMatchObject({
       subject: 'Leitura 31 October 2026',
-      body: 'Leitura - 00123 - 31 October 2026',
+      body: 'Leitura - 00123 - 31 October 2026 - ',
     });
   });
 

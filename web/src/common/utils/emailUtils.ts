@@ -9,6 +9,16 @@ export const SUBJECT_TOO_LONG_MESSAGE = `Keep the subject under ${EMAIL_SUBJECT_
 export const BODY_TOO_LONG_MESSAGE = `Keep the message under ${EMAIL_BODY_MAX_LENGTH} characters.`;
 export const INVALID_EMAIL_MESSAGE = 'Type a valid email address, like readings@water-provider.com';
 
+// The API's limit on a client number, and how the form says so.
+const CLIENT_NUMBER_MAX_LENGTH = 50;
+
+// The user's client number with the provider, as the Settings form and the save action both check it. Optional: an
+// empty one is not set.
+export const clientNumberSchema = string()
+  .trim()
+  .max(CLIENT_NUMBER_MAX_LENGTH, `Keep it to ${CLIENT_NUMBER_MAX_LENGTH} characters or fewer`)
+  .default('');
+
 // The provider's address, as the Settings form and the save action both check it.
 export const providerEmailSchema = string()
   .trim()

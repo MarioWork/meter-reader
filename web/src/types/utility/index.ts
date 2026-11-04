@@ -7,6 +7,7 @@ export type { LoaderDataUtil } from './loaderDataUtil.type';
 export type { LocalStorageStateUtil } from './localStorageStateUtil.type';
 export { MailStateUtil } from './mailStateUtil.type';
 export { MessageDateFormatUtil } from './messageDateFormatUtil.type';
+export { MessageDateLanguageUtil } from './messageDateLanguageUtil.type';
 export { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from './paginationUtil.type';
 export type { PaginationUtil } from './paginationUtil.type';
 export { ReadingStatusUtil } from './readingStatusUtil.type';
