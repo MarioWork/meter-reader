@@ -1,5 +1,6 @@
 import { EllipsisIcon } from 'lucide-react';
 import { useLocation } from 'react-router';
+import { ReadingStatusUtil } from '@app-types/utility';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import DeleteReadingDialog from '@components/DeleteReadingDialog';
 import { Button } from '@components/ui/button';
@@ -14,13 +15,16 @@ const MENU_LABEL = 'More actions';
 // The menu item's text, and the dialog's confirm button.
 const DELETE_LABEL = 'Delete';
 
-// The page's "⋯" menu: the cost & bill dialog (a routed modal over this page) and Delete, which asks first and then
+// The page's "⋯" menu: Resend once the reading is sent (the send preview, a routed modal over this page), the cost &
+// bill dialog (a routed modal over this page) and Delete, which asks first and then
 // goes back to Home through the page's own action.
 function ReadingPageMenu() {
   const reading = useReading();
   const { search } = useLocation();
   const readingId = String(reading.id);
   const costAndBillDialog = useToWithSearch(READING_ROUTES_PATHS.detailsCostAndBill(readingId));
+  const sendPreview = useToWithSearch(READING_ROUTES_PATHS.detailsSend(readingId));
+  const isSent = reading.status === ReadingStatusUtil.SENT;
   // The page's own action, with Home's search, which it goes back to once the reading is gone.
   const { isOpen, isDeleting, failureMessage, openDialog, handleOpenChange, deleteReading } = useDeleteReading(
     `${READING_ROUTES_PATHS.details(readingId)}${search}`,
@@ -34,6 +38,7 @@ function ReadingPageMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
           <ReadingPageMenuItems
+            resendTo={isSent ? sendPreview : undefined}
             costAndBillLabel={getCostAndBillLabel(reading)}
             costAndBillTo={costAndBillDialog}
             deleteLabel={DELETE_LABEL}
