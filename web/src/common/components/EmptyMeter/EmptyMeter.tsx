@@ -8,7 +8,7 @@ type Props = {
 // Where each of the four wheels starts across the window, on the drawing's 64 px wide grid.
 const WHEEL_X = [8, 20, 32, 44];
 
-// An empty state's picture, drawn like the app logo: the odometer window with its last wheel in aqua, but every wheel
+// An empty state's picture, drawn like the app logo: the odometer window with its last wheel picked out, but every wheel
 // blank. It follows the theme's colours. Purely decorative: the heading beside it says what is going on.
 function EmptyMeter({ BadgeIcon }: Props) {
   return (

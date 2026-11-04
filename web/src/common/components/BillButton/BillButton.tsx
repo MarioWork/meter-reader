@@ -10,6 +10,9 @@ type Props = {
   bill: ReadingBillApiModel;
   // For a list where every row has a bill: the reading's day tells them apart to a screen reader.
   readingDate?: string;
+  // A short word shown in place of the file name, where there is no room for it (a phone's list). The name still
+  // starts with it, then says the file (WCAG 2.5.3).
+  label?: string;
 };
 
 const OPENS_BILL = 'opens the bill';
@@ -18,17 +21,19 @@ const OPENS_BILL = 'opens the bill';
 const BUTTON_CLASSES =
   'inline-flex min-h-6 max-w-full min-w-0 items-center gap-1.5 rounded-sm text-left text-sm font-medium text-primary underline underline-offset-4 outline-none hover:decoration-2 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4 [&_svg]:shrink-0';
 
-// Starts with the file name it shows (WCAG 2.5.3), then says what it opens.
-function toAccessibleName(name: string, readingDate: string | undefined): string {
-  if (readingDate === undefined) return `${name}, ${OPENS_BILL}`;
+// Starts with the text it shows (WCAG 2.5.3), then says what it opens.
+function toAccessibleName(name: string, readingDate: string | undefined, label: string | undefined): string {
+  const shown = label === undefined ? name : `${label}: ${name}`;
 
-  return `${name}, ${OPENS_BILL} of ${formatIsoDate(readingDate)}`;
+  if (readingDate === undefined) return `${shown}, ${OPENS_BILL}`;
+
+  return `${shown}, ${OPENS_BILL} of ${formatIsoDate(readingDate)}`;
 }
 
 // A saved Bill, by its file name: one button that opens it in the app's own full-screen viewer. Nothing is saved to
 // the device unless the viewer's Download is tapped. The viewer's content mounts afresh for each opening, so every
 // bill starts at the screen's width.
-function BillButton({ bill, readingDate }: Props) {
+function BillButton({ bill, readingDate, label }: Props) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const { isOpen, open, close, retry, viewerState } = useBillViewer(bill.id);
@@ -39,12 +44,12 @@ function BillButton({ bill, readingDate }: Props) {
         ref={buttonRef}
         type="button"
         aria-haspopup="dialog"
-        aria-label={toAccessibleName(bill.name, readingDate)}
+        aria-label={toAccessibleName(bill.name, readingDate, label)}
         onClick={open}
         className={BUTTON_CLASSES}
       >
         <FileTextIcon aria-hidden="true" />
-        <span className="truncate">{bill.name}</span>
+        <span className="truncate">{label ?? bill.name}</span>
       </button>
       <BillViewer isOpen={isOpen} titleId={titleId} returnFocusRef={buttonRef} onClose={close}>
         {isOpen && (

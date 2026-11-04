@@ -12,20 +12,22 @@
  */
 :root {
   color-scheme: light;
-  --background: #e8f6fa;
+  /* A light neutral grey, not the palette's pale aqua: the blue is kept for the actions. */
+  --background: #eef2f6;
   --foreground: #03045e;
   --card: #ffffff;
   --card-foreground: #03045e;
   --popover: #ffffff;
   --popover-foreground: #03045e;
-  /* #0077B6 is a touch too light for text on the pale aqua, so light mode uses a deeper step of it. */
+  /* #0077B6 is a touch too light for text on the light page, so light mode uses a deeper step of it. */
   --primary: #006ba4;
   --primary-foreground: #ffffff;
-  --secondary: #caf0f8;
+  /* Soft fills and edges are a quiet grey-blue, so the palette's blue is kept for the actions and stands out. */
+  --secondary: #e8edf3;
   --secondary-foreground: #03045e;
-  --muted: #f0f9fc;
+  --muted: #f2f5f8;
   --muted-foreground: #3e5c76;
-  --accent: #caf0f8;
+  --accent: #e3e9f0;
   --accent-foreground: #03045e;
   --destructive: #a23b3b;
   --destructive-foreground: #ffffff;
@@ -33,7 +35,7 @@
   --success-foreground: #ffffff;
   --warning: #8a5a00;
   --warning-foreground: #ffffff;
-  --border: #ade8f4;
+  --border: #d6dee7;
   --input: #5f86a3;
   --ring: #006ba4;
   /* The Costs chart's bars, drawn on a card. A palette blue inside the dataviz lightness band for each theme, and at
@@ -78,7 +80,8 @@
   --warning: #e2bf7a;
   --warning-foreground: #373f3c;
   --border: #1d4a6e;
-  --input: #48cae4;
+  /* Field and outline-button edges: a calm blue-grey, not the bright aqua, still 5:1 against the page. */
+  --input: #6b93b3;
   --ring: #48cae4;
   --chart-1: #0096c7;
 }
@@ -204,6 +207,12 @@
      (WCAG 2.4.11). A wide screen has the sidebar instead, and nothing over the top of the page. */
   html {
     @apply scroll-pt-16 sm:scroll-pt-0;
+  }
+
+  /* Home's filters tile sticks over the list (HistoryFilters, isSticky): a focused element scrolled into view stops
+     below it too. Room for the tile at its usual height, with no chips under the title; a phone's adds the header. */
+  html:has([data-sticky-filters]) {
+    @apply scroll-pt-40 sm:scroll-pt-52;
   }
 
   body {

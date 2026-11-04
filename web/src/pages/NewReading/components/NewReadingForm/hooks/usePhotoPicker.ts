@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PhotoShrinkError, readAsDataUrl, shrinkPhoto } from '../photoShrinkUtils';
+import { PhotoShrinkError, readAsDataUrl, shrinkPhoto } from '@utils/photoShrinkUtils';
 import { TimeLimitError, withTimeLimit } from '../timeLimitUtils';
 
 // About 15 seconds to shrink the photo and make its preview, then the user is told to try again: a photo the

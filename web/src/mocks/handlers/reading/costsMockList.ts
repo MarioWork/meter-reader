@@ -1,5 +1,5 @@
 // What the Costs page's two mock endpoints share, as the API's share one query: the day range from the url, and the
-// readings with a Cost or a Bill in it.
+// readings in it, with or without a Cost or a Bill.
 import type { ReadingApiModel } from '@app-types/models';
 import { ApiUrlParamsUtil } from '@app-types/utility';
 import { narrowMockList } from '@mocks/mockListUtils';
@@ -18,13 +18,9 @@ export function isMockRangeBackwards({ dateFrom, dateTo }: MockDayRange): boolea
   return Boolean(dateFrom && dateTo && dateFrom > dateTo);
 }
 
-function hasCostOrBill(reading: ReadingApiModel): boolean {
-  return reading.costCents !== null || reading.bill !== null;
-}
-
-// Every reading with a Cost or a Bill in the request's day range (both ends inclusive), newest first.
+// Every reading in the request's day range (both ends inclusive), newest first; only the Costs count in the sum.
 export function getMockCostReadings(request: Request): ReadingApiModel[] {
-  return narrowMockList(request, getMockReadings().filter(hasCostOrBill), {
+  return narrowMockList(request, getMockReadings(), {
     ranges: [{ from: ApiUrlParamsUtil.dateFrom, to: ApiUrlParamsUtil.dateTo, read: (reading) => reading.date }],
   });
 }

@@ -16,7 +16,7 @@ import {
   type ReadingStatusUtil,
   type ResponseWithPaginationUtil,
 } from '@app-types/utility';
-import type { CreateReading, SendReading, UpdateReading } from './readingService.type';
+import type { AddReadingPhoto, CreateReading, SendReading, UpdateReading } from './readingService.type';
 
 const BASE_READINGS_URL = '/readings';
 // Both spreadsheets, the readings' and the costs', sit under this name.
@@ -156,6 +156,10 @@ export default {
 
   // Sets, changes or removes (null) what the reading cost and its bill. Neither is ever part of its email.
   updateReading: async (id: ReadingId, fields: UpdateReading): Promise<JSONResponseUtil<ReadingApiModel>> =>
+    axiosActions<ReadingApiModel>({ url: `${BASE_READINGS_URL}/${id}`, method: HttpVerbsUtil.PATCH, data: fields }),
+
+  // Links an uploaded photo to a reading saved without one, so its email can attach it.
+  addReadingPhoto: async (id: ReadingId, fields: AddReadingPhoto): Promise<JSONResponseUtil<ReadingApiModel>> =>
     axiosActions<ReadingApiModel>({ url: `${BASE_READINGS_URL}/${id}`, method: HttpVerbsUtil.PATCH, data: fields }),
 
   deleteReading: async (id: ReadingId): Promise<JSONResponseUtil> =>

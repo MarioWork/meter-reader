@@ -13,14 +13,14 @@ function RouteError() {
   const copy = ROUTE_ERROR_COPY[kind];
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background p-4">
-      <Link
-        to={BASE_ROUTES_PATHS.HOME}
-        className="rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <AppBrand />
-      </Link>
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-background p-4">
       <section className="flex w-full max-w-md flex-col items-center gap-6 rounded-2xl bg-card p-8 text-center shadow-sm ring-1 ring-foreground/10">
+        <Link
+          to={BASE_ROUTES_PATHS.HOME}
+          className="rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <AppBrand />
+        </Link>
         <RouteErrorFigure kind={kind} label={copy.label} />
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{copy.title}</h1>

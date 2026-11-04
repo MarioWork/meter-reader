@@ -76,6 +76,22 @@ it('rethrows an error that is not a request failure', async () => {
   await expect(axiosActions({ url: TEST_PATH, method: HttpVerbsUtil.POST })).rejects.toThrow('bug');
 });
 
+it('sends a write with no body without a Content-Type, as the API refuses a form one with 415', async () => {
+  let contentType: string | null = 'not read';
+  server.use(
+    http.post(`${TEST_BASE_API_URL}/auth/logout`, ({ request }) => {
+      contentType = request.headers.get('content-type');
+
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+
+  const result = await axiosActions({ url: `${TEST_BASE_API_URL}/auth/logout`, method: HttpVerbsUtil.POST });
+
+  expect(result).toMatchObject({ success: true });
+  expect(contentType).toBeNull();
+});
+
 describe('isNotFoundFailure', () => {
   it('is true for a read that found nothing', async () => {
     server.use(http.get(TEST_URL, () => HttpResponse.json({ code: 'NOT_FOUND' }, { status: 404 })));

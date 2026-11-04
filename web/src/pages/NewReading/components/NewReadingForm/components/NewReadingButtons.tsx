@@ -10,26 +10,31 @@ type Props = {
   onSend: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
-// Cancel, Save reading (the form's submit, so Enter saves) and Send reading, which saves and sends in one go.
+const CANCEL_LABEL = 'Cancel';
+const SAVE_LABEL = 'Save';
+const SEND_LABEL = 'Send';
+
+// Cancel, Save (the form's submit, so Enter saves) and Send, which saves and sends in one go. Each as wide as its
+// icon and word, together at the end of the form, where the eye ends up after filling it in.
 function NewReadingButtons({ isDisabled, isSendDisabled, onSend }: Props) {
   const { search } = useLocation();
 
   return (
-    <div className="flex gap-3">
+    <div className="flex justify-end gap-3">
       {/* Goes somewhere, so a link: back to the same page of the history, which also closes the modal. */}
       <Link
         to={{ pathname: BASE_ROUTES_PATHS.HOME, search }}
         className={buttonVariants({ variant: 'ghost', size: 'lg' })}
       >
-        Cancel
+        {CANCEL_LABEL}
       </Link>
-      <Button type="submit" variant="outline" size="lg" disabled={isDisabled} className="flex-1">
+      <Button type="submit" variant="outline" size="lg" disabled={isDisabled}>
         <SaveIcon aria-hidden="true" />
-        Save reading
+        {SAVE_LABEL}
       </Button>
-      <Button type="button" size="lg" disabled={isDisabled || isSendDisabled} className="flex-1" onClick={onSend}>
+      <Button type="button" size="lg" disabled={isDisabled || isSendDisabled} onClick={onSend}>
         <SendIcon aria-hidden="true" />
-        Send reading
+        {SEND_LABEL}
       </Button>
     </div>
   );

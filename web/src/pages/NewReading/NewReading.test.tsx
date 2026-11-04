@@ -21,10 +21,10 @@ import { READ_TIME_LIMIT_MS } from './components/NewReadingForm/hooks/usePhotoDi
 import { SHRINK_TIME_LIMIT_MS } from './components/NewReadingForm/hooks/usePhotoPicker';
 import { WHOLE_PHOTO } from './components/NewReadingForm/photoCropUtils';
 import { readDigitsFromPhoto } from './components/NewReadingForm/photoDigitsUtils';
-import { PhotoShrinkError, shrinkPhoto } from './components/NewReadingForm/photoShrinkUtils';
+import { PhotoShrinkError, shrinkPhoto } from '@utils/photoShrinkUtils';
 
 // jsdom has no canvas to shrink with: the shrink runs for real in the e2e test. Here it hands back a small JPEG.
-vi.mock('./components/NewReadingForm/photoShrinkUtils', async (importOriginal) => ({
+vi.mock('@utils/photoShrinkUtils', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   shrinkPhoto: vi.fn(),
 }));
@@ -66,7 +66,7 @@ function readingField() {
 }
 
 async function save() {
-  await userEvent.click(screen.getByRole('button', { name: 'Save reading' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 }
 
 async function takePhoto() {
@@ -144,11 +144,11 @@ it("saves the reading with its leading zeros as today's, then shows it on Home",
   expect(await findNotification('Reading saved')).toBeVisible();
 });
 
-it('saves and sends the reading in one go with Send reading, then shows it as sent on Home', async () => {
+it('saves and sends the reading in one go with Send, then shows it as sent on Home', async () => {
   await renderNewReading();
 
   await userEvent.type(readingField(), HIGHER_THAN_LAST);
-  await userEvent.click(screen.getByRole('button', { name: 'Send reading' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Send' }));
 
   await screen.findByRole('heading', { name: 'Water Readings' });
   expect(await findNotification('Reading saved and sent')).toBeVisible();
@@ -179,7 +179,7 @@ it('fills the message with the reading as it is typed, and sends the edited subj
   const subject = screen.getByRole('textbox', { name: 'Subject' });
   await userEvent.clear(subject);
   await userEvent.type(subject, 'Water meter reading');
-  await userEvent.click(screen.getByRole('button', { name: 'Send reading' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Send' }));
 
   await screen.findByRole('heading', { name: 'Water Readings' });
   expect(received).toEqual([
@@ -237,11 +237,11 @@ it('keeps a message the user edited, even when the reading changes', async () =>
   expect(message).toHaveValue('Hello');
 });
 
-it("turns Send reading off and says why while the provider's address is not set, but still saves", async () => {
+it("turns Send off and says why while the provider's address is not set, but still saves", async () => {
   updateMockSettings({ to: null });
   await renderNewReading();
 
-  expect(screen.getByRole('button', { name: 'Send reading' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   expect(screen.getByText(/Set the provider's address in/)).toHaveTextContent(
     "Set the provider's address in Settings.",
   );
@@ -591,7 +591,7 @@ describe('time limits', () => {
     expect(readingField()).toHaveValue(HIGHER_THAN_LAST);
     // Saving with a photo cannot run in jsdom (undici refuses jsdom's File when the router reads the form data):
     // newReadingActions.test.ts and the e2e suite cover the upload.
-    expect(screen.getByRole('button', { name: 'Save reading' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
   it('keeps reading a slow photo that finishes within the time limit', async () => {

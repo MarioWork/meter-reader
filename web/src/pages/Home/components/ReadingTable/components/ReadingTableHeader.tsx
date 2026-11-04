@@ -13,7 +13,7 @@ const COLUMNS: Column[] = [
   { label: 'Date' },
   { label: 'Reading' },
   { label: 'Status' },
-  { label: 'Cost', className: 'text-right' },
+  { label: 'Cost' },
   { label: 'Bill' },
   { label: 'Actions', isLabelHidden: true },
 ];

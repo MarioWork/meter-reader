@@ -1,5 +1,6 @@
 import { DownloadIcon } from 'lucide-react';
 import { buttonVariants } from '@components/ui/button';
+import { cn } from '@utils/classNameUtils';
 
 type Props = {
   href: string;
@@ -10,7 +11,7 @@ type Props = {
 // page stays where it is.
 function DownloadLink({ href, label }: Props) {
   return (
-    <a href={href} download className={buttonVariants({ variant: 'outline' })}>
+    <a href={href} download className={cn(buttonVariants({ variant: 'outline' }))}>
       <DownloadIcon data-icon="inline-start" aria-hidden="true" />
       {label}
     </a>

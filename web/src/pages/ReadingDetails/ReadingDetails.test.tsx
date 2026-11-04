@@ -59,7 +59,9 @@ describe('the header', () => {
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`Reading of ${NEWEST_DATE}`);
-    expect(within(main()).getByText('Not sent')).toBeVisible();
+    // The status shows twice on purpose: beside the title and in the Details card.
+    expect(within(main()).getAllByText('Not sent')[0]).toBeVisible();
+    expect(within(pageRegion('Details')).getByText('Not sent')).toBeVisible();
     // Send shows twice on purpose: in the header and in the email card. The header's comes first.
     expect(within(main()).getAllByRole('link', { name: 'Send' })[0]).toHaveAttribute(
       'href',
@@ -108,7 +110,7 @@ describe('the header', () => {
     await renderReadingPage(SENT_ID);
 
     const sectionHeadings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
-    expect(sectionHeadings).toEqual(['Cost & bill', 'Email', 'Details']);
+    expect(sectionHeadings).toEqual(['Details', 'Cost & bill', 'Email']);
   });
 });
 
@@ -234,10 +236,10 @@ describe('Previous and Next', () => {
 });
 
 describe('the way back', () => {
-  it('goes back to Home with the same filters and pages from "← Readings"', async () => {
+  it('goes back to Home with the same filters and pages from the back chevron', async () => {
     const router = await renderReadingPage(SENT_ID, FILTERED_SEARCH);
 
-    await userEvent.click(screen.getByRole('link', { name: 'Readings' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Back to readings' }));
 
     expect(await screen.findByRole('heading', { name: 'Water Readings' })).toBeVisible();
     expect(router.state.location.pathname).toBe(BASE_ROUTES_PATHS.HOME);
@@ -411,13 +413,14 @@ describe('the cost & bill card', () => {
     expect(pageRegion('Cost & bill')).toHaveTextContent('No bill');
   });
 
-  it('shows one "Add cost & bill" instead of empty rows when the reading has neither', async () => {
+  it('keeps both rows, each a dash named for what is missing, with a plus to add them, when the reading has neither', async () => {
     await renderReadingPage(NEWEST_ID);
 
     const card = pageRegion('Cost & bill');
     expect(within(card).getAllByRole('link')).toHaveLength(1);
     expect(within(card).getByRole('link', { name: 'Add cost & bill' })).toBeVisible();
-    expect(card).not.toHaveTextContent('No cost');
+    expect(within(card).getAllByText('—')).toHaveLength(2);
+    expect(card).toHaveTextContent('Cost—No costBill—No bill');
   });
 
   it('saves a cost from the dialog and shows it on the page, with a toast', async () => {
@@ -488,15 +491,17 @@ it('shows the day it was read and when it was saved under Details', async () => 
 });
 
 describe('the layout', () => {
-  it('puts the send action right under the digits on a phone, before the photo', async () => {
+  it('puts the send action in the title row on a phone, before the digits and the photo', async () => {
     await renderReadingPage(NEWEST_ID);
 
-    const digits = screen.getByText('00529');
+    const title = screen.getByRole('heading', { level: 1 });
     // The first Send; the email card has the same one further down.
     const [send] = within(main()).getAllByRole('link', { name: 'Send' });
+    const digits = screen.getByText('00529');
     const photo = screen.getByRole('button', { name: 'Open the photo full screen' });
-    expect(digits.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(send.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(send.compareDocumentPosition(digits) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(digits.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('puts the send action and the menu in the header on a wide screen, before the photo and the digits', async () => {

@@ -5,7 +5,7 @@ import ReadingSendStatus from '@components/ReadingSendStatus';
 import BillCell from './BillCell';
 import MissingValue from '@components/MissingValue';
 import RowActionsCell from './RowActionsCell';
-import RowDetailsLink from './RowDetailsLink';
+import RowDetailsLink from '@components/RowDetailsLink';
 
 type Props = {
   reading: ReadingApiModel;
@@ -26,7 +26,7 @@ function ReadingTableRow({ reading }: Props) {
       <TableCell>
         <ReadingSendStatus reading={reading} />
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="tabular-nums">
         {reading.costCents === null ? <MissingValue label={NO_COST} /> : formatCost(reading.costCents)}
       </TableCell>
       <BillCell reading={reading} />

@@ -19,7 +19,11 @@ async function renderHomeAndOpenMenu() {
   await screen.findByRole('heading', { name: 'Water Readings' });
 
   await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
-  await screen.findByRole('menu');
+  await screen.findByRole('dialog', { name: 'Menu' });
+}
+
+function drawer() {
+  return screen.getByRole('dialog', { name: 'Menu' });
 }
 
 afterEach(() => {
@@ -33,7 +37,7 @@ it('shows how to connect Hotmail when the server cannot send mail', async () => 
   renderRoutes(routes, { initialEntries: [BASE_ROUTES_PATHS.HOME] });
 
   await screen.findByRole('heading', { name: 'Water Readings' });
-  expect(screen.getByRole('status')).toHaveTextContent(/Hotmail not connected.*yarn mail:connect/);
+  expect(screen.getByRole('status')).toHaveTextContent(/Hotmail not connected.*docs\/guide\/hotmail\.md/);
 });
 
 it('shows no Hotmail banner when Hotmail is connected', async () => {
@@ -45,36 +49,36 @@ it('shows no Hotmail banner when Hotmail is connected', async () => {
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('offers the three themes in the header menu, with the current one checked', async () => {
+it('offers the three themes in the menu drawer, with the current one pressed', async () => {
   await renderHomeAndOpenMenu();
 
-  expect(screen.getByRole('menuitemradio', { name: 'Light' })).not.toBeChecked();
-  expect(screen.getByRole('menuitemradio', { name: 'Dark' })).not.toBeChecked();
-  expect(screen.getByRole('menuitemradio', { name: 'System' })).toBeChecked();
+  expect(within(drawer()).getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'false');
+  expect(within(drawer()).getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'false');
+  expect(within(drawer()).getByRole('button', { name: 'System' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-it('switches to the theme picked in the header menu, and remembers it', async () => {
+it('switches to the theme picked in the menu drawer, and remembers it', async () => {
   await renderHomeAndOpenMenu();
 
-  await userEvent.click(screen.getByRole('menuitemradio', { name: 'Dark' }));
+  await userEvent.click(within(drawer()).getByRole('button', { name: 'Dark' }));
 
   expect(document.documentElement).toHaveClass(DARK_CLASS);
   expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe(ThemeUtil.DARK);
 });
 
-it('opens Costs from the header menu', async () => {
+it('opens Costs from the menu drawer', async () => {
   await renderHomeAndOpenMenu();
 
-  await userEvent.click(screen.getByRole('menuitem', { name: 'Costs' }));
+  await userEvent.click(within(drawer()).getByRole('link', { name: 'Costs' }));
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Remove filter: This year' })).toBeVisible();
 });
 
-it('opens Settings from the header menu', async () => {
+it('opens Settings from the menu drawer', async () => {
   await renderHomeAndOpenMenu();
 
-  await userEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
+  await userEvent.click(within(drawer()).getByRole('link', { name: 'Settings' }));
 
   expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 });
@@ -149,10 +153,10 @@ describe('how the sidebar starts', () => {
   });
 });
 
-it('signs out from the header menu and opens the login page', async () => {
+it('signs out from the menu drawer and opens the login page', async () => {
   await renderHomeAndOpenMenu();
 
-  await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+  await userEvent.click(within(drawer()).getByRole('button', { name: 'Sign out' }));
 
   expect(await screen.findByRole('heading', { name: 'Welcome back!' })).toBeVisible();
 });

@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
 import { SidebarMenuButton, SidebarMenuItem } from '@components/ui/sidebar';
-import type { SidebarPage } from '../types';
+import type { AppPageUtil } from '@app-types/utility';
 import SidebarItemLabel from './SidebarItemLabel';
 
 type Props = {
-  page: SidebarPage;
+  page: AppPageUtil;
   isCurrent: boolean;
 };
 

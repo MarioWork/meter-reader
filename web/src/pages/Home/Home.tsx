@@ -16,8 +16,8 @@ import { useIsFilteringHistory } from '@hooks/useIsFilteringHistory';
 import { cn } from '@utils/classNameUtils';
 
 // Phone first: the title, the filters, the last reading on top, the earlier ones as cards below it, more as the user
-// scrolls, and New reading stuck to the bottom; a focused control scrolled to the bottom keeps clear of that bar (WCAG
-// 2.4.11). A wide screen uses the whole column for two tiles: the title, Export, New reading and the filters in one,
+// scrolls, and New reading floating in the bottom corner, with room left under the history so the last card and a
+// focused control scroll clear of it (WCAG 2.4.11). A wide screen uses the whole column for two tiles: the title, Export, New reading and the filters in one,
 // the table in the other.
 function Home() {
   const { readings, totalResultNumber, loadedPageCount, hasLoadMoreFailed } =
@@ -44,17 +44,19 @@ function Home() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-6 **:scroll-mb-24 sm:max-w-none sm:gap-4 sm:pb-6 sm:**:scroll-mb-0">
+    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-6 pb-24 **:scroll-mb-24 sm:max-w-none sm:gap-4 sm:pb-6 sm:**:scroll-mb-0">
       <HistoryFilters
         filterButtonRef={filterButtonRef}
-        header={
+        isSticky
+        renderHeader={(filterButton) => (
           <HomeHeader
             filters={filters}
             isFiltered={isFiltered}
             hasReadings={hasReadings}
             totalResultNumber={totalResultNumber}
+            filterButton={filterButton}
           />
-        }
+        )}
       />
       {/* Dims while new filters load, so the change shows at once instead of the list swapping out of nowhere. */}
       <HistoryContainer
