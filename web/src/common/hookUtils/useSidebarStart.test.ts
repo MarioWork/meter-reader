@@ -5,7 +5,6 @@ import { SIDEBAR_START_STORAGE_KEY, useSidebarStart } from './useSidebarStart';
 
 afterEach(() => {
   window.localStorage.clear();
-  vi.restoreAllMocks();
 });
 
 it('starts expanded when nothing is saved on this device', () => {

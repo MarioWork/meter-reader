@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from 'react';
-
-// A stored value and its setter, shaped like useState's.
-export type LocalStorageState<Value extends string> = [Value, (value: Value) => void];
+import type { LocalStorageStateUtil } from '@app-types/utility';
 
 type Options<Value extends string> = {
   key: string;
@@ -41,7 +39,7 @@ export function useLocalStorage<Value extends string>({
   key,
   fallback,
   values,
-}: Options<Value>): LocalStorageState<Value> {
+}: Options<Value>): LocalStorageStateUtil<Value> {
   const storedValue = useSyncExternalStore(subscribe, () => readStoredValue(key));
   const value = values.find((knownValue) => knownValue === storedValue) ?? fallback;
 

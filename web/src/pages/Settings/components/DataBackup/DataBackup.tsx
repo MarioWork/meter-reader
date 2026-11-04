@@ -1,6 +1,6 @@
 import readingService from '@services/readingService/readingService';
-import DownloadLink from '@components/DownloadLink';
 import SettingsCard from '../SettingsCard';
+import DownloadLink from './components/DownloadLink';
 
 const TITLE = 'Data';
 const DESCRIPTION =

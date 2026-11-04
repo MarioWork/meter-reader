@@ -1,8 +1,10 @@
 export { ApiUrlParamsUtil } from './apiUrlParamsUtil.type';
 export { AuthStateUtil } from './authStateUtil.type';
 export { HttpVerbsUtil } from './httpVerbsUtil.type';
+export type { ChoiceOptionUtil } from './choiceOptionUtil.type';
 export type { JSONResponseUtil } from './jsonResponseUtil.type';
 export type { LoaderDataUtil } from './loaderDataUtil.type';
+export type { LocalStorageStateUtil } from './localStorageStateUtil.type';
 export { MailStateUtil } from './mailStateUtil.type';
 export { MessageDateFormatUtil } from './messageDateFormatUtil.type';
 export { DEFAULT_FIRST_PAGE, DEFAULT_PAGINATION, PAGE_SIZE } from './paginationUtil.type';
