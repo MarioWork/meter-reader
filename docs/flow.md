@@ -28,7 +28,7 @@ flowchart TD
     setupLink --> setup["User opens it, sets a password and/or a passkey"]
     setup --> signedIn(["Signed in"])
 
-    reg["Register the app with Microsoft<br/>(README, once)"] --> connect["yarn mail:connect"]
+    reg["Register the app with Microsoft<br/>(docs/guide/hotmail.md, once)"] --> connect["yarn mail:connect"]
     connect --> code["Prints a code + microsoft.com/devicelogin"]
     code --> approve["User approves on their phone"]
     approve --> saved(["Token saved; refreshed every 30 min"])

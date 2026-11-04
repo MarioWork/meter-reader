@@ -1,8 +1,8 @@
 # The home-server front door: HTTPS with Caddy's own local CA (the camera and "Add to Home Screen" need a secure
 # context), the built app as static files, and the API proxied on the same origin.
-# SITE_ADDRESS carries the port (https://meter.home.arpa:8443): 80 and 443 belong to my-funko-collection.
+# SITE_ADDRESS carries the port (https://meter.home.arpa:8443): 80 and 443 are left to other services on the host.
 {
-	# No port-80 redirect listener: it would clash with the funko container on the same host.
+	# No port-80 redirect listener: it would clash with whatever else serves port 80 on the same host.
 	auto_https disable_redirects
 }
 
