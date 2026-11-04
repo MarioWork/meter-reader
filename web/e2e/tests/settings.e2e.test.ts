@@ -27,19 +27,24 @@ async function openSettings(settings: SettingsPage) {
 
 // The default project is a desktop browser (1280 px), so these run on a screen wide enough for two columns. jsdom has
 // no layout, so the columns are checked here rather than in Settings.test.tsx.
-test('puts the live preview beside the email fields, and the data backup below both', async ({ page }) => {
+test('puts the preview card beside the two field cards, Save under them, and the Data card below all', async ({
+  page,
+}) => {
   const settings = new SettingsPage(page);
   await openSettings(settings);
 
-  const emailFields = await boxOf(settings.emailFields);
-  const messageFields = await boxOf(settings.messageFields);
+  const emailAddresses = await boxOf(settings.emailAddressesCard);
+  const message = await boxOf(settings.messageCard);
   const preview = await boxOf(settings.preview);
   const saveButton = await boxOf(settings.saveButton);
   const dataBackup = await boxOf(settings.dataBackup);
 
-  expect(preview.x).toBeGreaterThanOrEqual(rightOf(emailFields));
-  expect(preview.x).toBeGreaterThanOrEqual(rightOf(messageFields));
-  expect(preview.y).toBeLessThan(bottomOf(emailFields));
+  expect(preview.x).toBeGreaterThanOrEqual(rightOf(emailAddresses));
+  expect(preview.x).toBeGreaterThanOrEqual(rightOf(message));
+  expect(preview.y).toBeLessThan(bottomOf(emailAddresses));
+  expect(message.y).toBeGreaterThanOrEqual(bottomOf(emailAddresses));
+  expect(saveButton.y).toBeGreaterThanOrEqual(bottomOf(message));
+  expect(saveButton.x).toBeLessThan(preview.x);
   expect(dataBackup.y).toBeGreaterThanOrEqual(bottomOf(saveButton));
   expect(dataBackup.y).toBeGreaterThanOrEqual(bottomOf(preview));
 });

@@ -3,8 +3,9 @@ type Props = {
 };
 
 const NOT_SET_LABEL = 'Not set';
-const HINT =
-  'Mail goes out from the Hotmail account yarn mail:connect signed in with. Connect another one to change it.';
+const HINT_START = 'Set on the server: mail goes out from the Hotmail account ';
+const CONNECT_COMMAND = 'yarn mail:connect';
+const HINT_END = ' signed in with. Connect another one to change it.';
 
 // "From" is the connected Microsoft account, so it is shown, never edited. MAIL_FROM on the server is its label.
 function FromAddress({ from }: Props) {
@@ -14,7 +15,11 @@ function FromAddress({ from }: Props) {
         <dt className="font-medium">From</dt>
         <dd className="break-all text-muted-foreground">{from ?? NOT_SET_LABEL}</dd>
       </dl>
-      <p className="text-sm text-muted-foreground">{HINT}</p>
+      <p className="text-sm text-muted-foreground">
+        {HINT_START}
+        <code className="font-mono">{CONNECT_COMMAND}</code>
+        {HINT_END}
+      </p>
     </div>
   );
 }

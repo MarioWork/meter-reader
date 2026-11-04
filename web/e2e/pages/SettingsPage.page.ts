@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { SETTINGS_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
-// Settings: the Email and Message fields, the live Preview, Save, and the Data backup below them.
+// Settings: the Email addresses and Message cards, the live Preview card, the save bar, and the Data card below them.
 export class SettingsPage {
   private readonly page: Page;
 
@@ -13,12 +13,12 @@ export class SettingsPage {
     return this.page.getByRole('heading', { level: 1, name: 'Settings' });
   }
 
-  get emailFields() {
-    return this.page.getByRole('group', { name: 'Email' });
+  get emailAddressesCard() {
+    return this.page.getByRole('region', { name: 'Email addresses' });
   }
 
-  get messageFields() {
-    return this.page.getByRole('group', { name: 'Message' });
+  get messageCard() {
+    return this.page.getByRole('region', { name: 'Message' });
   }
 
   get bodyTemplateField() {
