@@ -1355,6 +1355,33 @@ describe('the history on a wide screen', () => {
     expect(filterBar.compareDocumentPosition(readingTable())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  it('offers New reading after Export and before the filters, and opens it as a dialog', async () => {
+    await renderHome();
+
+    const exportLink = screen.getByRole('link', { name: 'Export as spreadsheet' });
+    const newReadingLink = screen.getByRole('link', { name: 'New reading' });
+    const filterBar = screen.getByRole('region', { name: 'Filters' });
+    expect(exportLink.compareDocumentPosition(newReadingLink)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(newReadingLink.compareDocumentPosition(filterBar)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    await userEvent.click(newReadingLink);
+
+    expect(await screen.findByRole('dialog', { name: 'New reading' })).toBeVisible();
+  });
+
+  it('points up to New reading when the history is empty', async () => {
+    server.use(
+      http.get(`${TEST_BASE_API_URL}/readings`, () =>
+        HttpResponse.json({ data: [], totalResultNumber: 0, currentPage: 1 }),
+      ),
+    );
+
+    await renderHome();
+
+    expect(screen.getByText(/New reading above/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'New reading' })).toBeVisible();
+  });
+
   it('adds the older readings as rows with Load more', async () => {
     await renderHome();
 
@@ -1392,7 +1419,7 @@ it('shows the history as cards, not a table, on a phone', async () => {
 });
 
 describe('exporting the history', () => {
-  const EXPORT_LINK_NAME = 'Export readings as a spreadsheet';
+  const EXPORT_LINK_NAME = 'Export as spreadsheet';
 
   function exportUrl() {
     return new URL(screen.getByRole('link', { name: EXPORT_LINK_NAME }).getAttribute('href') ?? '');

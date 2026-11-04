@@ -3,7 +3,7 @@ import BillButton from '@components/BillButton';
 import { TableCell } from '@components/ui/table';
 import { cn } from '@utils/classNameUtils';
 import { ABOVE_DETAILS_LINK } from '../readingTableUtils';
-import MissingValue from './MissingValue';
+import MissingValue from '@components/MissingValue';
 
 type Props = {
   reading: ReadingApiModel;

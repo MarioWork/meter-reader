@@ -1,13 +1,12 @@
 import readingService from '@services/readingService/readingService';
-import DownloadLink from '@components/DownloadLink';
+import IconDownloadLink from '@components/IconDownloadLink';
 import type { HistoryFilterValues } from '@components/HistoryFilters/types';
 
 type Props = {
   filters: HistoryFilterValues;
 };
 
-const EXPORT_LABEL = 'Export';
-const EXPORT_ACCESSIBLE_NAME = 'Export readings as a spreadsheet';
+const EXPORT_LABEL = 'Export as spreadsheet';
 
 // Downloads the history as an .xlsx file: every reading Home's filters match, not only the pages loaded. A link, as
 // the browser fetches a file; the API names it and sends it as a download, so the page stays where it is.
@@ -16,7 +15,7 @@ function ExportReadingsLink({ filters }: Props) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const href = readingService.getReadingsSpreadsheetUrl({ ...filters, timeZone });
 
-  return <DownloadLink href={href} label={EXPORT_LABEL} accessibleName={EXPORT_ACCESSIBLE_NAME} />;
+  return <IconDownloadLink href={href} label={EXPORT_LABEL} />;
 }
 
 export default ExportReadingsLink;

@@ -8,11 +8,10 @@ import { cn } from '@utils/classNameUtils';
 import CostList from './components/CostList';
 import CostsChart from './components/CostsChart';
 import CostsTotal from './components/CostsTotal';
-import ExportCostsLink from './components/ExportCostsLink';
+import CostsHeader from './components/CostsHeader';
 import NoCosts from './components/NoCosts';
 import type { loader } from './costsLoader';
 
-const PAGE_TITLE = 'Water Readings Costs';
 const SUMMARY_LABEL = 'Summary';
 
 // Costs filters by day only.
@@ -40,12 +39,11 @@ function Costs() {
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 lg:max-w-none lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{PAGE_TITLE}</h1>
-        {/* Only while readings are listed: an empty page has nothing to export. */}
-        {hasListedReadings && <ExportCostsLink range={filters} />}
-      </div>
-      <HistoryFilters filterButtonRef={filterButtonRef} hasStatusFilter={FILTERS_OPTIONS.hasStatusFilter} />
+      <HistoryFilters
+        filterButtonRef={filterButtonRef}
+        hasStatusFilter={FILTERS_OPTIONS.hasStatusFilter}
+        header={<CostsHeader range={filters} hasListedReadings={hasListedReadings} />}
+      />
       {/* Dims while new filters load, so the change shows at once. */}
       <div
         aria-busy={isFiltering}
