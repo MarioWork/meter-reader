@@ -42,7 +42,7 @@ function BillViewer({ isOpen, titleId, returnFocusRef, onClose, children }: Prop
       // Next to a button inside a live region (the cost & bill dialog's saved bill), the viewer is no part of it: the
       // dialog is announced as a dialog, and its own status lines speak for themselves.
       aria-live="off"
-      // Focusable from script only: Try again moves focus here while its own button gives way to the spinner.
+      // Focusable from script only: Try again moves focus here while its own button gives way to the loading meter.
       tabIndex={-1}
       onKeyDown={handleKeyDown}
       onClose={handleClose}

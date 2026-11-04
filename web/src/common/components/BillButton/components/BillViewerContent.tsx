@@ -15,7 +15,7 @@ type Props = {
   onRetry: () => void;
 };
 
-// What the viewer shows while open: its header, then the spinner, the failure, or the toolbar and the pages.
+// What the viewer shows while open: its header, then the loading meter, the failure, or the toolbar and the pages.
 function BillViewerContent({ titleId, billName, viewerState, onClose, onRetry }: Props) {
   const { zoom, shownZoom, canZoomIn, canZoomOut, zoomIn, zoomOut, pinchTo, endPinch } = useBillZoom();
 

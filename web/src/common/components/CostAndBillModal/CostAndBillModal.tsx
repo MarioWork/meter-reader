@@ -1,7 +1,7 @@
 import { SaveIcon } from 'lucide-react';
 import ErrorAlert from '@components/ErrorAlert';
 import { Button } from '@components/ui/button';
-import { Spinner } from '@components/ui/spinner';
+import LoadingDigits from '@components/LoadingDigits';
 import { formatIsoDate } from '@utils/dateUtils';
 import { getCostAndBillLabel } from '@utils/costAndBillUtils';
 import ResponsiveDialog from '@components/ResponsiveDialog';
@@ -37,7 +37,7 @@ function CostAndBillModal() {
 
   const footer = (
     <Button type="submit" form={FORM_ID} disabled={isSaving}>
-      {isSaving ? <Spinner aria-hidden="true" /> : <SaveIcon aria-hidden="true" />}
+      {isSaving ? <LoadingDigits /> : <SaveIcon aria-hidden="true" />}
       {isSaving ? SAVING_LABEL : SAVE_LABEL}
     </Button>
   );

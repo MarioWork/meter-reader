@@ -3,7 +3,7 @@ import ErrorAlert from '@components/ErrorAlert';
 import ProviderEmailMissingNote from '@components/ProviderEmailMissingNote';
 import EmailAddresses from '@components/EmailAddresses';
 import { Button } from '@components/ui/button';
-import { Spinner } from '@components/ui/spinner';
+import LoadingDigits from '@components/LoadingDigits';
 import EmailAttachment from './components/EmailAttachment';
 import EmailTextFields from './components/EmailTextFields';
 import MailNotConnectedNote from './components/MailNotConnectedNote';
@@ -41,7 +41,7 @@ function SendReadingModal() {
 
   const footer = (
     <Button type="submit" form={FORM_ID} disabled={!canSend}>
-      {isSending ? <Spinner aria-hidden="true" /> : <SendIcon aria-hidden="true" />}
+      {isSending ? <LoadingDigits /> : <SendIcon aria-hidden="true" />}
       {isSending ? SENDING_LABEL : SEND_LABEL}
     </Button>
   );

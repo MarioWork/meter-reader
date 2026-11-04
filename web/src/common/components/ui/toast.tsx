@@ -5,7 +5,8 @@ import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { cn } from '@utils/classNameUtils';
 
 import { Button } from '@components/ui/button';
-import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from 'lucide-react';
+import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon } from 'lucide-react';
+import LoadingDigits from '@components/LoadingDigits';
 
 const toast = ToastPrimitive.createToastManager();
 
@@ -136,7 +137,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
   }
 
   if (type === 'loading') {
-    icon = <Loader2Icon className="animate-spin" aria-hidden="true" />;
+    icon = <LoadingDigits />;
   }
 
   if (!icon) {
