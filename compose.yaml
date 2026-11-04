@@ -1,9 +1,9 @@
 # Home server deployment. Everything worth backing up lives in ./data (the Postgres files and ./data/uploads).
-# The database password comes from a .env file next to this one: POSTGRES_PASSWORD=<letters and digits> (README,
-# .env.example).
+# The database password comes from a .env file next to this one: POSTGRES_PASSWORD=<letters and digits>
+# (docs/guide/home-server.md, .env.example).
 # The web container (Caddy) is the only thing on the LAN: it serves the app over HTTPS on port 8443 and proxies /api
 # to the api container. Neither the api nor the database is published.
-# Ports 80 and 443 belong to my-funko-collection on the same host, so this app stays off them.
+# Ports 80 and 443 are left to other services on the same host, so this app stays off them.
 x-app-address: &app-address https://meter.home.arpa:8443
 # The one database URL, used by migrate and api. The password goes inside a URL, hence letters and digits only.
 x-database-url: &database-url postgresql://meter:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meter
@@ -56,14 +56,14 @@ services:
       TRUST_PROXY_HOPS: 1
       # Where the app is opened: the setup link points here, and passkeys belong to this host name.
       APP_ORIGIN: *app-address
-      # The Microsoft Entra app the server sends mail through (README, "Connecting Hotmail"). Empty until registered.
+      # The Microsoft Entra app the server sends mail through (docs/guide/hotmail.md). Empty until registered.
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
       # Your Hotmail address, shown as "From" in the app. Optional.
       MAIL_FROM: ${MAIL_FROM:-}
       # The photos and the bills, on the volume below, so they outlive the container.
       UPLOADS_DIR: /app/data/uploads
     volumes:
-      # Owned by uid 1000 (the image's `node` user), or the api refuses to start (README).
+      # Owned by uid 1000 (the image's `node` user), or the api refuses to start (docs/guide/home-server.md).
       - ./data/uploads:/app/data/uploads
     depends_on:
       migrate:
