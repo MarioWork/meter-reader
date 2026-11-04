@@ -1,4 +1,4 @@
-import type { PhotoSize } from './photoShrinkUtils';
+import type { PhotoSize } from '@utils/photoShrinkUtils';
 import type { BoxSizeChange, CropBox, CropPoint, PhotoCrop, PixelBox, PixelShift, QuarterTurn } from './types';
 
 // The smallest box, so a slip of the finger never leaves nothing to read.

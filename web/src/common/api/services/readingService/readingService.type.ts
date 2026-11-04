@@ -55,3 +55,10 @@ export const UpdateReadingSchema = object({
 });
 
 export type UpdateReading = InferType<typeof UpdateReadingSchema>;
+
+// An uploaded photo (photoService.addPhoto) for a reading saved without one. A reading's photo is never swapped.
+export const AddReadingPhotoSchema = object({
+  photoId: number().integer().positive().required(),
+});
+
+export type AddReadingPhoto = InferType<typeof AddReadingPhotoSchema>;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@utils/classNameUtils';
 import { isSidewaysTurn, turnedSize } from '../../../../../photoCropUtils';
-import type { PhotoSize } from '../../../../../photoShrinkUtils';
+import type { PhotoSize } from '@utils/photoShrinkUtils';
 import type { CropBox, PhotoCrop, QuarterTurn } from '../../../../../types';
 import { useCropDrag } from '../hooks/useCropDrag';
 

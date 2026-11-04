@@ -2,7 +2,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@components/ui/chart';
 import { formatCost, formatWholeEuros } from '@utils/costUtils';
 import { formatIsoDate } from '@utils/dateUtils';
-import { costsChartLabel, formatTickDate, type CostBar } from '../costsChartUtils';
+import { barDatesById, costsChartLabel, formatTickDate, type CostBar } from '../costsChartUtils';
 
 type Props = {
   bars: CostBar[];
@@ -10,6 +10,9 @@ type Props = {
 
 // A bar's corner radii: top left, top right, bottom right, bottom left.
 type BarCornerRadii = [number, number, number, number];
+
+// One hovered series in the tooltip, with the bar it belongs to.
+type TooltipEntry = { payload?: Partial<CostBar> };
 
 const COST_LABEL = 'Cost';
 
@@ -26,11 +29,24 @@ const TICK_GAP = 8;
 const MIN_TICK_SPACING = 24;
 const VALUE_AXIS_WIDTH = 48;
 
-// The hovered bar's date in full, "1 Sept 2025". Recharts hands it over as the bar's category, the ISO day.
-function tooltipDate(isoDate: React.ReactNode): React.ReactNode {
-  if (typeof isoDate !== 'string') return isoDate;
+// The hovered bar's date in full, "1 Sept 2025", read off the bar itself: the tooltip's own label is its series name.
+function tooltipDate(_label: React.ReactNode, payload: readonly TooltipEntry[]): React.ReactNode {
+  const isoDate = payload[0]?.payload?.date;
+
+  if (isoDate === undefined) return null;
 
   return formatIsoDate(isoDate);
+}
+
+// An axis tick, "1 Sept 25", for the bar's reading.
+function tickDateFor(datesById: Map<number, string>) {
+  return (readingId: number): string => {
+    const isoDate = datesById.get(readingId);
+
+    if (isoDate === undefined) return '';
+
+    return formatTickDate(isoDate);
+  };
 }
 
 // Its cost to the cent, "€38.20", in text colours: the bar carries the colour.
@@ -45,8 +61,11 @@ function tooltipCost(costCents: unknown): React.ReactNode {
 
 // The bars themselves, oldest on the left. A picture of the list below it, which holds the same numbers: screen
 // readers get one sentence that says so (role="img"), and the bars take no focus (no accessibility layer), so nothing
-// is announced twice. Hovering a bar shows its date and cost.
+// is announced twice. Hovering a bar shows its date and cost. Each bar has its own place, by its reading, so two
+// readings of one day are two bars, each with its own tooltip.
 function CostsBarChart({ bars }: Props) {
+  const datesById = barDatesById(bars);
+
   return (
     <ChartContainer
       config={CHART_CONFIG}
@@ -57,12 +76,12 @@ function CostsBarChart({ bars }: Props) {
       <BarChart data={bars} accessibilityLayer={false} margin={CHART_MARGIN}>
         <CartesianGrid vertical={false} />
         <XAxis
-          dataKey="date"
+          dataKey="readingId"
           tickLine={false}
           axisLine={false}
           tickMargin={TICK_GAP}
           minTickGap={MIN_TICK_SPACING}
-          tickFormatter={formatTickDate}
+          tickFormatter={tickDateFor(datesById)}
         />
         <YAxis tickLine={false} axisLine={false} width={VALUE_AXIS_WIDTH} tickFormatter={formatWholeEuros} />
         <ChartTooltip

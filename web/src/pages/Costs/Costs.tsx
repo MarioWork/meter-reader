@@ -18,7 +18,7 @@ const SUMMARY_LABEL = 'Summary';
 const FILTERS_OPTIONS = { hasStatusFilter: false };
 
 // What the readings cost: the sum, a bar per reading over time, and the same readings as a list, which is also the
-// chart's text alternative. The list also holds the readings with only a Bill, which get no bar and add nothing to the
+// chart's text alternative. The list also holds the readings with no Cost (a Bill only, or neither), which get no bar and add nothing to the
 // sum. Narrowed by the same day range as Home's history, kept in the url, and exported for it. A phone stacks them in
 // one narrow column; from `lg`, with room beside the sidebar, the page takes the shell's full column: the total and
 // the chart share the top row, the total a third of it and as tall as the chart, its content at the top, and the list
@@ -43,7 +43,9 @@ function Costs() {
       <HistoryFilters
         filterButtonRef={filterButtonRef}
         hasStatusFilter={FILTERS_OPTIONS.hasStatusFilter}
-        header={<CostsHeader range={filters} hasListedReadings={hasListedReadings} />}
+        renderHeader={(filterButton) => (
+          <CostsHeader range={filters} hasListedReadings={hasListedReadings} filterButton={filterButton} />
+        )}
       />
       {/* Dims while new filters load, so the change shows at once. */}
       <div

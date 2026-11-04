@@ -81,5 +81,5 @@ test('home shows how to connect Hotmail when the server cannot send mail', async
 
   const banner = page.getByRole('status');
   await expect(banner).toContainText('Hotmail not connected');
-  await expect(banner).toContainText('yarn mail:connect');
+  await expect(banner).toContainText('docs/guide/hotmail.md');
 });

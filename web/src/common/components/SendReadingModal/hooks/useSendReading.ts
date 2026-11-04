@@ -21,7 +21,9 @@ export function useSendReading() {
 
   const { readingEmail } = useLoaderData<LoaderDataUtil<typeof loader>>();
   const layoutData = useRouteLoaderData<LoaderDataUtil<typeof signedInLayoutLoader>>(ROUTE_IDS.SIGNED_IN_LAYOUT);
-  const [isAttachingPhoto, setIsAttachingPhoto] = useState(readingEmail.attachment !== null);
+  // Null until the user flips the switch: the photo goes with the email by default, also one added in the preview.
+  const [attachingChoice, setIsAttachingPhoto] = useState<boolean | null>(null);
+  const isAttachingPhoto = readingEmail.attachment !== null && (attachingChoice ?? true);
   const { register, handleSubmit, formState } = useForm<EmailText>({
     defaultValues: { subject: readingEmail.subject, body: readingEmail.body },
     resolver: yupResolver(EmailTextSchema),

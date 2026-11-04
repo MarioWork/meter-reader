@@ -33,6 +33,12 @@ export function costBars(readings: ReadingApiModel[]): CostBar[] {
     .reverse();
 }
 
+// Each bar's day, by its reading: the chart places the bars by reading, not by day, as two readings of one day must
+// be two bars the pointer can tell apart, and the axis and the tooltip turn the reading back into its day.
+export function barDatesById(bars: CostBar[]): Map<number, string> {
+  return new Map(bars.map((bar) => [bar.readingId, bar.date]));
+}
+
 export function formatTickDate(isoDate: string): string {
   return TICK_DATE_FORMAT.format(new Date(`${isoDate}${START_OF_DAY_UTC}`));
 }

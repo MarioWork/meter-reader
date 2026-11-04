@@ -46,10 +46,18 @@ function toApiError(statusCode: number | undefined, data: unknown): ApiError {
   return { statusCode, code: data.code, message, issues };
 }
 
+// A write with no body (sign out, delete) goes out with no Content-Type: left alone, axios labels it a form
+// (application/x-www-form-urlencoded), which the API refuses with 415, so the write never happens.
+function withoutEmptyBodyType(config: AxiosRequestConfig): AxiosRequestConfig {
+  if (config.data !== undefined) return config;
+
+  return { ...config, headers: { ...config.headers, 'Content-Type': false } };
+}
+
 // Only a failed request becomes `success: false`; any other error is a bug and still throws.
 export async function axiosActions<T = unknown>(config: AxiosRequestConfig): Promise<JSONResponseUtil<T>> {
   try {
-    const response = await axios.request<T>(config);
+    const response = await axios.request<T>(withoutEmptyBodyType(config));
 
     return { success: true, data: response.data };
   } catch (error) {

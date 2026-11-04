@@ -6,18 +6,23 @@ import { createBillMockModel } from '@mocks/handlers/bill/models/billMockModel.m
 import { updateMockReading } from '@mocks/handlers/reading/readingMockState';
 import { server, TEST_BASE_API_URL } from '@mocks/server';
 import { mockWideScreen, renderRoutes, screen, userEvent, waitFor, within } from '@test-utils';
+import { thisYearCostsPath } from '@utils/historyFilterUtils';
 
 // The mock history has a cost on 11 of its 14 readings: none on 1 Mar 2026, 1 Sep 2026 and 1 Oct 2026.
 const ALL_COSTS_TOTAL = '€444.80';
 const ALL_COSTS_COUNT = 11;
+// Every reading in the mock history, with a cost or not: the list holds them all.
+const ALL_READINGS_COUNT = 14;
 // 1 Jan 2026 (€44.10) and 1 Feb 2026 (€37.75); 1 Mar 2026 has no cost.
 const FIRST_QUARTER_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-01-01&to=2026-03-31`;
 // The mock history's 1 Sep 2026 reading (no cost) and 1 Aug 2026 reading (€39.05).
 const NO_COST_READING_ID = 13;
 const COSTED_READING_ID = 12;
 const EXPORT_LINK_NAME = 'Export as spreadsheet';
-// September and October 2026 have no cost.
+// September and October 2026: two readings, neither with a cost.
 const SEPT_OCT_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`;
+// A year the mock history has no reading in.
+const NO_READINGS_2027 = `${COSTS_ROUTES_PATHS.BASE}?from=2027-01-01&to=2027-12-31`;
 
 async function renderCosts(path = COSTS_ROUTES_PATHS.BASE) {
   const { router } = renderRoutes(routes, { initialEntries: [path] });
@@ -31,7 +36,7 @@ function total() {
 }
 
 function costList() {
-  return screen.getByRole('list', { name: 'Readings with a cost or a bill' });
+  return screen.getByRole('list', { name: 'Readings' });
 }
 
 function costItems() {
@@ -74,16 +79,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('lists only the readings that have a cost, newest first, with the sum of their costs', async () => {
+it('lists every reading, newest first, with the sum of only the ones with a cost', async () => {
   await renderCosts();
 
   expect(total()).toHaveTextContent(ALL_COSTS_TOTAL);
   expect(total()).toHaveTextContent(`${ALL_COSTS_COUNT} readings`);
-  expect(costItems()).toHaveLength(ALL_COSTS_COUNT);
-  expect(costItems()[0]).toHaveTextContent('1 Aug 2026');
-  expect(costItems()[0]).toHaveTextContent('€39.05');
-  expect(screen.queryByText('1 Mar 2026')).not.toBeInTheDocument();
-  expect(screen.queryByText('1 Oct 2026')).not.toBeInTheDocument();
+  expect(costItems()).toHaveLength(ALL_READINGS_COUNT);
+  expect(costItems()[0]).toHaveTextContent('1 Oct 2026');
+  expect(costItems()[0]).toHaveTextContent('No cost');
+  expect(costItems()[2]).toHaveTextContent('1 Aug 2026');
+  expect(costItems()[2]).toHaveTextContent('€39.05');
 });
 
 describe('readings with a bill', () => {
@@ -92,9 +97,9 @@ describe('readings with a bill', () => {
 
     await renderCosts();
 
-    expect(costItems()).toHaveLength(ALL_COSTS_COUNT + 1);
-    expect(costItems()[0]).toHaveTextContent('1 Sept 2026');
-    expect(costItems()[0]).toHaveTextContent('No cost');
+    expect(costItems()).toHaveLength(ALL_READINGS_COUNT);
+    expect(costItems()[1]).toHaveTextContent('1 Sept 2026');
+    expect(costItems()[1]).toHaveTextContent('No cost');
     expect(total()).toHaveTextContent(ALL_COSTS_TOTAL);
     expect(total()).toHaveTextContent(`${ALL_COSTS_COUNT} readings`);
     expect(
@@ -104,30 +109,31 @@ describe('readings with a bill', () => {
     ).toBeVisible();
   });
 
-  it("gives each row with a bill a button, by the file's name, that opens it, and the rows without one none", async () => {
+  it('gives each row with a bill a "Bill" button, named with the file, that opens it, and the rows without one none', async () => {
     saveMockBill(NO_COST_READING_ID, 'september.pdf');
     saveMockBill(COSTED_READING_ID, 'august.pdf');
 
     await renderCosts();
 
-    const onlyBill = within(costItems()[0]).getByRole('button', {
-      name: 'september.pdf, opens the bill of 1 Sept 2026',
+    const onlyBill = within(costItems()[1]).getByRole('button', {
+      name: 'Bill: september.pdf, opens the bill of 1 Sept 2026',
     });
-    expect(onlyBill).toHaveTextContent('september.pdf');
+    expect(onlyBill).toHaveTextContent('Bill');
+    expect(onlyBill).not.toHaveTextContent('september.pdf');
     expect(onlyBill).toHaveAttribute('aria-haspopup', 'dialog');
     expect(
-      within(costItems()[1]).getByRole('button', { name: 'august.pdf, opens the bill of 1 Aug 2026' }),
+      within(costItems()[2]).getByRole('button', { name: 'Bill: august.pdf, opens the bill of 1 Aug 2026' }),
     ).toBeVisible();
-    expect(costItems()[1]).toHaveTextContent('€39.05');
-    expect(within(costItems()[2]).queryByRole('button')).not.toBeInTheDocument();
+    expect(costItems()[2]).toHaveTextContent('€39.05');
+    expect(within(costItems()[0]).queryByRole('button', { name: /^Bill/ })).not.toBeInTheDocument();
   });
 
-  it('lists the readings with only a bill when no reading in the dates has a cost', async () => {
+  it('lists the readings, with their bill, and a sum of 0 when no reading in the dates has a cost', async () => {
     saveMockBill(NO_COST_READING_ID);
 
     await renderCosts(SEPT_OCT_2026);
 
-    expect(costItems()).toHaveLength(1);
+    expect(costItems()).toHaveLength(2);
     expect(total()).toHaveTextContent('€0.00');
     expect(total()).toHaveTextContent('0 readings');
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -154,8 +160,8 @@ describe('exporting the costs', () => {
     expect(url.searchParams.get('to')).toBe('2026-03-31');
   });
 
-  it('is not offered when no reading in the dates has a cost or a bill', async () => {
-    await renderCosts(SEPT_OCT_2026);
+  it('is not offered when no reading is in the dates', async () => {
+    await renderCosts(NO_READINGS_2027);
 
     expect(screen.queryByRole('link', { name: EXPORT_LINK_NAME })).not.toBeInTheDocument();
   });
@@ -179,7 +185,7 @@ it('narrows the chart, the sum and the list to the day range in the url', async 
   expect(received.at(-1)?.get('to')).toBe('2026-03-31');
   expect(total()).toHaveTextContent('€81.85');
   expect(total()).toHaveTextContent('2 readings');
-  expect(costItems()).toHaveLength(2);
+  expect(costItems()).toHaveLength(3);
   expect(screen.getByRole('img', { name: /Bar chart of 2 costs/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Remove filter: Jan 2026 – Mar 2026' })).toBeVisible();
 });
@@ -209,7 +215,7 @@ it('shows every cost again once the date filter is removed', async () => {
 it('filters by day only: no status choices, and a status in the url is ignored', async () => {
   await renderCosts(`${COSTS_ROUTES_PATHS.BASE}?status=failed`);
 
-  expect(costItems()).toHaveLength(ALL_COSTS_COUNT);
+  expect(costItems()).toHaveLength(ALL_READINGS_COUNT);
   expect(screen.queryByRole('list', { name: 'Active filters' })).not.toBeInTheDocument();
 
   await userEvent.click(screen.getByRole('button', { name: 'Filter' }));
@@ -222,16 +228,15 @@ it('says there are no costs yet when no reading has one', async () => {
 
   await renderCosts();
 
-  expect(screen.getByRole('heading', { name: 'No costs yet' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'No readings yet' })).toBeVisible();
   expect(screen.queryByRole('region', { name: 'Total' })).not.toBeInTheDocument();
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
 });
 
-it('says no cost matches the dates, and Clear filters shows every cost again', async () => {
-  // September and October 2026 have no cost.
-  const router = await renderCosts(SEPT_OCT_2026);
+it('says no reading is in the dates, and Clear filters shows every reading again', async () => {
+  const router = await renderCosts(NO_READINGS_2027);
 
-  expect(screen.getByRole('heading', { name: 'No costs in these dates' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'No readings in these dates' })).toBeVisible();
 
   await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 
@@ -270,7 +275,7 @@ describe('on a wide screen', () => {
   });
 
   function costTable() {
-    return screen.getByRole('table', { name: 'Readings with a cost or a bill' });
+    return screen.getByRole('table', { name: 'Readings' });
   }
 
   // Every row but the header row, newest first.
@@ -289,14 +294,15 @@ describe('on a wide screen', () => {
       .getAllByRole('columnheader')
       .map((header) => header.textContent);
     expect(headers).toEqual(['Date', 'Reading', 'Cost', 'Bill']);
-    expect(costRows()).toHaveLength(ALL_COSTS_COUNT);
-    expect(costRows()[0]).toHaveTextContent('1 Aug 2026');
-    expect(costRows()[0]).toHaveTextContent('00511');
-    expect(costRows()[0]).toHaveTextContent('€39.05');
+    expect(costRows()).toHaveLength(ALL_READINGS_COUNT);
+    expect(costRows()[0]).toHaveTextContent('1 Oct 2026');
+    expect(costRows()[2]).toHaveTextContent('1 Aug 2026');
+    expect(costRows()[2]).toHaveTextContent('00511');
+    expect(costRows()[2]).toHaveTextContent('€39.05');
     expect(
-      within(costRows()[0]).getByRole('button', { name: 'august.pdf, opens the bill of 1 Aug 2026' }),
+      within(costRows()[2]).getByRole('button', { name: 'august.pdf, opens the bill of 1 Aug 2026' }),
     ).toBeVisible();
-    expect(screen.queryByRole('list', { name: 'Readings with a cost or a bill' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Readings' })).not.toBeInTheDocument();
   });
 
   it('says a reading listed for its bill alone has no cost', async () => {
@@ -304,7 +310,21 @@ describe('on a wide screen', () => {
 
     await renderCosts();
 
-    expect(costRows()[0]).toHaveTextContent('1 Sept 2026');
-    expect(costRows()[0]).toHaveTextContent('No cost');
+    expect(costRows()[1]).toHaveTextContent('1 Sept 2026');
+    expect(costRows()[1]).toHaveTextContent('No cost');
   });
+});
+
+it('goes back to Costs with the same dates from a reading opened there', async () => {
+  mockWideScreen();
+  const { router } = renderRoutes(routes, { initialEntries: [thisYearCostsPath()] });
+  await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' });
+  const datesBefore = router.state.location.search;
+
+  await userEvent.click(within(screen.getByRole('table', { name: 'Readings' })).getAllByRole('link')[0]);
+  await userEvent.click(await screen.findByRole('link', { name: 'Back to costs' }));
+
+  await screen.findByRole('heading', { level: 1, name: 'Water Readings Costs' });
+  expect(router.state.location.search).toBe(datesBefore);
+  expect(screen.getByRole('button', { name: 'This year' })).toHaveAttribute('aria-pressed', 'true');
 });

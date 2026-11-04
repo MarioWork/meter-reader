@@ -1,4 +1,5 @@
 export { ApiUrlParamsUtil } from './apiUrlParamsUtil.type';
+export type { AppPageUtil } from './appPageUtil.type';
 export { AuthStateUtil } from './authStateUtil.type';
 export { HttpVerbsUtil } from './httpVerbsUtil.type';
 export type { ChoiceOptionUtil } from './choiceOptionUtil.type';

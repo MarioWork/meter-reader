@@ -1,4 +1,4 @@
-import { PencilIcon, PlusIcon } from 'lucide-react';
+import { PencilIcon, PlusIcon, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { ReadingId } from '@app-types/models';
@@ -15,20 +15,24 @@ type Props = {
 const ADD_LABEL = 'Add cost & bill';
 const EDIT_LABEL = 'Edit cost & bill';
 
-// Opens the cost & bill dialog over this page. A link, as the dialog has its own url. Add is a button with its words;
-// Edit, in the card's corner, a pencil alone, named "Edit cost & bill" and showing that as a tooltip on hover and on
-// keyboard focus. 32 px square, over the 24 px minimum target.
+// Type of link it is, by whether there is anything to edit yet.
+// Whether there is anything to edit yet.
+type CostAndBillLinkKind = 'add' | 'edit';
+
+// What the link shows and is named, by kind.
+type CostAndBillLinkLook = { label: string; Icon: LucideIcon };
+
+const LINK_MAP: Record<CostAndBillLinkKind, CostAndBillLinkLook> = {
+  add: { label: ADD_LABEL, Icon: PlusIcon },
+  edit: { label: EDIT_LABEL, Icon: PencilIcon },
+};
+
+// Opens the cost & bill dialog over this page. A link, as the dialog has its own url. In the card's corner, an icon
+// alone: a plus while there is nothing yet, a pencil after. Named "Add cost & bill" or "Edit cost & bill", which also
+// shows as a tooltip on hover and on keyboard focus. 32 px square, over the 24 px minimum target.
 function CostAndBillLink({ readingId, isEditing }: Props) {
   const costAndBillDialog = useToWithSearch(READING_ROUTES_PATHS.detailsCostAndBill(String(readingId)));
-
-  if (!isEditing) {
-    return (
-      <Link to={costAndBillDialog} className={buttonVariants({ variant: 'outline' })}>
-        <PlusIcon aria-hidden="true" />
-        {ADD_LABEL}
-      </Link>
-    );
-  }
+  const { label, Icon } = LINK_MAP[isEditing ? 'edit' : 'add'];
 
   return (
     <Tooltip>
@@ -36,14 +40,14 @@ function CostAndBillLink({ readingId, isEditing }: Props) {
         render={
           <Link
             to={costAndBillDialog}
-            aria-label={EDIT_LABEL}
+            aria-label={label}
             className={buttonVariants({ variant: 'ghost', size: 'icon' })}
           />
         }
       >
-        <PencilIcon aria-hidden="true" />
+        <Icon aria-hidden="true" />
       </TooltipTrigger>
-      <TooltipContent>{EDIT_LABEL}</TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 }

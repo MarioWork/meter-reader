@@ -13,7 +13,7 @@ type Props = {
 };
 
 const LEGEND = 'Email';
-const LEGEND_HINT = 'Goes out when you press Send reading. Filled in from the templates in Settings.';
+const LEGEND_HINT = 'Goes out when you press Send. Filled in from the templates in Settings.';
 const SUBJECT_ID = 'new-reading-subject';
 const SUBJECT_ERROR_ID = 'new-reading-subject-error';
 const BODY_ID = 'new-reading-body';

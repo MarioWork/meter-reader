@@ -14,6 +14,7 @@ function renderBillField(error?: string) {
     <BillField
       savedBill={SAVED_BILL}
       isBillRemoved={false}
+      chosenFileName={undefined}
       error={error}
       isDisabled={false}
       onFileChange={vi.fn()}

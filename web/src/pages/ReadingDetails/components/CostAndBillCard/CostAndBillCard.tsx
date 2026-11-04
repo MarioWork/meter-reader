@@ -7,8 +7,8 @@ import { useReading } from '../../hooks/useReading';
 
 const TITLE = 'Cost & bill';
 
-// What the reading cost and its bill, with Edit, which opens the cost & bill dialog over this page. With neither yet,
-// one "Add cost & bill" stands in for two empty rows.
+// What the reading cost and its bill, the same two rows whether they are filled in yet or not, and in the corner the
+// way to the cost & bill dialog over this page: a pencil once there is either, a plus until then.
 function CostAndBillCard() {
   const reading = useReading();
   const titleId = useId();
@@ -20,18 +20,12 @@ function CostAndBillCard() {
         <CardTitle>
           <h2 id={titleId}>{TITLE}</h2>
         </CardTitle>
-        {isEditing && (
-          <CardAction>
-            <CostAndBillLink readingId={reading.id} isEditing />
-          </CardAction>
-        )}
+        <CardAction>
+          <CostAndBillLink readingId={reading.id} isEditing={isEditing} />
+        </CardAction>
       </CardHeader>
       <CardContent>
-        {isEditing ? (
-          <CostAndBillList costCents={reading.costCents} bill={reading.bill} />
-        ) : (
-          <CostAndBillLink readingId={reading.id} isEditing={false} />
-        )}
+        <CostAndBillList costCents={reading.costCents} bill={reading.bill} />
       </CardContent>
     </Card>
   );

@@ -59,10 +59,10 @@ describe('getCosts', () => {
     expect(receivedQuery.get('to')).toBe('2026-03-31');
   });
 
-  it('returns the readings with a cost and their sum as the API sent them', async () => {
+  it('returns every reading in the dates, with or without a cost, and the sum of the costs as the API sent them', async () => {
     const costs = await readingService.getCosts({ dateFrom: '2026-01-01', dateTo: '2026-03-31' });
 
-    expect(costs.data.map((reading) => reading.costCents)).toEqual([3775, 4410]);
+    expect(costs.data.map((reading) => reading.costCents)).toEqual([null, 3775, 4410]);
     expect(costs.totalCostCents).toBe(8185);
   });
 });
@@ -311,6 +311,41 @@ describe('deleteReading', () => {
       success: false,
       error: { statusCode: 404, code: 'NOT_FOUND', message: 'Reading 999 not found' },
     });
+  });
+});
+
+describe('addReadingPhoto', () => {
+  it('patches the photo id onto the reading and returns the updated reading in a success envelope', async () => {
+    let receivedBody: unknown;
+    server.use(
+      http.patch(`${API}/readings/:id`, async ({ request }) => {
+        receivedBody = await request.clone().json();
+      }),
+    );
+
+    const response = await readingService.addReadingPhoto(10, { photoId: 77 });
+
+    expect(receivedBody).toEqual({ photoId: 77 });
+    expect(response.success).toBe(true);
+    expect(response.data?.photoId).toBe(77);
+  });
+
+  it("returns a failure with the API's code instead of throwing when the reading already has a photo", async () => {
+    server.use(
+      http.patch(`${API}/readings/:id`, () =>
+        HttpResponse.json(
+          {
+            code: 'PHOTO_NOT_AVAILABLE',
+            message: 'This reading already has a photo, or that photo belongs to another reading',
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    const response = await readingService.addReadingPhoto(14, { photoId: 77 });
+
+    expect(response).toMatchObject({ success: false, error: { statusCode: 409, code: 'PHOTO_NOT_AVAILABLE' } });
   });
 });
 

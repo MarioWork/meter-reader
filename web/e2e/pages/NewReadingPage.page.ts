@@ -56,6 +56,6 @@ export class NewReadingPage {
   // A reading is always today's: there is no date to pick.
   async save(digits: string) {
     await this.readingField.fill(digits);
-    await this.page.getByRole('button', { name: 'Save reading' }).click();
+    await this.page.getByRole('button', { name: 'Save' }).click();
   }
 }

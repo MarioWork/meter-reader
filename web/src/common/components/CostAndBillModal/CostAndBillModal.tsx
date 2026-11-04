@@ -27,6 +27,7 @@ function CostAndBillModal() {
     costError,
     billError,
     isBillRemoved,
+    chosenBillFileName,
     chooseBillFile,
     toggleBillRemoved,
     isSaving,
@@ -55,6 +56,7 @@ function CostAndBillModal() {
         <BillField
           savedBill={reading.bill}
           isBillRemoved={isBillRemoved}
+          chosenFileName={chosenBillFileName}
           error={billError}
           isDisabled={isSaving}
           onFileChange={chooseBillFile}

@@ -60,6 +60,7 @@ export function useCostAndBill() {
     costError: formState.errors.cost?.message,
     billError,
     isBillRemoved,
+    chosenBillFileName: billFile?.name,
     chooseBillFile,
     toggleBillRemoved,
     isSaving,

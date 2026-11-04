@@ -19,3 +19,9 @@ export const createBillNotAvailableMockModel = (): ReadingErrorMockModel => ({
   code: 'BILL_NOT_AVAILABLE',
   message: 'This bill does not exist or already belongs to another reading',
 });
+
+// The API's error envelope when a photo is added to a reading that has one, or the photo belongs to another reading.
+export const createPhotoNotAvailableMockModel = (): ReadingErrorMockModel => ({
+  code: 'PHOTO_NOT_AVAILABLE',
+  message: 'This reading already has a photo, or that photo belongs to another reading',
+});

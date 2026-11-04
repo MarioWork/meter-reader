@@ -10,7 +10,7 @@ import { useReading } from '../../hooks/useReading';
 
 type Props = {
   className?: string;
-  // The word beside the icon: on a phone's full-width button, where a touch shows no tooltip.
+  // The word beside the icon, where the button stands on its own line (the email card).
   hasText?: boolean;
 };
 
@@ -39,8 +39,8 @@ function ReadingSendAction({ className, hasText = false }: Props) {
 
   if (hasText) {
     return (
-      <Link to={sendPreview} className={cn(buttonVariants({ size: 'lg' }), className)}>
-        <Icon aria-hidden="true" />
+      <Link to={sendPreview} className={cn(buttonVariants(), className)}>
+        <Icon data-icon="inline-start" aria-hidden="true" />
         {label}
       </Link>
     );

@@ -5,7 +5,7 @@ import { useReading } from '../../hooks/useReading';
 
 const TITLE = 'Details';
 
-// The day the meter was read, and when the reading was saved in the app.
+// Whether and when the email went out, the day the meter was read, and when the reading was saved in the app.
 function DetailsCard() {
   const reading = useReading();
   const titleId = useId();
@@ -18,7 +18,7 @@ function DetailsCard() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <DetailsList date={reading.date} createdAt={reading.createdAt} />
+        <DetailsList reading={reading} />
       </CardContent>
     </Card>
   );

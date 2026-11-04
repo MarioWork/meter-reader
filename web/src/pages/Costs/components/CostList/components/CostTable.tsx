@@ -24,11 +24,10 @@ const COLUMNS: Column[] = [
   { label: 'Bill', className: 'w-64' },
 ];
 
-// A wide screen's list: a compact table, a row per reading, each column only as wide as what it holds, so a row reads
-// from its date to its bill in one glance instead of across the whole screen.
+// A wide screen's list: a table across the whole card, a row per reading, its columns sharing the width.
 function CostTable({ readings, titleId }: Props) {
   return (
-    <Table aria-labelledby={titleId} className="w-auto min-w-md">
+    <Table aria-labelledby={titleId} className="w-full">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           {COLUMNS.map(({ label, className }) => (

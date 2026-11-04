@@ -3,6 +3,7 @@ import { Link, useLocation, type To } from 'react-router';
 import { READING_ROUTES_PATHS } from '@application/routes/routesUtils';
 import type { ReadingNeighbourApiModel } from '@app-types/models';
 import { buttonVariants } from '@components/ui/button';
+import { Card } from '@components/ui/card';
 import { cn } from '@utils/classNameUtils';
 import { useReading } from '../../../hooks/useReading';
 import { useArrowKeysBetweenReadings } from '../hooks/useArrowKeysBetweenReadings';
@@ -21,7 +22,7 @@ function toNeighbourPage(neighbour: ReadingNeighbourApiModel | null, search: str
 }
 
 // "‹ Previous" and "Next ›": the readings just before and after this one by date, and the ← and → keys to them. Each is
-// left out at its end of the history, so Next always stays on the right.
+// left out at its end of the history, so Next always stays on the right. In a small tile, like the cards above it.
 function ReadingNeighbourLinks() {
   const { previous, next } = useReading();
   const { search } = useLocation();
@@ -35,20 +36,22 @@ function ReadingNeighbourLinks() {
   if (isOnlyReading) return null;
 
   return (
-    <nav aria-label={NAV_LABEL} className="-mx-2.5 flex items-center justify-between gap-2">
-      {previousTo && (
-        <Link to={previousTo} className={LINK_CLASS_NAME}>
-          <ChevronLeftIcon aria-hidden="true" data-icon="inline-start" />
-          {PREVIOUS_LABEL}
-        </Link>
-      )}
-      {nextTo && (
-        <Link to={nextTo} className={cn(LINK_CLASS_NAME, 'ml-auto')}>
-          {NEXT_LABEL}
-          <ChevronRightIcon aria-hidden="true" data-icon="inline-end" />
-        </Link>
-      )}
-    </nav>
+    <Card size="sm" className="py-1">
+      <nav aria-label={NAV_LABEL} className="flex items-center justify-between gap-2 px-1">
+        {previousTo && (
+          <Link to={previousTo} className={LINK_CLASS_NAME}>
+            <ChevronLeftIcon aria-hidden="true" data-icon="inline-start" />
+            {PREVIOUS_LABEL}
+          </Link>
+        )}
+        {nextTo && (
+          <Link to={nextTo} className={cn(LINK_CLASS_NAME, 'ml-auto')}>
+            {NEXT_LABEL}
+            <ChevronRightIcon aria-hidden="true" data-icon="inline-end" />
+          </Link>
+        )}
+      </nav>
+    </Card>
   );
 }
 

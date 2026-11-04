@@ -10,11 +10,11 @@ type Props = {
   readings: ReadingApiModel[];
 };
 
-const TITLE = 'Readings with a cost or a bill';
+const TITLE = 'Readings';
 
 // The readings behind the chart and the sum, newest first, each with its date, its cost and its bill. It carries the
-// same data as the chart, so it is the chart's text alternative too; a reading with only a bill is listed but has no
-// bar. A phone lists them; a wide screen has the room for a compact table.
+// same data as the chart, so it is the chart's text alternative too; a reading with no cost is listed but has no
+// bar and adds nothing to the total. A phone lists them; a wide screen has the room for a table.
 function CostList({ readings }: Props) {
   const titleId = useId();
   const isWideScreen = useIsWideScreen();

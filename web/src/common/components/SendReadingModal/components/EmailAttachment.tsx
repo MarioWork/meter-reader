@@ -1,4 +1,3 @@
-import { ImageOffIcon } from 'lucide-react';
 import { useId } from 'react';
 import type { ReadingEmailAttachmentApiModel } from '@app-types/models';
 import { Switch } from '@components/ui/switch';
@@ -6,29 +5,19 @@ import { getPhotoUrl } from '@utils/readingPhotoUtils';
 import { cn } from '@utils/classNameUtils';
 
 type Props = {
-  attachment: ReadingEmailAttachmentApiModel | null;
+  attachment: ReadingEmailAttachmentApiModel;
   isAttachingPhoto: boolean;
   isDisabled: boolean;
   onAttachingPhotoChange: (isAttachingPhoto: boolean) => void;
 };
 
 const PREVIEW_SIZE_PX = 64;
-const NO_PHOTO_LABEL = 'No photo to attach';
 const ATTACH_PHOTO_LABEL = 'Attach photo';
 
 // One row: the photo, its file name and the "Attach photo" switch. The photo fades while it is left out, so the
 // switch's state shows twice. Its alt text is the file name the provider will see.
 function EmailAttachment({ attachment, isAttachingPhoto, isDisabled, onAttachingPhotoChange }: Props) {
   const switchId = useId();
-
-  if (!attachment) {
-    return (
-      <p className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-        <ImageOffIcon aria-hidden="true" className="size-4" />
-        {NO_PHOTO_LABEL}
-      </p>
-    );
-  }
 
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
