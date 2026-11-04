@@ -42,19 +42,14 @@ const routes: RouteObject[] = [
                 lazy: () => import('@pages/Home/components/NewReadingModal/NewReadingModal.route'),
               },
               {
-                // Over the history: one reading's details, opened from its card.
-                path: READING_ROUTES_PATHS.details(),
-                lazy: () => import('@pages/Home/components/ReadingDetailsModal/ReadingDetailsModal.route'),
-              },
-              {
                 // Over the history, which stays in place behind it.
                 path: READING_ROUTES_PATHS.send(),
-                lazy: () => import('@pages/Home/components/SendReadingModal/SendReadingModal.route'),
+                lazy: () => import('@components/SendReadingModal/SendReadingModal.route'),
               },
               {
                 // Over the history: the reading's cost, opened from its "⋯" menu.
                 path: READING_ROUTES_PATHS.costAndBill(),
-                lazy: () => import('@pages/Home/components/CostAndBillModal/CostAndBillModal.route'),
+                lazy: () => import('@components/CostAndBillModal/CostAndBillModal.route'),
               },
             ],
           },

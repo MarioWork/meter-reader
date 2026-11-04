@@ -142,6 +142,16 @@ export class HomePage {
     await this.page.goto(BASE_ROUTES_PATHS.HOME);
   }
 
+  // Home with its filters (and pages) already in the url, as a shared link opens it.
+  async gotoWithSearch(search: string) {
+    await this.page.goto(`${BASE_ROUTES_PATHS.HOME}${search}`);
+  }
+
+  // A wide screen's row: its day is the link to the reading's own page.
+  async openReadingPage(readingDate: string) {
+    await this.page.getByRole('link', { name: `${readingDate} reading details`, exact: true }).click();
+  }
+
   // Opens the filter sheet, presses each choice (a date preset, a status) and applies them.
   async filterBy(choices: string[]) {
     await this.filterButton.click();

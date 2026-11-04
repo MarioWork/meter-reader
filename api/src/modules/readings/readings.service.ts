@@ -64,7 +64,6 @@ const BILL_NOT_AVAILABLE_MESSAGE = 'This bill does not exist or already belongs 
 const ISO_DATE_LENGTH = 10;
 
 const JPEG_CONTENT_TYPE = 'image/jpeg';
-const ALREADY_SENT_MESSAGE = 'This reading was sent already';
 const BEING_SENT_MESSAGE = 'This reading is being sent already';
 const NO_PHOTO_MESSAGE = 'This reading has no photo to attach';
 const PHOTO_FILE_MISSING_MESSAGE = 'The photo is missing on the server. Send the reading without it';
@@ -148,6 +147,8 @@ function toResponse(row: ReadingRow): ReadingResponse {
     photoId: row.photo?.id ?? null,
     sentAt: row.sentAt?.toISOString() ?? null,
     sentEmail: toSentEmailResponse(row),
+    failedAt: row.failedAt?.toISOString() ?? null,
+    failureReason: row.failureReason,
     costCents: row.costCents,
     bill: toBillResponse(row),
   };
@@ -164,6 +165,17 @@ function toMailText(row: ReadingRow, settings: MessageSettings): Pick<OutgoingMa
   const values: MessageValues = { reading: row.digits, date: formatMessageDate(row.date, settings.dateFormat) };
 
   return { subject: fillMessageTemplate(settings.subject, values), body: fillMessageTemplate(settings.body, values) };
+}
+
+// What an email starts from: a sent reading's own subject and body, the way it went out (docs/GLOSSARY.md: Template),
+// so a Resend repeats it; the current templates for any other, and for one sent before its email was kept.
+function toDefaultMailText(row: ReadingRow, settings: MessageSettings): Pick<OutgoingMail, 'subject' | 'body'> {
+  const { sentSubject, sentBody } = row;
+  const isKept = row.status === 'SENT' && sentSubject !== null && sentBody !== null;
+
+  if (isKept) return { subject: sentSubject, body: sentBody };
+
+  return toMailText(row, settings);
 }
 
 async function findReading(id: number): Promise<ReadingRow> {
@@ -397,7 +409,7 @@ export async function getReadingEmail(id: number): Promise<ReadingEmailResponse>
   const attachment = row.photo ? { photoId: row.photo.id, name: toAttachmentName(row) } : null;
   const [to, messageSettings] = await Promise.all([getProviderEmail(), getMessageSettings()]);
 
-  return { from: env.MAIL_FROM ?? null, to, ...toMailText(row, messageSettings), attachment };
+  return { from: env.MAIL_FROM ?? null, to, ...toDefaultMailText(row, messageSettings), attachment };
 }
 
 // The parts of every email that do not depend on a reading, with the templates still to fill in and the date format
@@ -416,13 +428,13 @@ async function readPhotoAttachment(row: ReadingRow): Promise<MailAttachment> {
   return { name: toAttachmentName(row), contentType: JPEG_CONTENT_TYPE, contents };
 }
 
-// The subject and body filled in from the current templates, unless the user edited them in the preview. The address
+// The subject and body the preview started from (toDefaultMailText), unless the user edited them there. The address
 // is the one in Settings, never the preview's to change.
 async function toOutgoingMail(
   { row, to }: SendableReading,
   { attachPhoto, subject, body }: SendReading,
 ): Promise<OutgoingMail> {
-  const defaultText = toMailText(row, await getMessageSettings());
+  const defaultText = toDefaultMailText(row, await getMessageSettings());
   const mail = { to, subject: subject ?? defaultText.subject, body: body ?? defaultText.body };
 
   if (!attachPhoto) return mail;
@@ -447,12 +459,10 @@ function toHttpSendError(error: unknown): unknown {
 // A reading that passed every check before a send, with the address it goes to.
 type SendableReading = { row: ReadingRow; to: string };
 
-// Refusals that try nothing, and so change nothing: unknown, sent already, no photo to attach, no provider address,
-// Hotmail not connected.
+// Refusals that try nothing, and so change nothing: unknown, no photo to attach, no provider address, Hotmail not
+// connected. A sent reading can go again (docs/GLOSSARY.md: Resend).
 async function findSendableReading(id: number, { attachPhoto }: SendReading): Promise<SendableReading> {
   const row = await findReading(id);
-
-  if (row.status === 'SENT') throw new ConflictError(ALREADY_SENT_MESSAGE, 'READING_ALREADY_SENT');
 
   const isPhotoMissing = attachPhoto && !row.photo;
 
@@ -465,11 +475,18 @@ async function findSendableReading(id: number, { attachPhoto }: SendReading): Pr
   return { row, to };
 }
 
+// What the user is told when the send failed, kept on the reading as its reason. A bug's own message is never kept.
+function toFailureReason(httpError: unknown): string | null {
+  if (httpError instanceof HttpError) return httpError.message;
+
+  return null;
+}
+
 // Saving the failure must not hide why the send failed: a database error here is logged, and the user still hears
 // Microsoft's reason.
-async function saveFailure(id: number): Promise<void> {
+async function saveFailure(id: number, failureReason: string | null): Promise<void> {
   try {
-    await readingsRepository.markFailed(id);
+    await readingsRepository.markFailed(id, new Date(), failureReason);
   } catch (error: unknown) {
     log.error({ readingId: id, ...getErrorLogFields(error) }, 'failed send not saved on the reading');
   }
@@ -495,11 +512,16 @@ async function sendOnce(id: number, fields: SendReading): Promise<ReadingRespons
     mail = await toOutgoingMail(sendable, fields);
     await sendMail(mail);
   } catch (error: unknown) {
-    await saveFailure(id);
+    const httpError = toHttpSendError(error);
+    // A failed Resend leaves the reading sent: the provider has its first email.
+    const isResend = sendable.row.status === 'SENT';
+
+    if (!isResend) await saveFailure(id, toFailureReason(httpError));
+
     // The id and the stable code only: the message may name the provider.
     log.warn({ readingId: id, code: error instanceof AppError ? error.code : undefined }, 'reading not sent');
 
-    throw toHttpSendError(error);
+    throw httpError;
   }
 
   const sentEmail = {
@@ -519,7 +541,8 @@ async function sendOnce(id: number, fields: SendReading): Promise<ReadingRespons
 }
 
 // Emails the reading to the provider from the user's Hotmail. Sent: the reading is marked sent, with the time. Not
-// sent: it is marked failed, and the error says why, so the user can try again. Failed covers every try that did not
+// sent: it is marked failed, with the time and the reason the error gives, so the user can try again. A sent reading
+// sent again (Resend) keeps its new email once it goes, and stays as it was when it does not. Failed covers every try that did not
 // reach the provider, a photo too large or missing included; only the checks in findSendableReading change nothing.
 export async function sendReading(id: number, fields: SendReading): Promise<ReadingResponse> {
   if (readingsBeingSent.has(id)) throw new ConflictError(BEING_SENT_MESSAGE, 'READING_BEING_SENT');

@@ -1,7 +1,7 @@
 import type { ReadingApiModel } from '@app-types/models';
 import { TableCell, TableRow } from '@components/ui/table';
 import { formatCost } from '@utils/costUtils';
-import ReadingSendStatus from '../../ReadingSendStatus';
+import ReadingSendStatus from '@components/ReadingSendStatus';
 import BillCell from './BillCell';
 import MissingValue from './MissingValue';
 import RowActionsCell from './RowActionsCell';

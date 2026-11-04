@@ -212,6 +212,8 @@ describe('POST /readings', () => {
       'createdAt',
       'date',
       'digits',
+      'failedAt',
+      'failureReason',
       'id',
       'photoId',
       'sentAt',
@@ -1411,6 +1413,34 @@ describe('POST /readings/:id/send', () => {
     expect(reading).toMatchObject({ status: 'FAILED', sentAt: null });
   });
 
+  it('keeps the failure time and the reason the user was told when a send fails', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    answerSendMail(graphErrorAnswer('ErrorInvalidRecipients'));
+    const failure = await sendReading(readingId);
+
+    const response = await getReading(readingId);
+
+    const failedReading = response.json<{ failedAt: string; failureReason: string }>();
+    expect(failedReading).toMatchObject({
+      status: 'failed',
+      failureReason: failure.json<{ message: string }>().message,
+    });
+    expect(Date.parse(failedReading.failedAt)).not.toBeNaN();
+  });
+
+  it('clears the failure time and reason when a failed reading is sent again and goes', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    answerSendMail(graphErrorAnswer('ErrorInvalidRecipients'), { status: 202 });
+    await sendReading(readingId);
+
+    await sendReading(readingId);
+
+    const response = await getReading(readingId);
+    expect(response.json()).toMatchObject({ status: 'sent', failedAt: null, failureReason: null });
+  });
+
   it('sends a failed reading again and marks it sent when the user tries again', async () => {
     await connectHotmail();
     const readingId = await addReadingId('00123');
@@ -1494,17 +1524,30 @@ describe('POST /readings/:id/send', () => {
     expect(reading.status).toBe('NOT_SENT');
   });
 
-  it('returns 409 READING_ALREADY_SENT and sends nothing more when the reading was sent already', async () => {
+  it('emails a sent reading again and keeps the new email when the user resends it', async () => {
     await connectHotmail();
     const readingId = await addReadingId('00123');
     const received = answerSendMail();
     await sendReading(readingId);
 
+    const response = await sendReading(readingId, { attachPhoto: false, subject: 'Meter reading, again' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ status: 'sent', sentEmail: { subject: 'Meter reading, again' } });
+    expect(received).toHaveLength(2);
+  });
+
+  it('keeps a sent reading sent with its first email when its resend fails', async () => {
+    await connectHotmail();
+    const readingId = await addReadingId('00123');
+    answerSendMail({ status: 202 }, graphErrorAnswer('ErrorInvalidRecipients'));
+    await sendReading(readingId);
+
     const response = await sendReading(readingId);
 
-    expect(response.statusCode).toBe(409);
-    expect(response.json()).toMatchObject({ code: 'READING_ALREADY_SENT' });
-    expect(received).toHaveLength(1);
+    expect(response.statusCode).toBe(502);
+    const reading = await getReading(readingId);
+    expect(reading.json()).toMatchObject({ status: 'sent', failedAt: null, sentEmail: { subject: SUBJECT } });
   });
 
   it('returns 400 NO_PHOTO_TO_ATTACH and sends nothing when the photo is asked for a reading without one', async () => {

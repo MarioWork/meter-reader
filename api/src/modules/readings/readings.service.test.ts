@@ -8,6 +8,7 @@ import {
   addReading,
   deleteReading,
   getCosts,
+  getReadingEmail,
   getReadings,
   getReadingsBackup,
   getReadingsBackupCsv,
@@ -70,10 +71,23 @@ const SAVED_ROW = {
   sentSubject: null,
   sentBody: null,
   sentWithPhoto: null,
+  failedAt: null,
+  failureReason: null,
   costCents: null,
   createdAt: new Date('2026-11-01T08:15:00.000Z'),
   photo: null,
   bill: null,
+};
+
+// Sent once already, with the email it went out with.
+const SENT_ROW = {
+  ...SAVED_ROW,
+  status: 'SENT' as const,
+  sentAt: new Date('2026-11-01T09:00:00.000Z'),
+  sentTo: 'readings@water-provider.example',
+  sentSubject: 'Leitura',
+  sentBody: 'Leitura - 00123',
+  sentWithPhoto: false,
 };
 
 describe('addReading', () => {
@@ -96,6 +110,8 @@ describe('addReading', () => {
       photoId: null,
       sentAt: null,
       sentEmail: null,
+      failedAt: null,
+      failureReason: null,
       costCents: null,
       bill: null,
     });
@@ -347,7 +363,11 @@ describe('sendReading', () => {
 
     await expect(sending).rejects.toMatchObject({ code: 'PHOTO_FILE_MISSING', statusCode: 409 });
     expect(sendMail).not.toHaveBeenCalled();
-    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
+    expect(readingsRepository.markFailed).toHaveBeenCalledWith(
+      7,
+      expect.any(Date),
+      'The photo is missing on the server. Send the reading without it',
+    );
   });
 
   it('answers 413 MAIL_TOO_LARGE and marks the reading failed when the photo is over Microsoft limit', async () => {
@@ -357,7 +377,7 @@ describe('sendReading', () => {
     const sending = sendReading(7, { attachPhoto: false });
 
     await expect(sending).rejects.toMatchObject({ code: 'MAIL_TOO_LARGE', statusCode: 413 });
-    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
+    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7, expect.any(Date), 'too large');
   });
 
   it('marks the reading failed and lets a bug through as it is when sending throws something unexpected', async () => {
@@ -366,7 +386,8 @@ describe('sendReading', () => {
     vi.mocked(sendMail).mockRejectedValueOnce(bug);
 
     await expect(sendReading(7, { attachPhoto: false })).rejects.toBe(bug);
-    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7);
+    // A bug's own message is never kept as the reason.
+    expect(readingsRepository.markFailed).toHaveBeenCalledWith(7, expect.any(Date), null);
   });
 
   it("still answers Microsoft's reason when saving the failure itself fails", async () => {
@@ -377,6 +398,33 @@ describe('sendReading', () => {
     const sending = sendReading(7, { attachPhoto: false });
 
     await expect(sending).rejects.toMatchObject({ code: 'MAIL_SERVICE_BUSY', statusCode: 502 });
+  });
+
+  it('keeps a sent reading sent, with its first email, when a Resend fails', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce({ ...SENT_ROW });
+    vi.mocked(sendMail).mockRejectedValueOnce(new AppError('Microsoft is busy', { code: 'MAIL_SERVICE_BUSY' }));
+
+    await expect(sendReading(7, { attachPhoto: false })).rejects.toMatchObject({ code: 'MAIL_SERVICE_BUSY' });
+    expect(readingsRepository.markFailed).not.toHaveBeenCalled();
+  });
+
+  it('emails a sent reading again with the subject and body it went out with when nothing was edited', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce({ ...SENT_ROW });
+    vi.mocked(readingsRepository.markSent).mockResolvedValueOnce({ ...SENT_ROW, sentAt: new Date() });
+
+    await sendReading(7, { attachPhoto: false });
+
+    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ subject: 'Leitura', body: 'Leitura - 00123' }));
+  });
+});
+
+describe('getReadingEmail', () => {
+  it('starts from the subject and body it went out with when the reading was sent already', async () => {
+    vi.mocked(readingsRepository.findById).mockResolvedValueOnce({ ...SENT_ROW });
+
+    const email = await getReadingEmail(7);
+
+    expect(email).toMatchObject({ subject: 'Leitura', body: 'Leitura - 00123' });
   });
 });
 

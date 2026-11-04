@@ -134,6 +134,10 @@ export const ReadingResponseSchema = z
     sentAt: z.iso.datetime().nullable(),
     // Null until it is sent, and for readings sent before the email was kept.
     sentEmail: SentEmailResponseSchema.nullable(),
+    // When its last send failed, and the reason the user was told; null unless it is failed, and for readings that
+    // failed before these were kept. The reason is null too when the failure was the server's own bug.
+    failedAt: z.iso.datetime().nullable(),
+    failureReason: z.string().nullable(),
     // What the reading cost, in euro cents (4210 is 42,10 €); null when the user has not added one.
     costCents: CostCentsSchema.nullable(),
     // The provider's bill for this reading; null when the user has not added one. Never part of its email.

@@ -2,12 +2,6 @@ import type { ReadingId } from '@app-types/models';
 
 export type ReadingErrorMockModel = { code: string; message: string };
 
-// The API's error envelope when the reading's email went out already.
-export const createReadingAlreadySentMockModel = (): ReadingErrorMockModel => ({
-  code: 'READING_ALREADY_SENT',
-  message: 'This reading was sent already',
-});
-
 // The API's error envelope when the reading a request names is not there (already deleted).
 export const createReadingNotFoundMockModel = (id: ReadingId): ReadingErrorMockModel => ({
   code: 'NOT_FOUND',

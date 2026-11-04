@@ -16,6 +16,9 @@ const MONTH_LENGTH = 2;
 // Every mock reading was taken at the same time of day, and the sent ones went out half an hour later.
 const MOCK_READ_TIME = 'T08:30:00.000Z';
 const MOCK_SENT_TIME = 'T09:00:00.000Z';
+// What the API keeps on a reading whose send Microsoft refused.
+export const MOCK_FAILURE_REASON =
+  'Microsoft refused the email (ErrorInvalidRecipients). Check the address and try again';
 
 // Most of the history went out. The newest reading and one without a photo are waiting to be sent, and the one
 // before the newest failed, so the history shows every status.
@@ -66,27 +69,37 @@ export const createReadingMockModel = (overrides?: Partial<ReadingApiModel>): Re
   photoId: 1,
   sentAt: null,
   sentEmail: null,
+  failedAt: null,
+  failureReason: null,
   costCents: null,
   bill: null,
   ...overrides,
 });
 
-type SendOutcome = Pick<ReadingApiModel, 'status' | 'sentAt' | 'sentEmail'>;
+type SendOutcome = Pick<ReadingApiModel, 'status' | 'sentAt' | 'sentEmail' | 'failedAt' | 'failureReason'>;
+
+const NO_FAILURE = { failedAt: null, failureReason: null };
 
 // A sent mock reading went out as the API's own email, with its photo when it had one.
 function sendOutcome(reading: ReadingApiModel): SendOutcome {
   if (NOT_SENT_READING_IDS.includes(reading.id)) {
-    return { status: ReadingStatusUtil.NOT_SENT, sentAt: null, sentEmail: null };
+    return { status: ReadingStatusUtil.NOT_SENT, sentAt: null, sentEmail: null, ...NO_FAILURE };
   }
 
   if (FAILED_READING_IDS.includes(reading.id)) {
-    return { status: ReadingStatusUtil.FAILED, sentAt: null, sentEmail: null };
+    return {
+      status: ReadingStatusUtil.FAILED,
+      sentAt: null,
+      sentEmail: null,
+      failedAt: `${reading.date}${MOCK_SENT_TIME}`,
+      failureReason: MOCK_FAILURE_REASON,
+    };
   }
 
   const { from, subject, body } = createReadingEmailMockModel(reading);
   const sentEmail = { from, to: MOCK_PROVIDER_EMAIL, subject, body, hasPhoto: reading.photoId !== null };
 
-  return { status: ReadingStatusUtil.SENT, sentAt: `${reading.date}${MOCK_SENT_TIME}`, sentEmail };
+  return { status: ReadingStatusUtil.SENT, sentAt: `${reading.date}${MOCK_SENT_TIME}`, sentEmail, ...NO_FAILURE };
 }
 
 // Oldest first, as they were saved.

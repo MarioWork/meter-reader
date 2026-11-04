@@ -2,7 +2,7 @@ import type { ReadingApiModel } from '@app-types/models';
 import { CardAction, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { formatIsoDate } from '@utils/dateUtils';
 import ReadingActionsMenu from '../../ReadingActionsMenu';
-import ReadingSendStatus from '../../ReadingSendStatus';
+import ReadingSendStatus from '@components/ReadingSendStatus';
 
 type Props = {
   reading: ReadingApiModel;
