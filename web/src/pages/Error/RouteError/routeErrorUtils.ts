@@ -19,7 +19,7 @@ export const ROUTE_ERROR_COPY: Record<RouteErrorKind, RouteErrorCopy> = {
   },
   broken: {
     label: 'Oops',
-    title: 'Something sprang a leak',
+    title: 'Something skipped a beat',
     description: 'This page tripped on the way in. Try again, or head back home.',
   },
 };
