@@ -75,13 +75,26 @@ describe('the header', () => {
     expect(screen.getByRole('link', { name: 'Retry' })).toBeVisible();
   });
 
-  it('offers Resend on a sent reading, with the time it was sent', async () => {
+  it('offers Resend in the "⋯" menu on a sent reading, not as a button, with the time it was sent', async () => {
     await renderReadingPage(SENT_ID);
 
     // In the status chip, and again in the email card's timeline.
     expect(within(main()).getAllByText(/^Sent/)[0]).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Resend' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Resend' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Send' })).not.toBeInTheDocument();
+
+    await openMenu();
+
+    const menuItems = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
+    expect(menuItems).toEqual(['Resend', 'Edit cost & bill', 'Delete']);
+  });
+
+  it('keeps Resend out of the "⋯" menu while the reading is not sent', async () => {
+    await renderReadingPage(NEWEST_ID);
+    await openMenu();
+
+    expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: 'Resend' })).not.toBeInTheDocument();
   });
 
   it('shows the digits as the meter does, with the unit', async () => {
@@ -255,14 +268,16 @@ describe('sending from the page', () => {
     expect(await findNotification('Reading sent')).toBeVisible();
     await waitFor(() => expect(screen.queryByRole('dialog', { name: SEND_DIALOG })).not.toBeInTheDocument());
     expect(router.state.location.pathname).toBe(READING_ROUTES_PATHS.details(String(NEWEST_ID)));
-    expect(await screen.findByRole('link', { name: 'Resend' })).toBeVisible();
     expect(pageRegion('Email')).toHaveTextContent(/Sent 2 Nov 2026/);
+    await openMenu();
+    expect(await screen.findByRole('menuitem', { name: 'Resend' })).toBeVisible();
   });
 
   it('resends a sent reading, starting from the email it went out with', async () => {
     await renderReadingPage(SENT_ID);
+    await openMenu();
 
-    await userEvent.click(screen.getByRole('link', { name: 'Resend' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Resend' }));
     const preview = await screen.findByRole('dialog', { name: SEND_DIALOG });
     const sentSubject = findMockReading(SENT_ID)?.sentEmail?.subject;
     expect(within(preview).getByRole('textbox', { name: 'Subject' })).toHaveValue(sentSubject);
@@ -379,6 +394,17 @@ describe('the cost & bill card', () => {
     );
   });
 
+  it('shows Edit as a pencil alone, with its name as a tooltip on hover', async () => {
+    await renderReadingPage(SENT_ID);
+
+    const editLink = within(pageRegion('Cost & bill')).getByRole('link', { name: 'Edit cost & bill' });
+    expect(editLink).not.toHaveTextContent(/\S/);
+
+    await userEvent.hover(editLink);
+
+    expect(await screen.findByText('Edit cost & bill')).toBeVisible();
+  });
+
   it('says which one is missing when the reading has only one of them', async () => {
     await renderReadingPage(SENT_ID);
 
@@ -463,25 +489,26 @@ it('shows the day it was read and when it was saved under Details', async () => 
 
 describe('the layout', () => {
   it('puts the send action right under the digits on a phone, before the photo', async () => {
-    await renderReadingPage(SENT_ID);
+    await renderReadingPage(NEWEST_ID);
 
-    const digits = screen.getByText('00511');
-    const resend = screen.getByRole('link', { name: 'Resend' });
+    const digits = screen.getByText('00529');
+    // The first Send; the email card has the same one further down.
+    const [send] = within(main()).getAllByRole('link', { name: 'Send' });
     const photo = screen.getByRole('button', { name: 'Open the photo full screen' });
-    expect(digits.compareDocumentPosition(resend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(resend.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(digits.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(send.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('puts the send action and the menu in the header on a wide screen, before the photo and the digits', async () => {
     mockWideScreen();
-    await renderReadingPage(SENT_ID);
+    await renderReadingPage(FAILED_ID);
 
     const header = screen.getByRole('heading', { level: 1 }).closest('header');
     if (!header) throw new Error('The title is not in a header');
-    expect(within(header).getByRole('link', { name: 'Resend' })).toBeVisible();
+    expect(within(header).getByRole('link', { name: 'Retry' })).toBeVisible();
     expect(within(header).getByRole('button', { name: 'More actions' })).toBeVisible();
     const photo = screen.getByRole('button', { name: 'Open the photo full screen' });
-    expect(photo.compareDocumentPosition(screen.getByText('00511')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(photo.compareDocumentPosition(screen.getByText('00520')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

@@ -26,9 +26,32 @@ export class ReadingDetailsPage {
     return this.page.getByRole('main').getByText(digits, { exact: true });
   }
 
-  // A sent reading's one primary action.
-  get resendAction() {
+  // A failed reading's one primary action.
+  get retryAction() {
+    return this.page.getByRole('link', { name: 'Retry', exact: true });
+  }
+
+  // Never a button of its own: a sent reading goes again from the menu (resendMenuItem).
+  get resendLink() {
     return this.page.getByRole('link', { name: 'Resend', exact: true });
+  }
+
+  get menuButton() {
+    return this.page.getByRole('button', { name: 'More actions' });
+  }
+
+  // A sent reading goes again from the "⋯" menu.
+  get resendMenuItem() {
+    return this.page.getByRole('menuitem', { name: 'Resend' });
+  }
+
+  get sendDialog() {
+    return this.page.getByRole('dialog', { name: 'Send this reading?' });
+  }
+
+  async resendFromMenu() {
+    await this.menuButton.click();
+    await this.resendMenuItem.click();
   }
 
   get photoButton() {

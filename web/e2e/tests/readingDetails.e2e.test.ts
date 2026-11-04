@@ -11,6 +11,7 @@ const SENT_DIGITS = '00511';
 // The reading just after it by date, in the whole history whatever Home is filtered to: 1 Sept 2026, which failed.
 const NEXT_ID = 13;
 const NEXT_DATE = '1 Sept 2026';
+const NEXT_DIGITS = '00520';
 const PHONE_VIEWPORT = { width: 390, height: 844 };
 // Enough to go round the full-screen photo's one button a few times.
 const TAB_PRESSES = 3;
@@ -84,19 +85,30 @@ test('a wide screen puts the photo beside the digits and the cost', async ({ pag
   await expect(readingPage.card('Email')).toContainText('Photo attached');
 });
 
+test('a sent reading goes again from Resend in the "⋯" menu, not from a button', async ({ page }) => {
+  const readingPage = new ReadingDetailsPage(page);
+  await readingPage.goto(SENT_ID);
+  await expect(readingPage.title).toHaveText(`Reading of ${SENT_DATE}`);
+  await expect(readingPage.resendLink).toHaveCount(0);
+
+  await readingPage.resendFromMenu();
+
+  await expect(readingPage.sendDialog).toBeVisible();
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: PHONE_VIEWPORT });
 
-  test('one column: the digits, then Resend, then the photo', async ({ page }) => {
+  test('one column: the digits, then Retry, then the photo', async ({ page }) => {
     const readingPage = new ReadingDetailsPage(page);
-    await readingPage.goto(SENT_ID);
+    await readingPage.goto(NEXT_ID);
     await expect(readingPage.photoButton).toBeVisible();
 
-    const digitsBox = await readingPage.digits(SENT_DIGITS).boundingBox();
-    const resendBox = await readingPage.resendAction.boundingBox();
+    const digitsBox = await readingPage.digits(NEXT_DIGITS).boundingBox();
+    const retryBox = await readingPage.retryAction.boundingBox();
     const photoBox = await readingPage.photoButton.boundingBox();
 
-    expect(digitsBox && resendBox && resendBox.y > digitsBox.y).toBe(true);
-    expect(resendBox && photoBox && photoBox.y > resendBox.y).toBe(true);
+    expect(digitsBox && retryBox && retryBox.y > digitsBox.y).toBe(true);
+    expect(retryBox && photoBox && photoBox.y > retryBox.y).toBe(true);
   });
 });
