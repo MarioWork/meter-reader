@@ -30,8 +30,8 @@ const EnvSchema = z
     // Where the user opens the app: the setup link points here, and passkeys belong to its host name for good. Only the
     // origin counts (scheme, host, port). Must be https in production.
     APP_ORIGIN: z.url().default(DEFAULT_APP_ORIGIN),
-    // The Application (client) id of the app registered in Microsoft Entra for sending mail (README, "Connecting
-    // Hotmail"). Not a secret: the app is a public client. Empty until that one-time setup is done; the api still
+    // The Application (client) id of the app registered in Microsoft Entra for sending mail
+    // (docs/guide/hotmail.md). Not a secret: the app is a public client. Empty until that one-time setup is done; the api still
     // starts, and the web app shows that Hotmail is not connected.
     MICROSOFT_CLIENT_ID: z.string().trim().default(''),
     // The user's own Hotmail address, shown as "From" on every email. Display only: Microsoft sends from whichever

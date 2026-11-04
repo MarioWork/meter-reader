@@ -55,7 +55,7 @@ export async function assertServerReachable(serverUrl: string): Promise<void> {
   } catch (error: unknown) {
     if (!isConnectionRefused(error)) throw error;
 
-    throw new AppError('Postgres is not running on localhost:5432. Start it first (README, "Local development")', {
+    throw new AppError('Postgres is not running on localhost:5432. Start it first (docs/guide/local-development.md)', {
       code: 'POSTGRES_NOT_RUNNING',
       cause: error,
     });

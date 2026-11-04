@@ -615,7 +615,7 @@ describe('GET /readings/export.xlsx', () => {
 });
 
 describe('GET /readings/costs', () => {
-  it('lists only the readings with a cost, newest first, with their sum, when some readings have none', async () => {
+  it('lists every reading, newest first, with the sum of the costs alone, when some readings have none', async () => {
     await addReadingWithCost('00100', '2026-08-01', 4210);
     await addReading({ digits: '00200', date: '2026-09-01' });
     await addReadingWithCost('00300', '2026-10-01', 3990);
@@ -627,6 +627,7 @@ describe('GET /readings/costs', () => {
       totalCostCents: 8200,
       data: [
         { digits: '00300', costCents: 3990 },
+        { digits: '00200', costCents: null, bill: null },
         { digits: '00100', costCents: 4210 },
       ],
     });
@@ -642,6 +643,7 @@ describe('GET /readings/costs', () => {
     expect(response.json()).toMatchObject({
       totalCostCents: 4210,
       data: [
+        { digits: '00300', costCents: null, bill: null },
         { digits: '00200', costCents: null, bill: { id: billId } },
         { digits: '00100', costCents: 4210, bill: null },
       ],
@@ -670,10 +672,18 @@ describe('GET /readings/costs', () => {
     });
   });
 
-  it('answers an empty list and a sum of 0 when no reading has a cost', async () => {
+  it('lists the reading with a sum of 0 when no reading has a cost', async () => {
     await addReading({ digits: '00100', date: '2026-09-01' });
 
     const response = await getCosts();
+
+    expect(response.json()).toMatchObject({ totalCostCents: 0, data: [{ digits: '00100', costCents: null }] });
+  });
+
+  it('answers an empty list and a sum of 0 when the range has no reading', async () => {
+    await addReading({ digits: '00100', date: '2026-09-01' });
+
+    const response = await getCosts('?from=2026-10-01&to=2026-10-31');
 
     expect(response.json()).toEqual({ totalCostCents: 0, data: [] });
   });
@@ -728,7 +738,7 @@ describe('GET /readings/costs/export.xlsx', () => {
     expect(response.headers['content-disposition']).toBe('attachment; filename="water-costs.xlsx"');
   });
 
-  it('holds the date, the digits as text, the Cost and an Open link to the Bill, then the sum, when readings have either', async () => {
+  it('holds the date, the digits as text, the Cost, an Open link and the sum when readings have a cost, a bill or neither', async () => {
     await addReadingWithCost('00100', '2026-08-01', 4210);
     const onlyBillId = await addReadingWithBill('00200', '2026-09-01');
     const bothBillId = await addReadingWithBill('00300', '2026-10-01', 3990);
@@ -739,12 +749,13 @@ describe('GET /readings/costs/export.xlsx', () => {
 
     expect(rows).toEqual([
       COSTS_SPREADSHEET_HEADER,
+      [sheetDay('2026-10-31'), '00400', null, null],
       [sheetDay('2026-10-01'), '00300', 39.9, 'Open'],
       [sheetDay('2026-09-01'), '00200', null, 'Open'],
       [sheetDay('2026-08-01'), '00100', 42.1, null],
       ['Total', null, 82, null],
     ]);
-    expect(sheetLinks(response.rawPayload)).toEqual({ D2: billUrl(bothBillId), D3: billUrl(onlyBillId) });
+    expect(sheetLinks(response.rawPayload)).toEqual({ D3: billUrl(bothBillId), D4: billUrl(onlyBillId) });
   });
 
   it('adds up the Costs in a sum row whose formula covers every reading row when some have only a bill', async () => {
@@ -771,7 +782,7 @@ describe('GET /readings/costs/export.xlsx', () => {
     const rows = await readSheet(response.rawPayload);
     const listed = (await getCosts(range)).json<{ data: { digits: string }[] }>().data;
 
-    expect(digitsColumn(rows)).toEqual(['00400', '00300', '00200']);
+    expect(digitsColumn(rows)).toEqual(['00400', '00350', '00300', '00200']);
     expect(digitsColumn(rows)).toEqual(listed.map((reading) => reading.digits));
     expect(rows.at(-1)).toEqual(['Total', null, 50, null]);
     expect(response.headers['content-disposition']).toBe(
@@ -779,12 +790,13 @@ describe('GET /readings/costs/export.xlsx', () => {
     );
   });
 
-  it('holds the header and a sum of 0 when no reading in the range has a Cost or a Bill', async () => {
+  it('holds the reading and a sum of 0 when no reading in the range has a Cost or a Bill', async () => {
     await addReading({ digits: '00100', date: '2026-09-01' });
 
     const rows = await costRows();
 
-    expect(rows).toEqual([COSTS_SPREADSHEET_HEADER, ['Total', null, 0, null]]);
+    expect(digitsColumn(rows)).toEqual(['00100']);
+    expect(rows.at(-1)).toEqual(['Total', null, 0, null]);
   });
 
   it('treats an empty day as no filter when a param is sent empty', async () => {
@@ -1003,6 +1015,41 @@ describe('GET /readings/:id', () => {
 });
 
 describe('PATCH /readings/:id', () => {
+  it('links the photo and its email attaches it when the reading was saved without one', async () => {
+    const readingId = await addReadingId('00123');
+    const photoId = await addPhoto();
+
+    const response = await updateReading(readingId, { photoId });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ photoId });
+    expect((await getReadingEmail(readingId)).json()).toMatchObject({ attachment: { photoId } });
+  });
+
+  it('returns 409 PHOTO_NOT_AVAILABLE and keeps the photo when the reading already has one', async () => {
+    const firstPhotoId = await addPhoto();
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31', photoId: firstPhotoId })).json<{
+      id: number;
+    }>().id;
+
+    const response = await updateReading(readingId, { photoId: await addPhoto() });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'PHOTO_NOT_AVAILABLE' });
+    expect((await getReadingEmail(readingId)).json()).toMatchObject({ attachment: { photoId: firstPhotoId } });
+  });
+
+  it('returns 409 PHOTO_NOT_AVAILABLE when the photo belongs to another reading', async () => {
+    const photoId = await addPhoto();
+    await addReading({ digits: '00100', date: '2026-09-30', photoId });
+    const readingId = await addReadingId('00123');
+
+    const response = await updateReading(readingId, { photoId });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'PHOTO_NOT_AVAILABLE' });
+  });
+
   it('sets the cost and answers the reading with it when the reading has none', async () => {
     const readingId = await addReadingId('00123');
 

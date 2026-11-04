@@ -45,15 +45,16 @@ type HistoryPosition = Pick<ReadingRow, 'id' | 'date'>;
 export type NewReading = { digits: string; date: Date; photoId?: number };
 
 // What can change on a saved reading. A field left out stays as it is. `billId` links an uploaded bill in place of the
-// reading's own, and null removes it.
-export type ReadingChanges = { costCents?: number | null; billId?: number | null };
+// reading's own, and null removes it. `photoId` links an uploaded photo to a reading saved without one.
+export type ReadingChanges = { costCents?: number | null; billId?: number | null; photoId?: number };
 
 // How an update ended. `removedBillFileName` is the file of the bill it replaced or removed: its row is gone, and the
 // caller removes the file once the change is saved.
 export type ReadingUpdate =
   | { outcome: 'updated'; row: ReadingRow; removedBillFileName: string | null }
   | { outcome: 'notFound' }
-  | { outcome: 'billNotAvailable' };
+  | { outcome: 'billNotAvailable' }
+  | { outcome: 'photoNotAvailable' };
 
 type CurrentBill = { id: number; fileName: string } | null;
 
@@ -112,6 +113,25 @@ function toSentEmailColumns({ from, to, subject, body, withPhoto }: SentEmail): 
   return { sentFrom: from, sentTo: to, sentSubject: subject, sentBody: body, sentWithPhoto: withPhoto };
 }
 
+// Thrown inside the update's transaction to undo it: the photo asked for is unknown or belongs to a reading, or this
+// reading already has one (a reading's photo is never swapped).
+class PhotoNotAvailableError extends AppError {
+  constructor() {
+    super('The photo does not exist, already belongs to a reading, or this reading has one', {
+      code: 'PHOTO_NOT_AVAILABLE',
+    });
+  }
+}
+
+// Links the photo to a reading that has none, only while the photo belongs to no reading.
+async function addPhoto(tx: Prisma.TransactionClient, readingId: number, hasPhoto: boolean, photoId: number) {
+  if (hasPhoto) throw new PhotoNotAvailableError();
+
+  const { count } = await tx.photo.updateMany({ where: { id: photoId, readingId: null }, data: { readingId } });
+
+  if (count === 0) throw new PhotoNotAvailableError();
+}
+
 // Thrown inside the update's transaction to undo it: the bill asked for is unknown or belongs to another reading.
 class BillNotAvailableError extends AppError {
   constructor() {
@@ -144,15 +164,17 @@ async function replaceBill(
   return current?.fileName ?? null;
 }
 
-// The cost and the bill change together or not at all.
-async function updateInTransaction(id: number, { costCents, billId }: ReadingChanges): Promise<ReadingUpdate> {
+// The cost, the bill and the photo change together or not at all.
+async function updateInTransaction(id: number, { costCents, billId, photoId }: ReadingChanges): Promise<ReadingUpdate> {
   return prisma.$transaction(async (tx) => {
     const current = await tx.reading.findUnique({
       where: { id },
-      select: { bill: { select: { id: true, fileName: true } } },
+      select: { bill: { select: { id: true, fileName: true } }, photo: { select: { id: true } } },
     });
 
     if (!current) return { outcome: 'notFound' };
+
+    if (photoId !== undefined) await addPhoto(tx, id, current.photo !== null, photoId);
 
     const removedBillFileName = billId === undefined ? null : await replaceBill(tx, id, current.bill, billId);
     const row = await tx.reading.update({ where: { id }, data: { costCents }, select: READING_SELECT });
@@ -204,14 +226,10 @@ export const readingsRepository = {
   findAll: (filter: ReadingFilter): Promise<ReadingRow[]> =>
     prisma.reading.findMany({ where: toWhere(filter), orderBy: [...NEWEST_FIRST], select: READING_SELECT }),
 
-  // Every reading with a Cost or a Bill in the range, newest first. No `take`: the Costs page lists every one of them,
-  // and one meter read about monthly keeps this to a dozen rows a year.
-  findWithCostOrBill: (filter: ReadingFilter): Promise<ReadingRow[]> =>
-    prisma.reading.findMany({
-      where: { ...toWhere(filter), OR: [{ costCents: { not: null } }, { bill: { isNot: null } }] },
-      orderBy: [...NEWEST_FIRST],
-      select: READING_SELECT,
-    }),
+  // Every reading in the range, newest first, with or without a Cost or a Bill: the Costs page and its spreadsheet list
+  // them all. No `take`: one meter read about monthly keeps this to a dozen rows a year.
+  findInRange: (filter: ReadingFilter): Promise<ReadingRow[]> =>
+    prisma.reading.findMany({ where: toWhere(filter), orderBy: [...NEWEST_FIRST], select: READING_SELECT }),
 
   findById: (id: number): Promise<ReadingRow | null> =>
     prisma.reading.findUnique({ where: { id }, select: READING_SELECT }),
@@ -232,6 +250,8 @@ export const readingsRepository = {
       return await updateInTransaction(id, changes);
     } catch (error: unknown) {
       if (error instanceof BillNotAvailableError) return { outcome: 'billNotAvailable' };
+
+      if (error instanceof PhotoNotAvailableError) return { outcome: 'photoNotAvailable' };
 
       if (getPrismaErrorCode(error) === PRISMA_RECORD_NOT_FOUND) return { outcome: 'notFound' };
 

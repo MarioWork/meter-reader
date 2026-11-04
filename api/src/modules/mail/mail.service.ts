@@ -63,7 +63,7 @@ export type DeviceLoginPrompt = { userCode: string; verificationUri: string };
 function requireClientId(): string {
   if (env.MICROSOFT_CLIENT_ID) return env.MICROSOFT_CLIENT_ID;
 
-  throw new AppError('MICROSOFT_CLIENT_ID is not set. Register the app first (README, "Connecting Hotmail")', {
+  throw new AppError('MICROSOFT_CLIENT_ID is not set. Register the app first (docs/guide/hotmail.md)', {
     code: 'MAIL_NOT_CONFIGURED',
   });
 }

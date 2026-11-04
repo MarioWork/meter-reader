@@ -221,7 +221,7 @@ export const readingsRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: TAGS,
-        summary: 'Set, change or remove what the reading cost and its bill (null removes either)',
+        summary: "Change a reading's cost and bill (null removes either), or add a photo it was saved without",
         params: ReadingParamsSchema,
         body: UpdateReadingSchema,
         response: {
