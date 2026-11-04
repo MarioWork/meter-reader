@@ -1,6 +1,6 @@
 import { ImageOffIcon } from 'lucide-react';
 import { useState } from 'react';
-import { Spinner } from '@components/ui/spinner';
+import LoadingDigits from '@components/LoadingDigits';
 import { cn } from '@utils/classNameUtils';
 
 type Props = {
@@ -32,7 +32,7 @@ function PhotoFrame({ photoUrl, photoDescription, className }: Props) {
     >
       {isLoading && (
         <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner aria-hidden="true" />
+          <LoadingDigits />
           {LOADING_LABEL}
         </p>
       )}

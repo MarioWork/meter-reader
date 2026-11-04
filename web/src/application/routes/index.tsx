@@ -1,4 +1,5 @@
 import { Navigate, type RouteObject } from 'react-router';
+import AppLoading from '@components/AppLoading';
 import RouteError from '@pages/Error/RouteError';
 import { authMiddleware } from './authMiddleware';
 import { authRoutes } from './featureRoutes/authRoutes';
@@ -13,11 +14,7 @@ const routes: RouteObject[] = [
     path: BASE_ROUTES_PATHS.ROOT,
     errorElement: <RouteError />,
     // Shown while the first page's lazy module and loader resolve on the initial load.
-    hydrateFallbackElement: (
-      <p role="status" className="p-6">
-        Loading…
-      </p>
-    ),
+    hydrateFallbackElement: <AppLoading />,
     // Any 401 from a loader or an action, anywhere below, becomes a trip to the login page.
     middleware: [authMiddleware],
     children: [

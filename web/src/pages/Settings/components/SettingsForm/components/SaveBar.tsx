@@ -2,7 +2,7 @@ import { useId } from 'react';
 import ErrorAlert from '@components/ErrorAlert';
 import { Button } from '@components/ui/button';
 import { Card, CardContent } from '@components/ui/card';
-import { Spinner } from '@components/ui/spinner';
+import LoadingDigits from '@components/LoadingDigits';
 
 type Props = {
   formError?: string;
@@ -29,7 +29,7 @@ function SaveBar({ formError, isSaving }: Props) {
           {SAVE_HINT}
         </p>
         <Button type="submit" size="lg" disabled={isSaving} aria-describedby={hintId} className="ml-auto">
-          {isSaving && <Spinner aria-hidden="true" />}
+          {isSaving && <LoadingDigits />}
           {SAVE_LABEL}
         </Button>
       </CardContent>

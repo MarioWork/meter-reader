@@ -1,4 +1,4 @@
-import { Spinner } from '@components/ui/spinner';
+import LoadingDigits from '@components/LoadingDigits';
 import { DigitsReadStatus } from '../../../../types';
 
 type Props = {
@@ -14,13 +14,13 @@ const STATUS_MESSAGES: Record<DigitsReadStatus, string> = {
 
 // Always in the page, so a screen reader hears each change of the message (a live region added with its text in
 // it is often missed). Empty, it is visually hidden but stays in the accessibility tree (display: none would not).
-// The spinner only shows the work going on; the message already says it, so it is hidden from screen readers.
+// The loading meter only shows the work going on; the message already says it, so it is hidden from screen readers.
 function PhotoDigitsStatus({ status }: Props) {
   const isReading = status === DigitsReadStatus.READING;
 
   return (
     <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground empty:sr-only">
-      {isReading && <Spinner role={undefined} aria-hidden />}
+      {isReading && <LoadingDigits />}
       {STATUS_MESSAGES[status]}
     </p>
   );

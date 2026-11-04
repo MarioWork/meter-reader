@@ -153,6 +153,22 @@
   }
 }
 
+/* LoadingDigits' meter wheels: each strip rolls up ten digits, 1em each, then starts again where it began. */
+@theme {
+  --animate-digit-roll-fast: digit-roll 0.8s linear infinite;
+  --animate-digit-roll: digit-roll 1.6s linear infinite;
+  --animate-digit-roll-slow: digit-roll 3.2s linear infinite;
+
+  @keyframes digit-roll {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-10em);
+    }
+  }
+}
+
 /* Anything clickable gets the hand, so it reads as clickable. Tailwind 4 resets buttons to the default arrow, so
    controls get it in the base layer, where a control's own cursor-* utility still wins. The vendored menu items set
    cursor-default, so their hand is unlayered: it beats that utility without editing src/common/components/ui.

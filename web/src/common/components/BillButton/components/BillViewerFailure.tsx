@@ -11,7 +11,7 @@ const VIEWER_SELECTOR = 'dialog';
 
 // The bill could not be fetched or read: said at once, with one way to try again.
 function BillViewerFailure({ onRetry }: Props) {
-  // The spinner replaces this button: focus moves to the viewer itself instead of falling to the page behind it.
+  // The loading meter replaces this button: focus moves to the viewer itself instead of falling to the page behind it.
   const handleRetry = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.currentTarget.closest<HTMLElement>(VIEWER_SELECTOR)?.focus();
     onRetry();
