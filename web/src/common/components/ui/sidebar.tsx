@@ -3,7 +3,7 @@
 // Vendored from shadcn (base-nova). Local changes, all for this app's one "wide screen" breakpoint (Tailwind's `sm`,
 // see useIsWideScreen): the provider asks useIsWideScreen instead of shadcn's own 768 px use-mobile hook, and the
 // desktop sidebar shows from `sm:` instead of `md:`, so the sidebar and the shell switch at the same width. Also
-// SIDEBAR_WIDTH_ICON, below. SidebarInset, SidebarGroupAction and SidebarMenuAction still say `md:`: unused here, so
+// SIDEBAR_WIDTH and SIDEBAR_WIDTH_ICON, below. SidebarInset, SidebarGroupAction and SidebarMenuAction still say `md:`: unused here, so
 // switch them to `sm:` too before using one.
 import * as React from 'react';
 import { mergeProps } from '@base-ui/react/merge-props';
@@ -22,7 +22,9 @@ import { PanelLeftIcon } from 'lucide-react';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = '16rem';
+// Local change: 11.25rem, not shadcn's 16rem. Measured in Chromium: the logo, the gap and "Meter Reader" take 154 px,
+// plus the header's 12 px padding each side, so 180 px. Every page and action label fits well inside it.
+const SIDEBAR_WIDTH = '11.25rem';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 // Local change: 4rem, not shadcn's 3rem. At 3rem the collapsed icons sit right beside the edge that expands the
 // sidebar (SidebarEdgeToggle), so a click meant for an icon could open the sidebar instead.

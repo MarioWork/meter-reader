@@ -11,7 +11,7 @@ import AppSidebar from './AppSidebar';
 
 const ANY_PATH = '*';
 const DARK_CLASS = 'dark';
-// The app name, Home, Costs, Settings, Theme and Sign out, in tab order before the edge.
+// The app name, Home, Costs, Settings, Sign out and Theme, in tab order before the edge.
 const CONTROLS_BEFORE_EDGE = 6;
 
 // The sidebar alone, on whatever page the test opens.
@@ -109,12 +109,12 @@ it('collapses and expands with ⌘ B', async () => {
   expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
 });
 
-it('reaches its edge with Tab, after Sign out, and collapses with Enter', async () => {
+it('reaches its edge with Tab, after Theme, and collapses with Enter', async () => {
   renderSidebar();
 
   for (let i = 0; i < CONTROLS_BEFORE_EDGE; i++) await userEvent.tab();
 
-  expect(within(sidebarNavigation()).getByRole('button', { name: 'Sign out' })).toHaveFocus();
+  expect(within(sidebarNavigation()).getByRole('button', { name: 'Theme' })).toHaveFocus();
 
   await userEvent.tab();
   await userEvent.keyboard('{Enter}');

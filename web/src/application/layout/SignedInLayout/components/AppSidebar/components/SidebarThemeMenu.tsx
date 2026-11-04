@@ -1,25 +1,23 @@
-import { SunMoonIcon } from 'lucide-react';
+import { MoonIcon, SunIcon } from 'lucide-react';
+import { Button } from '@components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
-import { SidebarMenuButton, SidebarMenuItem } from '@components/ui/sidebar';
 import ThemeMenuGroup from '../../ThemeMenuGroup';
-import SidebarItemLabel from './SidebarItemLabel';
 
 const THEME_LABEL = 'Theme';
 
-// A Theme button that opens the same Light / Dark / System choice as the phone's menu, beside the sidebar.
+// An icon button at the end of the sidebar's bottom row: a sun in light mode, a moon in dark. It opens the same Light /
+// Dark / System choice as the phone's menu, beside the sidebar.
 function SidebarThemeMenu() {
   return (
-    <SidebarMenuItem>
-      <DropdownMenu>
-        <SidebarMenuButton tooltip={THEME_LABEL} render={<DropdownMenuTrigger />}>
-          <SunMoonIcon aria-hidden="true" />
-          <SidebarItemLabel label={THEME_LABEL} />
-        </SidebarMenuButton>
-        <DropdownMenuContent side="right" align="end" className="w-44">
-          <ThemeMenuGroup />
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </SidebarMenuItem>
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label={THEME_LABEL} />}>
+        <SunIcon className="dark:hidden" aria-hidden="true" />
+        <MoonIcon className="hidden dark:block" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="end" className="w-44">
+        <ThemeMenuGroup />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
