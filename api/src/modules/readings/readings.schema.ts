@@ -145,6 +145,21 @@ export const ReadingResponseSchema = z
   })
   .meta({ id: 'Reading' });
 
+// A reading beside another one in the history (by date, then the one saved last): its id for the link to it, and its
+// digits and day for the water used between them.
+const ReadingNeighbourSchema = z.object({
+  id: z.number().int(),
+  digits: z.string(),
+  date: z.iso.date(),
+});
+
+// One reading for its own page, with what the page needs beside it in the same answer: `previous` is the reading just
+// before it by date (null for the first one ever), `next` the one just after (null for the newest).
+export const ReadingDetailsResponseSchema = ReadingResponseSchema.extend({
+  previous: ReadingNeighbourSchema.nullable(),
+  next: ReadingNeighbourSchema.nullable(),
+}).meta({ id: 'ReadingDetails' });
+
 // What can change on a reading after it is saved. A field left out stays as it is; one sent as null is removed.
 // `billId` is a bill uploaded first (POST /bills): it replaces the reading's bill, whose file is deleted.
 export const UpdateReadingSchema = z.strictObject({
@@ -250,6 +265,8 @@ export type ReadingEmailResponse = z.infer<typeof ReadingEmailResponseSchema>;
 export type EmailDefaultsResponse = z.infer<typeof EmailDefaultsResponseSchema>;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 export type ReadingResponse = z.infer<typeof ReadingResponseSchema>;
+export type ReadingNeighbour = z.infer<typeof ReadingNeighbourSchema>;
+export type ReadingDetailsResponse = z.infer<typeof ReadingDetailsResponseSchema>;
 export type ReadingListResponse = z.infer<typeof ReadingListResponseSchema>;
 export type CostListResponse = z.infer<typeof CostListResponseSchema>;
 export type BackupReading = z.infer<typeof BackupReadingSchema>;

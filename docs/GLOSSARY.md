@@ -58,6 +58,10 @@ _Avoid_: Re-submit, re-send
 The list of past readings, newest first, each with its date, photo and whether it was sent or failed.
 _Avoid_: Log, archive
 
+**Usage**:
+The water used between a reading and the one just before it by date: its digits minus theirs, in m³, over the days between them ("+12 m³ in 31 days"). The first reading has none. When the digits went down (the meter was replaced, or a reading mistyped), the difference is shown as that, never as usage.
+_Avoid_: Consumption, delta
+
 **Cost**:
 What one reading cost, in euros, with up to 2 decimals and never below 0. Added after the reading is saved; a reading may have none.
 _Avoid_: Total, price, amount, paid

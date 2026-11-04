@@ -18,10 +18,13 @@ import {
 } from '@test-utils';
 
 // The mock history: reading 14 (1 Oct 2026) is the newest, not sent, with a photo and no cost; 13 (1 Sept) failed;
-// 12 (1 Aug) was sent, with its photo, and cost €39.05; 10 (1 Jun) has no photo and was never sent.
+// 12 (1 Aug) was sent, with its photo, and cost €39.05; 10 (1 Jun) has no photo and was never sent; 1 (1 Sept 2025) is
+// the first. The digits go up by 9 every month: 00511 on 1 Aug, 00520 on 1 Sept, 00529 on 1 Oct.
 const NEWEST_ID = 14;
 const NEWEST_DATE = '1 Oct 2026';
+const FIRST_ID = 1;
 const FAILED_ID = 13;
+const FAILED_DATE = '1 Sept 2026';
 const SENT_ID = 12;
 const SENT_DATE = '1 Aug 2026';
 const NO_PHOTO_ID = 10;
@@ -93,6 +96,127 @@ describe('the header', () => {
 
     const sectionHeadings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(sectionHeadings).toEqual(['Cost & bill', 'Email', 'Details']);
+  });
+});
+
+describe('the water used since the previous reading', () => {
+  it('shows the cubic metres used and the days since the previous reading, under the digits', async () => {
+    await renderReadingPage(NEWEST_ID);
+
+    expect(screen.getByText('+9 m³ in 30 days')).toBeVisible();
+  });
+
+  it('says "First reading" for the first reading ever', async () => {
+    await renderReadingPage(FIRST_ID);
+
+    expect(screen.getByText('First reading')).toBeVisible();
+    expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
+  });
+
+  it('says how far the digits went down, with the previous reading, never as water used', async () => {
+    updateMockReading(FAILED_ID, { digits: '00100' });
+
+    await renderReadingPage(FAILED_ID);
+
+    expect(screen.getByText('411 m³ lower than the previous reading')).toBeVisible();
+    expect(
+      screen.getByText(/The previous reading, on 1 Aug 2026, was 00511\. The meter may have been replaced/),
+    ).toBeVisible();
+    expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Previous and Next', () => {
+  function readingsNav() {
+    return screen.getByRole('navigation', { name: 'Other readings' });
+  }
+
+  it("links to the readings just before and after by date, keeping Home's filters", async () => {
+    await renderReadingPage(FAILED_ID, FILTERED_SEARCH);
+
+    expect(within(readingsNav()).getByRole('link', { name: 'Previous' })).toHaveAttribute(
+      'href',
+      `${READING_ROUTES_PATHS.details(String(SENT_ID))}${FILTERED_SEARCH}`,
+    );
+    expect(within(readingsNav()).getByRole('link', { name: 'Next' })).toHaveAttribute(
+      'href',
+      `${READING_ROUTES_PATHS.details(String(NEWEST_ID))}${FILTERED_SEARCH}`,
+    );
+  });
+
+  it('opens the next reading from Next, and the previous one from Previous', async () => {
+    const router = await renderReadingPage(FAILED_ID);
+
+    await userEvent.click(screen.getByRole('link', { name: 'Next' }));
+    expect(await screen.findByRole('heading', { level: 1, name: `Reading of ${NEWEST_DATE}` })).toBeVisible();
+
+    await userEvent.click(screen.getByRole('link', { name: 'Previous' }));
+    expect(await screen.findByRole('heading', { level: 1, name: `Reading of ${FAILED_DATE}` })).toBeVisible();
+    expect(router.state.location.pathname).toBe(READING_ROUTES_PATHS.details(String(FAILED_ID)));
+  });
+
+  it('leaves out Next on the newest reading', async () => {
+    await renderReadingPage(NEWEST_ID);
+
+    expect(within(readingsNav()).getByRole('link', { name: 'Previous' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Next' })).not.toBeInTheDocument();
+  });
+
+  it('leaves out Previous on the first reading ever', async () => {
+    await renderReadingPage(FIRST_ID);
+
+    expect(within(readingsNav()).getByRole('link', { name: 'Next' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Previous' })).not.toBeInTheDocument();
+  });
+
+  it("moves between readings with the left and right arrow keys, keeping Home's filters", async () => {
+    const router = await renderReadingPage(FAILED_ID, FILTERED_SEARCH);
+
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(await screen.findByRole('heading', { level: 1, name: `Reading of ${SENT_DATE}` })).toBeVisible();
+    expect(router.state.location.search).toBe(FILTERED_SEARCH);
+
+    await userEvent.keyboard('{ArrowRight}');
+    expect(await screen.findByRole('heading', { level: 1, name: `Reading of ${FAILED_DATE}` })).toBeVisible();
+  });
+
+  it('does nothing with an arrow key that has no reading that way', async () => {
+    const router = await renderReadingPage(NEWEST_ID);
+
+    await userEvent.keyboard('{ArrowRight}');
+
+    expect(router.state.location.pathname).toBe(READING_ROUTES_PATHS.details(String(NEWEST_ID)));
+  });
+
+  it('leaves the arrow keys to the "⋯" menu while it is open', async () => {
+    const router = await renderReadingPage(FAILED_ID);
+    await openMenu();
+    await screen.findByRole('menu');
+
+    await userEvent.keyboard('{ArrowLeft}');
+
+    expect(router.state.location.pathname).toBe(READING_ROUTES_PATHS.details(String(FAILED_ID)));
+  });
+
+  it("leaves Alt + ← to the browser's own Back", async () => {
+    const router = await renderReadingPage(FAILED_ID);
+
+    await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+
+    expect(router.state.location.pathname).toBe(READING_ROUTES_PATHS.details(String(FAILED_ID)));
+  });
+
+  it('leaves the arrow keys to a field while the focus is in one', async () => {
+    const router = await renderReadingPage(NEWEST_ID);
+    await userEvent.click(within(pageRegion('Cost & bill')).getByRole('link', { name: 'Add cost & bill' }));
+    const costField = within(await screen.findByRole('dialog', { name: 'Add cost & bill' })).getByRole('textbox', {
+      name: 'Cost (€)',
+    });
+
+    await userEvent.type(costField, '42{ArrowLeft}1');
+
+    expect(costField).toHaveValue('412');
+    expect(router.state.location.pathname).toBe(READING_ROUTES_PATHS.detailsCostAndBill(String(NEWEST_ID)));
   });
 });
 

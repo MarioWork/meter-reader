@@ -927,6 +927,53 @@ describe('GET /readings/:id', () => {
     expect(Date.parse(response.json<{ createdAt: string }>().createdAt)).not.toBeNaN();
   });
 
+  it('answers the readings just before and after it by date when they were saved out of order', async () => {
+    const newerId = (await addReading({ digits: '00160', date: '2026-11-30' })).json<{ id: number }>().id;
+    const olderId = (await addReading({ digits: '00100', date: '2026-09-30' })).json<{ id: number }>().id;
+    const readingId = (await addReading({ digits: '00123', date: '2026-10-31' })).json<{ id: number }>().id;
+    await addReading({ digits: '00050', date: '2026-08-31' });
+
+    const response = await getReading(readingId);
+
+    expect(response.json()).toMatchObject({
+      previous: { id: olderId, digits: '00100', date: '2026-09-30' },
+      next: { id: newerId, digits: '00160', date: '2026-11-30' },
+    });
+  });
+
+  it('answers no previous reading and no next one when the reading is at that end of the history', async () => {
+    const firstId = await addReadingId('00100');
+    const newestId = (await addReading({ digits: '00123', date: '2026-11-30' })).json<{ id: number }>().id;
+
+    const first = (await getReading(firstId)).json<{ previous: unknown; next: { id: number } }>();
+    const newest = (await getReading(newestId)).json<{ previous: { id: number }; next: unknown }>();
+
+    expect(first.previous).toBeNull();
+    expect(first.next.id).toBe(newestId);
+    expect(newest.previous.id).toBe(firstId);
+    expect(newest.next).toBeNull();
+  });
+
+  it('answers the one saved first as previous and the one saved last as next when two readings share a day', async () => {
+    const savedFirstId = await addReadingId('00100');
+    const savedSecondId = await addReadingId('00101');
+
+    const savedFirst = (await getReading(savedFirstId)).json<{ next: { id: number } }>();
+    const savedSecond = (await getReading(savedSecondId)).json<{ previous: { id: number } }>();
+
+    expect(savedFirst.next.id).toBe(savedSecondId);
+    expect(savedSecond.previous.id).toBe(savedFirstId);
+  });
+
+  it('answers the previous reading as read when its digits are higher, so the page can say the digits went down', async () => {
+    await addReading({ digits: '00900', date: '2026-09-30' });
+    const readingId = await addReadingId('00012');
+
+    const response = await getReading(readingId);
+
+    expect(response.json()).toMatchObject({ digits: '00012', previous: { digits: '00900', date: '2026-09-30' } });
+  });
+
   it('returns 400 VALIDATION_ERROR when the id is not a whole number', async () => {
     const response = await getReading('abc');
 

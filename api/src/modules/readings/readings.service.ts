@@ -25,7 +25,13 @@ import {
 } from '../settings/settings.service.ts';
 import type { MessageSettings, MessageValues } from '../settings/settings.type.ts';
 import type { MailAttachment, OutgoingMail } from '../mail/mail.type.ts';
-import { readingsRepository, type ReadingFilter, type ReadingRow, type SentEmail } from './readings.repository.ts';
+import {
+  readingsRepository,
+  type NeighbourRow,
+  type ReadingFilter,
+  type ReadingRow,
+  type SentEmail,
+} from './readings.repository.ts';
 import {
   BILLS_FOLDER,
   CSV_EXTENSION,
@@ -47,6 +53,8 @@ import type {
   ListReadingsQuery,
   ReadingEmailResponse,
   ReadingListResponse,
+  ReadingDetailsResponse,
+  ReadingNeighbour,
   ReadingResponse,
   ReadingStatus,
   SendReading,
@@ -186,8 +194,19 @@ async function findReading(id: number): Promise<ReadingRow> {
   return row;
 }
 
-export async function getReading(id: number): Promise<ReadingResponse> {
-  return toResponse(await findReading(id));
+function toNeighbourResponse(row: NeighbourRow | null): ReadingNeighbour | null {
+  if (!row) return null;
+
+  return { id: row.id, digits: row.digits, date: toIsoDate(row.date) };
+}
+
+// The reading with the ones just before and after it, so its page shows the water used since the previous one and
+// links to both in one request.
+export async function getReadingDetails(id: number): Promise<ReadingDetailsResponse> {
+  const row = await findReading(id);
+  const { previous, next } = await readingsRepository.findNeighbours(row);
+
+  return { ...toResponse(row), previous: toNeighbourResponse(previous), next: toNeighbourResponse(next) };
 }
 
 export async function addReading({ digits, date, photoId }: CreateReading): Promise<ReadingResponse> {

@@ -33,7 +33,8 @@ function ReadingPhoto() {
 
   return (
     <div className="relative">
-      <PhotoFrame photoUrl={photoUrl} photoDescription={photoDescription} className="w-full" />
+      {/* Keyed by the photo: Previous and Next keep this page mounted, and a new photo starts its own loading. */}
+      <PhotoFrame key={photoUrl} photoUrl={photoUrl} photoDescription={photoDescription} className="w-full" />
       {/* Over the whole photo, so the photo itself is the target; its corner icon says what a tap does. */}
       <button
         ref={openButtonRef}

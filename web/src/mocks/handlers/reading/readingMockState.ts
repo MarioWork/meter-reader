@@ -1,5 +1,5 @@
 // The mock history: one list shared by the reading handlers, so a reading saved in the demo shows up on Home.
-import type { ReadingApiModel, ReadingId } from '@app-types/models';
+import type { ReadingApiModel, ReadingDetailsApiModel, ReadingId, ReadingNeighbourApiModel } from '@app-types/models';
 import { createReadingMockModelList, READING_MOCK_COUNT } from './models/readingMockModel.mock';
 
 let readings: ReadingApiModel[] = createReadingMockModelList(READING_MOCK_COUNT);
@@ -31,6 +31,24 @@ export function addMockReading(reading: Omit<ReadingApiModel, 'id'>): ReadingApi
 
 export function findMockReading(id: ReadingId): ReadingApiModel | undefined {
   return readings.find((reading) => reading.id === id);
+}
+
+function toNeighbour(reading: ReadingApiModel | undefined): ReadingNeighbourApiModel | null {
+  if (!reading) return null;
+
+  return { id: reading.id, digits: reading.digits, date: reading.date };
+}
+
+// The reading for its page, with the ones just before and after it in the history, as the API answers it.
+export function findMockReadingDetails(id: ReadingId): ReadingDetailsApiModel | undefined {
+  const newestFirst = getMockReadings();
+  const index = newestFirst.findIndex((reading) => reading.id === id);
+
+  if (index === -1) return undefined;
+
+  const reading = newestFirst[index];
+
+  return { ...reading, previous: toNeighbour(newestFirst[index + 1]), next: toNeighbour(newestFirst[index - 1]) };
 }
 
 // The reading with the changes made, or undefined when there was no such reading.
