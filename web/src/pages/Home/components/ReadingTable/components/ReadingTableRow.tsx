@@ -3,7 +3,7 @@ import { TableCell, TableRow } from '@components/ui/table';
 import { formatCost } from '@utils/costUtils';
 import ReadingSendStatus from '@components/ReadingSendStatus';
 import BillCell from './BillCell';
-import MissingValue from './MissingValue';
+import MissingValue from '@components/MissingValue';
 import RowActionsCell from './RowActionsCell';
 import RowDetailsLink from './RowDetailsLink';
 

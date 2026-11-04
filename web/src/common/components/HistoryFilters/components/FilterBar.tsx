@@ -29,10 +29,10 @@ const NO_FILTERS: HistoryFilterValues = { statuses: [] };
 const APPLY_RANGE_LABEL = 'Apply';
 const CLEAR_LABEL = 'Clear all';
 
-// The filters laid out under the title on a wide screen, always in view. A day range or a status applies the moment
-// it is pressed; Custom shows its months and applies them with Apply, so a half-picked range never runs. What is
-// pressed comes from the applied filters, so the bar stays as it is (focus included) while the list reloads; only
-// Custom being open and its months are its own.
+// A wide screen's filters, always in view: the day ranges, the statuses and Clear all in one row, Custom's months
+// under it. A day range or a status applies the moment it is pressed; Custom shows its months and applies them with
+// Apply, so a half-picked range never runs. What is pressed comes from the applied filters, so the bar stays as it is
+// (focus included) while the list reloads; only Custom being open and its months are its own.
 function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
   const applied = historyFilterDraft(filters);
   const isCustomApplied = applied.datePreset === DatePresets.CUSTOM;
@@ -52,8 +52,6 @@ function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
     if (!isFiltered) setIsCustomOpen(false);
   }
 
-  // Costs has no statuses: its bottom row is there only while Clear all is.
-  const hasBottomRow = hasStatusFilter || isFiltered;
   const shownPreset = isCustomOpen ? DatePresets.CUSTOM : applied.datePreset;
   const isCustomBackwards = isRangeBackwards({ dateFrom: customMonths.customFrom, dateTo: customMonths.customTo });
 
@@ -89,10 +87,26 @@ function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
   };
 
   return (
-    <section aria-label={BAR_LABEL} className="flex flex-col gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-      <DatePresetField datePreset={shownPreset} onChange={pickDatePreset} />
+    <section aria-label={BAR_LABEL} className="flex flex-col">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <DatePresetField datePreset={shownPreset} onChange={pickDatePreset} />
+        {hasStatusFilter && (
+          <StatusField
+            statuses={filters.statuses}
+            onChange={(statuses) => onUpdate((currentFilters) => ({ ...currentFilters, statuses }))}
+          />
+        )}
+        {isFiltered && (
+          // At the end of the row, even when it wraps under the other filters on a narrower screen.
+          <Button variant="ghost" onClick={clearAll} className="ml-auto">
+            <XIcon aria-hidden="true" />
+            {CLEAR_LABEL}
+          </Button>
+        )}
+      </div>
       <SmoothReveal isOpen={isCustomOpen}>
-        <div className="flex flex-col gap-3 pb-1">
+        {/* The gap above it is inside, so a closed Custom leaves no space under the row. */}
+        <div className="flex max-w-md flex-col gap-3 pt-3 pb-1">
           <CustomRangeFields
             customFrom={customMonths.customFrom}
             customTo={customMonths.customTo}
@@ -106,23 +120,6 @@ function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
           </Button>
         </div>
       </SmoothReveal>
-      {hasBottomRow && (
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          {hasStatusFilter && (
-            <StatusField
-              statuses={filters.statuses}
-              onChange={(statuses) => onUpdate((currentFilters) => ({ ...currentFilters, statuses }))}
-            />
-          )}
-          {isFiltered && (
-            // Right-aligned even when it is alone in the row (Costs) or wraps under the statuses.
-            <Button variant="ghost" size="sm" onClick={clearAll} className="ml-auto">
-              <XIcon aria-hidden="true" />
-              {CLEAR_LABEL}
-            </Button>
-          )}
-        </div>
-      )}
     </section>
   );
 }

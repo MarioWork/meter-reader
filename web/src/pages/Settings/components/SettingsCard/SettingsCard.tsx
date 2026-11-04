@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
+import TileCard from '@components/TileCard';
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 
 type Props = {
   title: string;
@@ -13,7 +14,7 @@ function SettingsCard({ title, description, children }: Props) {
   const titleId = useId();
 
   return (
-    <Card role="region" aria-labelledby={titleId}>
+    <TileCard role="region" aria-labelledby={titleId}>
       <CardHeader>
         <CardTitle>
           <h2 id={titleId}>{title}</h2>
@@ -21,7 +22,7 @@ function SettingsCard({ title, description, children }: Props) {
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">{children}</CardContent>
-    </Card>
+    </TileCard>
   );
 }
 

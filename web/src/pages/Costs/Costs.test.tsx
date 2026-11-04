@@ -15,7 +15,7 @@ const FIRST_QUARTER_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-01-01&to=2026-0
 // The mock history's 1 Sep 2026 reading (no cost) and 1 Aug 2026 reading (€39.05).
 const NO_COST_READING_ID = 13;
 const COSTED_READING_ID = 12;
-const EXPORT_LINK_NAME = 'Export costs as a spreadsheet';
+const EXPORT_LINK_NAME = 'Export as spreadsheet';
 // September and October 2026 have no cost.
 const SEPT_OCT_2026 = `${COSTS_ROUTES_PATHS.BASE}?from=2026-09-01&to=2026-10-31`;
 
@@ -264,8 +264,47 @@ describe('on a wide screen', () => {
 
     expect(within(summary).getByRole('region', { name: 'Total' })).toHaveTextContent(ALL_COSTS_TOTAL);
     expect(within(summary).getByRole('img', { name: /^Bar chart of 11 costs/ })).toBeVisible();
-    expect(within(summary).queryByRole('list')).not.toBeInTheDocument();
-    expect(summary.compareDocumentPosition(costList()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(summary).queryByRole('table')).not.toBeInTheDocument();
+    expect(summary.compareDocumentPosition(costTable()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('link', { name: EXPORT_LINK_NAME })).toBeVisible();
+  });
+
+  function costTable() {
+    return screen.getByRole('table', { name: 'Readings with a cost or a bill' });
+  }
+
+  // Every row but the header row, newest first.
+  function costRows() {
+    const [, ...bodyRows] = within(costTable()).getAllByRole('row');
+
+    return bodyRows;
+  }
+
+  it('shows the readings as a table, newest first, with the date, the digits, the cost and the bill', async () => {
+    saveMockBill(COSTED_READING_ID, 'august.pdf');
+
+    await renderCosts();
+
+    const headers = within(costTable())
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent);
+    expect(headers).toEqual(['Date', 'Reading', 'Cost', 'Bill']);
+    expect(costRows()).toHaveLength(ALL_COSTS_COUNT);
+    expect(costRows()[0]).toHaveTextContent('1 Aug 2026');
+    expect(costRows()[0]).toHaveTextContent('00511');
+    expect(costRows()[0]).toHaveTextContent('€39.05');
+    expect(
+      within(costRows()[0]).getByRole('button', { name: 'august.pdf, opens the bill of 1 Aug 2026' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Readings with a cost or a bill' })).not.toBeInTheDocument();
+  });
+
+  it('says a reading listed for its bill alone has no cost', async () => {
+    saveMockBill(NO_COST_READING_ID);
+
+    await renderCosts();
+
+    expect(costRows()[0]).toHaveTextContent('1 Sept 2026');
+    expect(costRows()[0]).toHaveTextContent('No cost');
   });
 });

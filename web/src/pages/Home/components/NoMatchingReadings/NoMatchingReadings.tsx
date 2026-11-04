@@ -8,10 +8,11 @@ type Props = {
 
 const CLEAR_LABEL = 'Clear filters';
 
-// A filtered history with nothing in it, and the way back to the whole history.
+// A filtered history with nothing in it, and the way back to the whole history. A wide screen shows it inside the
+// list's tile, so it needs no card of its own there.
 function NoMatchingReadings({ onClearFilters }: Props) {
   return (
-    <Empty className="border bg-card">
+    <Empty className="border bg-card sm:border-0 sm:bg-transparent">
       <NoMatchingReadingsHeader />
       <EmptyContent>
         <Button variant="outline" onClick={onClearFilters}>
