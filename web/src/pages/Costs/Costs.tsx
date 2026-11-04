@@ -20,8 +20,9 @@ const FILTERS_OPTIONS = { hasStatusFilter: false };
 // What the readings cost: the sum, a bar per reading over time, and the same readings as a list, which is also the
 // chart's text alternative. The list also holds the readings with only a Bill, which get no bar and add nothing to the
 // sum. Narrowed by the same day range as Home's history, kept in the url, and exported for it. A phone stacks them in
-// one narrow column; from `lg`, with room beside the sidebar, the page takes the shell's full column, the total and a
-// taller chart share the top row, and the list runs under them.
+// one narrow column; from `lg`, with room beside the sidebar, the page takes the shell's full column: the total and
+// the chart share the top row, the total a third of it and as tall as the chart, its content at the top, and the list
+// runs under both, as wide as the two.
 function Costs() {
   const { costs } = useLoaderData<LoaderDataUtil<typeof loader>>();
   const { filters, isFiltered, clearFilters } = useHistoryFilters(FILTERS_OPTIONS);
@@ -54,14 +55,10 @@ function Costs() {
       >
         {hasListedReadings ? (
           <>
-            {/* From lg: the total takes a third of the row at its own height, the chart the rest. */}
-            <div role="group" aria-label={SUMMARY_LABEL} className="flex flex-col gap-6 lg:flex-row">
-              <CostsTotal
-                totalCostCents={costs.totalCostCents}
-                costCount={costCount}
-                className="lg:flex-1 lg:self-start"
-              />
-              <CostsChart readings={costs.data} className="min-w-0 lg:flex-2" />
+            {/* From lg: the total takes a third of the row and stretches to the chart's height. */}
+            <div role="group" aria-label={SUMMARY_LABEL} className="flex flex-col gap-6 lg:grid lg:grid-cols-3">
+              <CostsTotal totalCostCents={costs.totalCostCents} costCount={costCount} />
+              <CostsChart readings={costs.data} className="min-w-0 lg:col-span-2" />
             </div>
             <CostList readings={costs.data} />
           </>

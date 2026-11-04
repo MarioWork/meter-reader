@@ -89,7 +89,7 @@ function FilterBar({ filters, hasStatusFilter, onApply, onUpdate }: Props) {
   return (
     <section aria-label={BAR_LABEL} className="flex flex-col">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-        <DatePresetField datePreset={shownPreset} onChange={pickDatePreset} />
+        <DatePresetField datePreset={shownPreset} isLegendHidden={!hasStatusFilter} onChange={pickDatePreset} />
         {hasStatusFilter && (
           <StatusField
             statuses={filters.statuses}
