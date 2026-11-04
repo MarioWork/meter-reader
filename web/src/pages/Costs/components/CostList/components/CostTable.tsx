@@ -14,12 +14,14 @@ type Column = {
   className?: string;
 };
 
-// In the order CostTableRow fills its cells. The amounts right-aligned, so they line up for the eye to run down.
+// In the order CostTableRow fills its cells, each with room around what it holds. All start-aligned, so a row reads
+// left to right like the rest of the page.
 const COLUMNS: Column[] = [
-  { label: 'Date' },
-  { label: 'Reading' },
-  { label: 'Cost', className: 'text-right' },
-  { label: 'Bill' },
+  { label: 'Date', className: 'w-40' },
+  { label: 'Reading', className: 'w-36' },
+  { label: 'Cost', className: 'w-36' },
+  // Wide enough for most file names before they are cut short.
+  { label: 'Bill', className: 'w-64' },
 ];
 
 // A wide screen's list: a compact table, a row per reading, each column only as wide as what it holds, so a row reads

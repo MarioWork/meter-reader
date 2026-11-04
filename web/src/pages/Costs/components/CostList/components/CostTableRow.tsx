@@ -21,14 +21,14 @@ function CostTableRow({ reading }: Props) {
     <TableRow>
       <TableCell className={cn(CELL_CLASS, 'font-medium')}>{formatIsoDate(reading.date)}</TableCell>
       <TableCell className={cn(CELL_CLASS, 'font-mono tabular-nums')}>{reading.digits}</TableCell>
-      <TableCell className={cn(CELL_CLASS, 'text-right tabular-nums')}>
+      <TableCell className={cn(CELL_CLASS, 'tabular-nums')}>
         {reading.costCents === null ? (
           <span className="text-muted-foreground">{NO_COST_TEXT}</span>
         ) : (
           <span className="font-semibold">{formatCost(reading.costCents)}</span>
         )}
       </TableCell>
-      <TableCell className={CELL_CLASS}>
+      <TableCell className={cn(CELL_CLASS, 'max-w-64')}>
         {reading.bill === null ? (
           <MissingValue label={NO_BILL_TEXT} />
         ) : (
