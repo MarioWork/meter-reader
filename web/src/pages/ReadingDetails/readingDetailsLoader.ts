@@ -30,5 +30,11 @@ async function findReading(params: Params): Promise<ReadingDetailsApiModel | nul
 // The reading fresh from the server, so a link to it works on its own. Not awaited: the page opens at once and shows
 // where everything goes while the reading loads.
 export function loader({ params }: LoaderFunctionArgs) {
-  return { reading: findReading(params) };
+  const reading = findReading(params);
+
+  // The page's <Await> still gets the rejection and shows its failure state; this only marks the promise handled, so
+  // a load the page no longer waits for (left behind by a later visit or revalidation) is no unhandled rejection.
+  reading.catch(() => undefined);
+
+  return { reading };
 }
