@@ -8,7 +8,7 @@ type Props = {
   label: string;
 };
 
-// DownloadLink as an icon alone, for a page's header: a plain link the browser downloads the file from, named by its
+// A download as an icon alone, for a page's header: a plain link the browser downloads the file from, named by its
 // label, which also shows as a tooltip on hover and on keyboard focus. 32 px square, over the 24 px minimum target.
 function IconDownloadLink({ href, label }: Props) {
   return (

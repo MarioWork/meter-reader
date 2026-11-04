@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test';
 import { SETTINGS_ROUTES_PATHS } from '../../src/application/routes/routesUtils';
 
+type SidebarStartLabel = 'Expanded' | 'Collapsed';
+
 // Settings: the Email addresses and Message cards, the live Preview card, the save bar, then the Appearance and Data
 // cards below them.
 export class SettingsPage {
@@ -42,11 +44,11 @@ export class SettingsPage {
     return this.page.getByRole('region', { name: 'Appearance' });
   }
 
-  sidebarStartChoice(label: 'Expanded' | 'Collapsed') {
+  sidebarStartChoice(label: SidebarStartLabel) {
     return this.appearance.getByRole('group', { name: 'Sidebar starts' }).getByRole('button', { name: label });
   }
 
-  async chooseSidebarStart(label: 'Expanded' | 'Collapsed') {
+  async chooseSidebarStart(label: SidebarStartLabel) {
     await this.sidebarStartChoice(label).click();
   }
 

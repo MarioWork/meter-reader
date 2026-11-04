@@ -1,10 +1,10 @@
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from 'lucide-react';
-import { SidebarStartUtil } from '@app-types/utility';
+import { SidebarStartUtil, type ChoiceOptionUtil } from '@app-types/utility';
 import { useSidebarStart } from '@hooks/useSidebarStart';
 import { useTheme } from '@hooks/useTheme';
 import { THEME_OPTIONS } from '@utils/themeOptionUtils';
 import SettingsCard from '../SettingsCard';
-import SegmentedChoice, { type SegmentedOption } from './components/SegmentedChoice';
+import SegmentedChoice from './components/SegmentedChoice';
 
 const TITLE = 'Appearance';
 const DESCRIPTION = 'Kept on this device, and changed the moment you pick. System follows your device.';
@@ -12,7 +12,7 @@ const THEME_LEGEND = 'Theme';
 const SIDEBAR_START_LEGEND = 'Sidebar starts';
 const SIDEBAR_START_HINT = 'On a computer, each time the app opens.';
 
-const SIDEBAR_START_OPTIONS: SegmentedOption<SidebarStartUtil>[] = [
+const SIDEBAR_START_OPTIONS: ChoiceOptionUtil<SidebarStartUtil>[] = [
   { value: SidebarStartUtil.EXPANDED, label: 'Expanded', Icon: PanelLeftOpenIcon },
   { value: SidebarStartUtil.COLLAPSED, label: 'Collapsed', Icon: PanelLeftCloseIcon },
 ];

@@ -1,17 +1,12 @@
-import { CheckIcon, type LucideIcon } from 'lucide-react';
+import { CheckIcon } from 'lucide-react';
+import type { ChoiceOptionUtil } from '@app-types/utility';
 import { FieldDescription, FieldLegend, FieldSet } from '@components/ui/field';
 import { ToggleGroup, ToggleGroupItem } from '@components/ui/toggle-group';
-
-export type SegmentedOption<Value extends string> = {
-  value: Value;
-  label: string;
-  Icon: LucideIcon;
-};
 
 type Props<Value extends string> = {
   // Names the group, seen and heard.
   legend: string;
-  options: SegmentedOption<Value>[];
+  options: ChoiceOptionUtil<Value>[];
   value: Value;
   onChange: (value: Value) => void;
   hint?: string;

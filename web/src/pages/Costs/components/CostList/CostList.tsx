@@ -3,7 +3,7 @@ import type { ReadingApiModel } from '@app-types/models';
 import TileCard from '@components/TileCard';
 import { CardContent, CardHeader, CardTitle } from '@components/ui/card';
 import { useIsWideScreen } from '@hooks/useIsWideScreen';
-import CostListItem from './components/CostListItem';
+import CostItems from './components/CostItems';
 import CostTable from './components/CostTable';
 
 type Props = {
@@ -30,11 +30,7 @@ function CostList({ readings }: Props) {
         {isWideScreen ? (
           <CostTable readings={readings} titleId={titleId} />
         ) : (
-          <ul aria-labelledby={titleId} className="flex flex-col divide-y divide-border">
-            {readings.map((reading) => (
-              <CostListItem key={reading.id} reading={reading} />
-            ))}
-          </ul>
+          <CostItems readings={readings} titleId={titleId} />
         )}
       </CardContent>
     </TileCard>
