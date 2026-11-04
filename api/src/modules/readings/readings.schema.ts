@@ -165,6 +165,8 @@ export const ReadingDetailsResponseSchema = ReadingResponseSchema.extend({
 export const UpdateReadingSchema = z.strictObject({
   costCents: CostCentsSchema.nullable().optional(),
   billId: z.number().int().positive().nullable().optional(),
+  // An uploaded photo (POST /photos), for a reading saved without one. A reading's photo is never swapped.
+  photoId: z.number().int().positive().optional(),
 });
 
 const SUBJECT_MAX_LENGTH = 200;
@@ -212,8 +214,8 @@ export const EmailDefaultsResponseSchema = z
 
 export const ReadingListResponseSchema = paginatedResponseSchema(ReadingResponseSchema);
 
-// Every reading with a Cost or a Bill in the range, newest first, and the sum of their costs in euro cents (a reading
-// with only a Bill adds nothing). Not paged: the chart needs every bar in the range, and one meter read about monthly
+// Every reading in the range, newest first, and the sum of their costs in euro cents (a reading with no Cost adds
+// nothing). Not paged: the chart needs every bar in the range, and one meter read about monthly
 // makes a dozen readings a year.
 export const CostListResponseSchema = z
   .object({

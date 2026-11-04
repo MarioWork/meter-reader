@@ -67,6 +67,8 @@ const log = logger.child({ module: 'readings' });
 const ENTITY = 'Reading';
 const PHOTO_NOT_AVAILABLE_MESSAGE = 'This photo does not exist or already belongs to another reading';
 const BILL_NOT_AVAILABLE_MESSAGE = 'This bill does not exist or already belongs to another reading';
+// The web app shows this as is, when a photo added after saving cannot be.
+const PHOTO_NOT_ADDABLE_MESSAGE = 'This reading already has a photo, or that photo belongs to another reading';
 
 // An ISO timestamp's first ten characters are its calendar day.
 const ISO_DATE_LENGTH = 10;
@@ -236,12 +238,19 @@ async function removeFile(fileName: string, logFields: object, message: string):
 
 // Sets, changes or removes (null) the reading's cost and its bill. A bill replaced or removed is deleted, its file
 // too. Nothing here touches its email: the cost and the bill are never sent.
-export async function updateReading(id: number, { costCents, billId }: UpdateReading): Promise<ReadingResponse> {
-  const update = await readingsRepository.update(id, { costCents, billId });
+export async function updateReading(
+  id: number,
+  { costCents, billId, photoId }: UpdateReading,
+): Promise<ReadingResponse> {
+  const update = await readingsRepository.update(id, { costCents, billId, photoId });
 
   if (update.outcome === 'notFound') throw new NotFoundError(ENTITY, id);
 
   if (update.outcome === 'billNotAvailable') throw new ConflictError(BILL_NOT_AVAILABLE_MESSAGE, 'BILL_NOT_AVAILABLE');
+
+  if (update.outcome === 'photoNotAvailable') {
+    throw new ConflictError(PHOTO_NOT_ADDABLE_MESSAGE, 'PHOTO_NOT_AVAILABLE');
+  }
 
   if (update.removedBillFileName) {
     await removeFile(update.removedBillFileName, { readingId: id }, 'file of a replaced bill not removed');
@@ -271,10 +280,10 @@ function sumCostCents(rows: ReadingRow[]): number {
   return rows.reduce((totalCents, row) => totalCents + (row.costCents ?? 0), 0);
 }
 
-// The Costs page: every reading with a Cost or a Bill in the range, and what they cost together. A reading with only a
-// Bill adds nothing to the sum.
+// The Costs page: every reading in the range, and what they cost together. A reading with no Cost (only a Bill, or
+// neither) is listed but adds nothing to the sum.
 export async function getCosts(query: ListCostsQuery): Promise<CostListResponse> {
-  const rows = await readingsRepository.findWithCostOrBill(toFilter(query));
+  const rows = await readingsRepository.findInRange(toFilter(query));
 
   return { data: rows.map(toResponse), totalCostCents: sumCostCents(rows) };
 }
@@ -287,7 +296,7 @@ function toCostSheetLine(row: ReadingRow): CostSheetLine {
 
 // The readings the Costs page lists for the same day range, from the same query, as an .xlsx file named after it.
 export async function getCostsSpreadsheet(query: ListCostsQuery): Promise<SpreadsheetFile> {
-  const rows = await readingsRepository.findWithCostOrBill(toFilter(query));
+  const rows = await readingsRepository.findInRange(toFilter(query));
   const content = await toCostsSpreadsheet(rows.map(toCostSheetLine));
   const fileName = costsSpreadsheetFileName(query);
 

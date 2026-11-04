@@ -21,7 +21,7 @@ vi.mock('./readings.repository.ts', () => ({
     create: vi.fn(),
     findPage: vi.fn(),
     findAll: vi.fn(),
-    findWithCostOrBill: vi.fn(),
+    findInRange: vi.fn(),
     findById: vi.fn(),
     update: vi.fn(),
     markSent: vi.fn(),
@@ -161,14 +161,14 @@ describe('getReadings', () => {
 
 describe('getCosts', () => {
   it('asks for the days as midnight UTC and answers the rows with their sum when a day range is given', async () => {
-    vi.mocked(readingsRepository.findWithCostOrBill).mockResolvedValueOnce([
+    vi.mocked(readingsRepository.findInRange).mockResolvedValueOnce([
       { ...SAVED_ROW, id: 8, costCents: 3990 },
       { ...SAVED_ROW, id: 7, costCents: 4210 },
     ]);
 
     const costs = await getCosts({ from: '2026-09-01', to: '2026-09-30' });
 
-    expect(readingsRepository.findWithCostOrBill).toHaveBeenCalledWith({
+    expect(readingsRepository.findInRange).toHaveBeenCalledWith({
       from: new Date('2026-09-01T00:00:00.000Z'),
       to: new Date('2026-09-30T00:00:00.000Z'),
       statuses: undefined,
@@ -177,7 +177,7 @@ describe('getCosts', () => {
   });
 
   it('answers the reading but adds nothing to the sum for it when a reading has only a bill', async () => {
-    vi.mocked(readingsRepository.findWithCostOrBill).mockResolvedValueOnce([
+    vi.mocked(readingsRepository.findInRange).mockResolvedValueOnce([
       { ...SAVED_ROW, id: 8, costCents: null, bill: BILL },
       { ...SAVED_ROW, id: 7, costCents: 4210 },
     ]);
@@ -188,6 +188,17 @@ describe('getCosts', () => {
       totalCostCents: 4210,
       data: [{ id: 8, costCents: null, bill: { id: 9 } }, { id: 7 }],
     });
+  });
+
+  it('answers the reading and adds nothing to the sum when a reading has neither a cost nor a bill', async () => {
+    vi.mocked(readingsRepository.findInRange).mockResolvedValueOnce([
+      { ...SAVED_ROW, id: 8, costCents: null, bill: null },
+      { ...SAVED_ROW, id: 7, costCents: 4210 },
+    ]);
+
+    const costs = await getCosts({});
+
+    expect(costs).toMatchObject({ totalCostCents: 4210, data: [{ id: 8, costCents: null, bill: null }, { id: 7 }] });
   });
 });
 

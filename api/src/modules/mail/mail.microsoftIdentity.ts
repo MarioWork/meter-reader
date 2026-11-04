@@ -66,11 +66,14 @@ export function microsoftUnreachable(cause?: unknown): AppError {
   });
 }
 
-// Microsoft said no for a reason that is not the user's doing: almost always the app registration (README).
+// Microsoft said no for a reason that is not the user's doing: almost always the app registration (docs/guide/hotmail.md, step 2).
 export function microsoftRefused(reason: string): AppError {
-  return new AppError(`Microsoft refused the sign-in (${reason}). Check the app registration (README)`, {
-    code: 'MICROSOFT_SIGN_IN_FAILED',
-  });
+  return new AppError(
+    `Microsoft refused the sign-in (${reason}). Check the app registration (docs/guide/hotmail.md, step 2)`,
+    {
+      code: 'MICROSOFT_SIGN_IN_FAILED',
+    },
+  );
 }
 
 async function readJson(response: Response): Promise<unknown> {

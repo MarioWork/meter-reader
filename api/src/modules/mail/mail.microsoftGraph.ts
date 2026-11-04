@@ -15,6 +15,9 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const FILE_ATTACHMENT_TYPE = '#microsoft.graph.fileAttachment';
 const TEXT_BODY = 'Text';
 const BASE64 = 'base64';
+// Ends the body when a photo goes with it. Mail apps show an attached picture where a plain-text body ends: with no line
+// break there, it sits beside the last word. Only what Graph gets; the kept copy of the email stays as written.
+const BEFORE_ATTACHMENT = '\n\n';
 const JSON_CONTENT_TYPE = 'application/json';
 const FIRST_SUCCESS_STATUS = 200;
 const FIRST_REDIRECT_STATUS = 300;
@@ -38,7 +41,7 @@ function toGraphAttachment({ name, contentType, contents }: MailAttachment) {
 export function buildSendMailRequest({ to, subject, body, attachment }: OutgoingMail): SendMailRequest {
   const message = {
     subject,
-    body: { contentType: TEXT_BODY, content: body },
+    body: { contentType: TEXT_BODY, content: attachment ? `${body}${BEFORE_ATTACHMENT}` : body },
     toRecipients: [{ emailAddress: { address: to } }],
     attachments: attachment ? [toGraphAttachment(attachment)] : [],
   };
